@@ -1,784 +1,459 @@
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>WebStudio</title>
-    <!--Normalizer-->
-    <link
-      rel="stylesheet"
-      href="https://cdnjs.cloudflare.com/ajax/libs/modern-normalize/3.0.1/modern-normalize.min.css"
-    />
-    <!--Fonts-->
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Raleway:ital,wght@0,700;1,700&family=Roboto:wght@400;500;700&display=swap"
-      rel="stylesheet"
-    />
-    <!--Styles CSS-->
-    <link rel="stylesheet" href="./css/styles.css" />
-  </head>
-  <body class="document">
-    <!--Аdded a logo, navigation, and contacts with options to call and send an email to the header.-->
-    <header class="head">
-      <div class="container head-c">
-        <nav class="head-navi">
-          <a class="logo head-link head-logo" href="./index.html"
-            >Web<span class="head-logo-accent">Studio</span></a
-          >
-          <ul class="navi-list">
-            <li>
-              <a class="navi-list-link head-link current" href="./index.html"
-                >Studio</a
-              >
-            </li>
-            <li><a class="navi-list-link head-link" href="">Portfolio</a></li>
-            <li><a class="navi-list-link head-link" href="">Contacts</a></li>
-          </ul>
-        </nav>
-        <!--Contacts-->
-        <address class="head-addr">
-          <ul class="head-contacts">
-            <li>
-              <a
-                class="contacts-link head-link"
-                href="mailto:info@devstudio.com"
-                >info@devstudio.com</a
-              >
-            </li>
-            <li>
-              <a class="contacts-link head-link" href="tel:+110001111111"
-                >+11 (000) 111-11-11</a
-              >
-            </li>
-          </ul>
-        </address>
-        <button class="menu-btn" type="button">
-          <svg class="menu-icon" width="18" height="16">
-            <use href="./images/icons.svg#icon-menu"></use>
-          </svg>
-        </button>
-      </div>
-    </header>
-    <main>
-      <!--Main section with h1-->
-      <section class="hero-section section">
-        <div class="container">
-          <h1 class="hero-title">Effective Solutions for Your Business</h1>
-          <button class="hero-btn" type="button">Order Service</button>
-        </div>
-      </section>
+﻿<!doctype html>
+<html lang="uk">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ocr</title>
+  <meta name="description" content="Odesa Coffe Roasters - обсмажка specialty кави, підписка та зерно для дому й бізнесу.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Sora:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body class="page">
+  <div class="backdrop" aria-hidden="true">
+    <span class="glow one"></span>
+    <span class="glow two"></span>
+    <span class="grain"></span>
+  </div>
 
-      <!--Second section with "Advantages"-->
-
-      <section class="section">
-        <div class="container">
-          <h2 class="visually-hidden">Advantages</h2>
-          <ul class="adv-list">
-            <li class="adv-list-item">
-              <div class="rectangle">
-                <svg class="icon" width="64" height="64">
-                  <use href="./images/icons.svg#icon-antenna"></use>
-                </svg>
-              </div>
-              <h3 class="adv-title">Strategy</h3>
-              <p class="adv-text">
-                Our goal is to identify the business problem to walk away with
-                the perfect and creative solution.
-              </p>
-            </li>
-            <li class="adv-list-item">
-              <div class="rectangle">
-                <svg class="icon" width="64" height="64">
-                  <use href="./images/icons.svg#icon-clock"></use>
-                </svg>
-              </div>
-              <h3 class="adv-title">Punctuality</h3>
-              <p class="adv-text">
-                Bring the key message to the brand's audience for the best price
-                within the shortest possible time.
-              </p>
-            </li>
-            <li class="adv-list-item">
-              <div class="rectangle">
-                <svg class="icon" width="64" height="64">
-                  <use href="./images/icons.svg#icon-diagram"></use>
-                </svg>
-              </div>
-              <h3 class="adv-title">Diligence</h3>
-              <p class="adv-text">
-                Research and confirm brands that present the strongest digital
-                growth opportunities and minimize risk.
-              </p>
-            </li>
-            <li class="adv-list-item">
-              <div class="rectangle">
-                <svg class="icon" width="64" height="64">
-                  <use href="./images/icons.svg#icon-astronaut"></use>
-                </svg>
-              </div>
-              <h3 class="adv-title">Technologies</h3>
-              <p class="adv-text">
-                Design practice focused on digital experiences. We bring forth a
-                deep passion for problem-solving.
-              </p>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <!--Third section with photo-->
-
-      <section class="team-section section">
-        <div class="container">
-          <h2 class="team-title">Our Team</h2>
-          <ul class="team-list">
-            <li class="team-list-item">
-              <img
-                src="./images/img(1).jpg"
-                alt="male employee"
-                width="264"
-                srcset="./images/img(1)@2x.jpg 2x"
-              />
-              <div class="team-list-bottom">
-                <h3 class="team-list-title">Mark Guerrero</h3>
-                <p class="team-list-text">Product Designer</p>
-                <ul class="i-list">
-                  <li class="i-item">
-                    <a class="i-link" href="">
-                      <svg class="i-icon" width="16" height="16">
-                        <use href="./images/icons.svg#icon-instagram"></use>
-                      </svg>
-                    </a>
-                  </li>
-                  <li class="i-item">
-                    <a class="i-link" href="">
-                      <svg class="i-icon" width="16" height="16">
-                        <use href="./images/icons.svg#icon-twitter"></use>
-                      </svg>
-                    </a>
-                  </li>
-                  <li class="i-item">
-                    <a class="i-link" href="">
-                      <svg class="i-icon" width="16" height="16">
-                        <use href="./images/icons.svg#icon-facebook"></use>
-                      </svg>
-                    </a>
-                  </li>
-                  <li class="i-item">
-                    <a class="i-link" href="">
-                      <svg class="i-icon" width="16" height="16">
-                        <use href="./images/icons.svg#icon-linkedin"></use>
-                      </svg>
-                    </a>
-                  </li>
-                </ul>
-              </div>
-            </li>
-            <li class="team-list-item">
-              <img
-                src="./images/img(2).jpg"
-                alt="male employee"
-                width="264"
-                srcset="./images/img(2)@2x.jpg 2x"
-              />
-              <div class="team-list-bottom">
-                <h3 class="team-list-title">Tom Ford</h3>
-                <p class="team-list-text">Frontend Developer</p>
-                <ul class="i-list">
-                  <li class="i-item">
-                    <a class="i-link" href="">
-                      <svg class="i-icon" width="16" height="16">
-                        <use href="./images/icons.svg#icon-instagram"></use>
-                      </svg>
-                    </a>
-                  </li>
-                  <li class="i-item">
-                    <a class="i-link" href="">
-                      <svg class="i-icon" width="16" height="16">
-                        <use href="./images/icons.svg#icon-twitter"></use>
-                      </svg>
-                    </a>
-                  </li>
-                  <li class="i-item">
-                    <a class="i-link" href="">
-                      <svg class="i-icon" width="16" height="16">
-                        <use href="./images/icons.svg#icon-facebook"></use>
-                      </svg>
-                    </a>
-                  </li>
-
-                  <li class="i-item">
-                    <a class="i-link" href="">
-                      <svg class="i-icon" width="16" height="16">
-                        <use href="./images/icons.svg#icon-linkedin"></use>
-                      </svg>
-                    </a>
-                  </li>
-                </ul>
-              </div>
-            </li>
-            <li class="team-list-item">
-              <img
-                src="./images/img(3).jpg"
-                alt="female employee"
-                width="264"
-                srcset="./images/img(3)@2x.jpg 2x"
-              />
-              <div class="team-list-bottom">
-                <h3 class="team-list-title">Camila Garcia</h3>
-                <p class="team-list-text">Marketing</p>
-                <ul class="i-list">
-                  <li class="i-item">
-                    <a class="i-link" href="">
-                      <svg class="i-icon" width="16" height="16">
-                        <use href="./images/icons.svg#icon-instagram"></use>
-                      </svg>
-                    </a>
-                  </li>
-                  <li class="i-item">
-                    <a class="i-link" href="">
-                      <svg class="i-icon" width="16" height="16">
-                        <use href="./images/icons.svg#icon-twitter"></use>
-                      </svg>
-                    </a>
-                  </li>
-                  <li class="i-item">
-                    <a class="i-link" href="">
-                      <svg class="i-icon" width="16" height="16">
-                        <use href="./images/icons.svg#icon-facebook"></use>
-                      </svg>
-                    </a>
-                  </li>
-
-                  <li class="i-item">
-                    <a class="i-link" href="">
-                      <svg class="i-icon" width="16" height="16">
-                        <use href="./images/icons.svg#icon-linkedin"></use>
-                      </svg>
-                    </a>
-                  </li>
-                </ul>
-              </div>
-            </li>
-            <li class="team-list-item">
-              <img
-                src="./images/img(4).jpg"
-                alt="male employee"
-                width="264"
-                srcset="./images/img(4)@2x.jpg 2x"
-              />
-              <div class="team-list-bottom">
-                <h3 class="team-list-title">Daniel Wilson</h3>
-                <p class="team-list-text">UI Designer</p>
-                <ul class="i-list">
-                  <li class="i-item">
-                    <a class="i-link" href="">
-                      <svg class="i-icon" width="16" height="16">
-                        <use href="./images/icons.svg#icon-instagram"></use>
-                      </svg>
-                    </a>
-                  </li>
-                  <li class="i-item">
-                    <a class="i-link" href="">
-                      <svg class="i-icon" width="16" height="16">
-                        <use href="./images/icons.svg#icon-twitter"></use>
-                      </svg>
-                    </a>
-                  </li>
-                  <li class="i-item">
-                    <a class="i-link" href="">
-                      <svg class="i-icon" width="16" height="16">
-                        <use href="./images/icons.svg#icon-facebook"></use>
-                      </svg>
-                    </a>
-                  </li>
-
-                  <li class="i-item">
-                    <a class="i-link" href="">
-                      <svg class="i-icon" width="16" height="16">
-                        <use href="./images/icons.svg#icon-linkedin"></use>
-                      </svg>
-                    </a>
-                  </li>
-                </ul>
-              </div>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <!--Fourth section with portfolio-->
-
-      <section class="port-section section">
-        <div class="container">
-          <h2 class="port-title">Our Portfolio</h2>
-          <ul class="port-list">
-            <li class="port-list-item">
-              <div class="port-img">
-                <picture>
-                  <source
-                    media="(min-width: 1200px)"
-                    srcset="
-                      ./images/img-5.jpg         1x,
-                      ./images/img-5-desk@2x.jpg 2x
-                    "
-                  />
-                  <source
-                    media="(min-width: 768px)"
-                    srcset="
-                      ./images/img-5-tablet@1x.jpg 1x,
-                      ./images/img-5-tablet@2x.jpg 2x
-                    "
-                  />
-                  <source
-                    media="(max-width: 767px)"
-                    srcset="./images/img-5-mobile@2x.jpg 2x"
-                  />
-                  <img
-                    class="port-img-img"
-                    src="./images/img-5-mobile@1x.jpg"
-                    alt="online banking"
-                  />
-                </picture>
-
-                <p class="overlay-text">
-                  14 Stylish and User-Friendly App Design Concepts · Task
-                  Manager App · Calorie Tracker App · Exotic Fruit Ecommerce App
-                  · Cloud Storage App
-                </p>
-              </div>
-              <div class="port-list-bottom">
-                <h3 class="port-list-title">Banking App</h3>
-                <p class="port-list-text">App</p>
-              </div>
-            </li>
-            <li class="port-list-item">
-              <div class="port-img">
-                <picture>
-                  <source
-                    media="(min-width: 1200px)"
-                    srcset="
-                      ./images/img-6.jpg         1x,
-                      ./images/img-6-desk@2x.jpg 2x
-                    "
-                  />
-                  <source
-                    media="(min-width: 768px)"
-                    srcset="
-                      ./images/img-6-tablet@1x.jpg 1x,
-                      ./images/img-6-tablet@2x.jpg 2x
-                    "
-                  />
-                  <source
-                    media="(max-width: 767px)"
-                    srcset="./images/img-6-mobile@2x.jpg 2x"
-                  />
-                  <img
-                    class="port-img-img"
-                    src="./images/img-6-mobile@1x.jpg"
-                    alt="contactless payment"
-                  />
-                </picture>
-
-                <p class="overlay-text">
-                  14 Stylish and User-Friendly App Design Concepts · Task
-                  Manager App · Calorie Tracker App · Exotic Fruit Ecommerce App
-                  · Cloud Storage App
-                </p>
-              </div>
-              <div class="port-list-bottom">
-                <h3 class="port-list-title">Cashless Payment</h3>
-                <p class="port-list-text">Marketing</p>
-              </div>
-            </li>
-            <li class="port-list-item">
-              <div class="port-img">
-                <picture>
-                  <source
-                    media="(min-width: 1200px)"
-                    srcset="
-                      ./images/img-7.jpg         1x,
-                      ./images/img-7-desk@2x.jpg 2x
-                    "
-                  />
-                  <source
-                    media="(min-width: 768px)"
-                    srcset="
-                      ./images/img-7-tablet@1x.jpg 1x,
-                      ./images/img-7-tablet@2x.jpg 2x
-                    "
-                  />
-                  <source
-                    media="(max-width: 767px)"
-                    srcset="./images/img-7-mobile@2x.jpg 2x"
-                  />
-                  <img
-                    class="port-img-img"
-                    src="./images/img-7-mobile@1x.jpg"
-                    alt="laptop"
-                  />
-                </picture>
-
-                <p class="overlay-text">
-                  14 Stylish and User-Friendly App Design Concepts · Task
-                  Manager App · Calorie Tracker App · Exotic Fruit Ecommerce App
-                  · Cloud Storage App
-                </p>
-              </div>
-              <div class="port-list-bottom">
-                <h3 class="port-list-title">Meditation App</h3>
-                <p class="port-list-text">App</p>
-              </div>
-            </li>
-            <li class="port-list-item">
-              <div class="port-img">
-                <picture>
-                  <source
-                    media="(min-width: 1200px)"
-                    srcset="
-                      ./images/img-8.jpg         1x,
-                      ./images/img-8-desk@2x.jpg 2x
-                    "
-                  />
-                  <source
-                    media="(min-width: 768px)"
-                    srcset="
-                      ./images/img-8-tablet@1x.jpg 1x,
-                      ./images/img-8-tablet@2x.jpg 2x
-                    "
-                  />
-                  <source
-                    media="(max-width: 767px)"
-                    srcset="./images/img-8-mobile@2x.jpg 2x"
-                  />
-                  <img
-                    class="port-img-img"
-                    src="./images/img-8-mobile@1x.jpg"
-                    alt="car"
-                  />
-                </picture>
-
-                <p class="overlay-text">
-                  14 Stylish and User-Friendly App Design Concepts · Task
-                  Manager App · Calorie Tracker App · Exotic Fruit Ecommerce App
-                  · Cloud Storage App
-                </p>
-              </div>
-              <div class="port-list-bottom">
-                <h3 class="port-list-title">Taxi Service</h3>
-                <p class="port-list-text">Marketing</p>
-              </div>
-            </li>
-            <li class="port-list-item">
-              <div class="port-img">
-                <picture>
-                  <source
-                    media="(min-width: 1200px)"
-                    srcset="
-                      ./images/img-9.jpg         1x,
-                      ./images/img-9-desk@2x.jpg 2x
-                    "
-                  />
-                  <source
-                    media="(min-width: 768px)"
-                    srcset="
-                      ./images/img-9-tablet@1x.jpg 1x,
-                      ./images/img-9-tablet@2x.jpg 2x
-                    "
-                  />
-                  <source
-                    media="(max-width: 767px)"
-                    srcset="./images/img-9-mobile@2x.jpg 2x"
-                  />
-                  <img
-                    class="port-img-img"
-                    src="./images/img-9-mobile@1x.jpg"
-                    alt="phone screen"
-                  />
-                </picture>
-
-                <p class="overlay-text">
-                  14 Stylish and User-Friendly App Design Concepts · Task
-                  Manager App · Calorie Tracker App · Exotic Fruit Ecommerce App
-                  · Cloud Storage App
-                </p>
-              </div>
-              <div class="port-list-bottom">
-                <h3 class="port-list-title">Screen Illustrations</h3>
-                <p class="port-list-text">Design</p>
-              </div>
-            </li>
-            <li class="port-list-item">
-              <div class="port-img">
-                <picture>
-                  <source
-                    media="(min-width: 1200px)"
-                    srcset="
-                      ./images/img-10.jpg         1x,
-                      ./images/img-10-desk@2x.jpg 2x
-                    "
-                  />
-                  <source
-                    media="(min-width: 768px)"
-                    srcset="
-                      ./images/img-10-tablet@1x.jpg 1x,
-                      ./images/img-10-tablet@2x.jpg 2x
-                    "
-                  />
-                  <source
-                    media="(max-width: 767px)"
-                    srcset="./images/img-10-mobile@2x.jpg 2x"
-                  />
-                  <img
-                    class="port-img-img"
-                    src="./images/img-10-mobile@1x.jpg"
-                    alt="pretty woman"
-                  />
-                </picture>
-
-                <p class="overlay-text">
-                  14 Stylish and User-Friendly App Design Concepts · Task
-                  Manager App · Calorie Tracker App · Exotic Fruit Ecommerce App
-                  · Cloud Storage App
-                </p>
-              </div>
-              <div class="port-list-bottom">
-                <h3 class="port-list-title">Online Courses</h3>
-                <p class="port-list-text">Marketing</p>
-              </div>
-            </li>
-          </ul>
-        </div>
-      </section>
-    </main>
-
-    <footer class="foot-section">
-      <div class="container foot-container">
-        <div class="block-common">
-          <div class="block-logo">
-            <a class="foot-logo logo" href="./index.html"
-              >Web<span class="foot-logo-accent">Studio</span></a
-            >
-            <p class="foot-text">
-              Increase the flow of customers and sales for your business with
-              digital marketing & growth solutions.
-            </p>
-          </div>
-          <div class="block-social">
-            <p class="social-text">Social media</p>
-            <ul class="f-list">
-              <li class="f-item">
-                <a class="f-link" href="">
-                  <svg class="f-icon" width="24" height="24">
-                    <use href="./images/icons.svg#icon-instagram"></use>
-                  </svg>
-                </a>
-              </li>
-              <li class="f-item">
-                <a class="f-link" href="">
-                  <svg class="f-icon" width="24" height="24">
-                    <use href="./images/icons.svg#icon-twitter"></use>
-                  </svg>
-                </a>
-              </li>
-              <li class="f-item">
-                <a class="f-link" href="">
-                  <svg class="f-icon" width="24" height="24">
-                    <use href="./images/icons.svg#icon-facebook"></use>
-                  </svg>
-                </a>
-              </li>
-              <li class="f-item">
-                <a class="f-link" href="">
-                  <svg class="f-icon" width="24" height="24">
-                    <use href="./images/icons.svg#icon-linkedin"></use>
-                  </svg>
-                </a>
-              </li>
-            </ul>
-          </div>
-        </div>
-
-        <div class="block-subscribe">
-          <p class="sub-text">Subscribe</p>
-          <form class="sub-form">
-            <label class="sub-label">
-              <input
-                name="email"
-                class="sub-inp"
-                type="email"
-                placeholder="E-mail"
-              />
-            </label>
-            <button class="sub-btn" type="submit">
-              Subscribe
-              <svg class="send-icon" width="24" height="24">
-                <use href="./images/icons.svg#icon-send"></use>
-              </svg>
-            </button>
-          </form>
-        </div>
-      </div>
-    </footer>
-
-    <!--Modal overlay-->
-
-    <div class="modal-overlay">
-      <div class="modal">
-        <button type="button" class="close-btn">
-          <svg class="close-icon" width="8" height="8">
-            <use href="./images/icons.svg#icon-exit"></use>
-          </svg>
-        </button>
-        <p class="modal-text">Leave your contacts and we will call you back</p>
-
-        <!-- ======= Form ====== -->
-        <form class="modal-form">
-          <div class="icon-father">
-            <label class="modal-label" for="user-name"> Name </label>
-            <div class="icon-container">
-              <input
-                name="user-name"
-                class="modal-inp"
-                type="text"
-                id="user-name"
-                autofocus
-              />
-              <svg class="modal-icon" width="18" height="24">
-                <use href="./images/icons.svg#icon-profile"></use>
-              </svg>
-            </div>
-          </div>
-
-          <div class="icon-father">
-            <label class="modal-label" for="user-phone"> Phone </label>
-            <div class="icon-container">
-              <input
-                name="phone"
-                class="modal-inp"
-                type="text"
-                id="user-phone"
-              />
-              <svg class="modal-icon" width="18" height="24">
-                <use href="./images/icons.svg#icon-phone"></use>
-              </svg>
-            </div>
-          </div>
-
-          <div class="icon-father">
-            <label class="modal-label" for="user-email"> Email </label>
-            <div class="icon-container">
-              <input
-                name="email"
-                class="modal-inp"
-                type="email"
-                id="user-email"
-              />
-              <svg class="modal-icon" width="18" height="24">
-                <use href="./images/icons.svg#icon-mail"></use>
-              </svg>
-            </div>
-          </div>
-
-          <div class="last-father">
-            <label class="modal-label" for="user-comment"> Comment </label>
-            <textarea
-              class="modal-comment"
-              name="user-comment"
-              placeholder="Text input"
-              id="user-comment"
-            ></textarea>
-          </div>
-
-          <div class="checkbox-container">
-            <input
-              name="user-privacy"
-              type="checkbox"
-              class="modal-check visually-hidden"
-              id="user-privacy"
-              value="true"
-            />
-            <label for="user-privacy" class="check-label">
-              <span class="check-box">
-                <svg class="check-icon" width="10" height="8">
-                  <use href="./images/icons.svg#icon-v-mark"></use>
-                </svg>
-              </span>
-              I accept the terms and conditions of the&nbsp;
-              <a class="check-link" href=""> Privacy Policy</a>
-            </label>
-          </div>
-          <button class="send-btn" type="submit">Send</button>
-        </form>
+  <header class="site-header">
+    <div class="container header-inner">
+      <a class="logo" href="#top">
+        <img src="images/logo.png" alt="Odesa Coffe Roasters">
+      </a>
+      <nav class="main-nav" aria-label="Основна навігація">
+        <a href="#products">Товари</a>
+        <a href="#catalog">Каталог</a>
+        <a href="#story">Про нас</a>
+        <a href="#bars">Кав'ярні</a>
+        <a href="#wholesale">Опт</a>
+        <a href="#contact">Контакти</a>
+      </nav>
+      <div class="header-actions">
+        <a class="btn ghost" href="#subscription">Підписка</a>
+        <button class="menu-toggle" type="button" aria-label="Відкрити меню">Меню</button>
       </div>
     </div>
+  </header>
 
-    <!-- Mobile menu -->
+  <main id="top">
+    <section class="hero">
+      <div class="container hero-grid">
+        <div class="hero-copy">
+          <p class="eyebrow">Одеська обсмажка з характером</p>
+          <div class="brand-mark">
+            <img src="images/brand-logo.png" alt="Логотип Odesa Coffe Roasters">
+          </div>
+          <h1>Кава з морським акцентом та щільним тілом</h1>
+          <p class="lead">Odesa Coffe Roasters працює з лотами, що залишають післясмак. Ми обсмажуємо дрібними партіями, щоб тримати профілі чистими та яскравими.</p>
+          <div class="hero-actions">
+            <a class="btn primary" href="#catalog">Обрати зерно</a>
+            <a class="btn ghost" href="#products">Переглянути товари</a>
+            <a class="btn light" href="#bars">Знайти кав'ярню</a>
+          </div>
+          <div class="hero-list">
+            <div>
+              <span>48h</span>
+              <p>від обсмажки до відправки</p>
+            </div>
+            <div>
+              <span>18</span>
+              <p>лотів у постійному меню</p>
+            </div>
+            <div>
+              <span>03</span>
+              <p>барів у центрі Одеси</p>
+            </div>
+          </div>
+        </div>
+        <div class="hero-panel">
+          <div class="panel-card">
+            <p class="label">Розклад обсмажки</p>
+            <h3>Пн, Ср, Пт</h3>
+            <p>Свіжі лоти оновлюються щотижня. Підписка виходить у середу.</p>
+          </div>
+          <div class="panel-card accent">
+            <p class="label">Дегустація</p>
+            <h3>Щосуботи 12:00</h3>
+            <p>Запрошення для бариста, власників кав'ярень та фанатів V60.</p>
+          </div>
+          <div class="panel-card">
+            <p class="label">Мікролоти</p>
+            <h3>Обмежений тираж</h3>
+            <p>Окремі лоти для еспресо та фільтру з нестандартним профілем.</p>
+          </div>
+        </div>
+      </div>
+    </section>
 
-    <div class="mobile-menu">
+    <section class="marquee" aria-hidden="true">
+      <div class="track">
+        <span>Odesa Coffe Roasters</span>
+        <span>ODESSA</span>
+        <span>SMALL BATCH</span>
+        <span>Odesa Coffe Roasters</span>
+        <span>ODESSA</span>
+        <span>SMALL BATCH</span>
+      </div>
+    </section>
+
+        <section class="section products" id="products">
       <div class="container">
-        <button class="close-menu-btn" type="button">
-          <svg class="close-icon" width="8" height="8">
-            <use href="./images/icons.svg#icon-exit"></use>
-          </svg>
-        </button>
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Товари</p>
+            <h2>Свіжі лоти та авторські бленди</h2>
+          </div>
+          <p class="lead">Кава для еспресо, фільтру та холодних напоїв. Оберіть формат, а ми доставимо протягом 48 годин після обсмажки.</p>
+        </div>
+        <div class="product-grid">
+          <article class="product-card">
+            <div class="product-media">
+              <img src="images/product-1.jpg" alt="Пакування кави Colombia Alto Cielo Tabi">
+            </div>
+            <div class="product-body">
+              <h3>Colombia Alto Cielo Tabi</h3>
+              <p>Темний виноград, мандарин, ром. Обсмажено під фільтр.</p>
+              <div class="product-meta">
+                <span>фільтр</span>
+                <span>регіон: Huila</span>
+                <span>обробка: natural</span>
+              </div>
+              <a class="btn primary product-buy" href="#contact">Купити</a>
+            </div>
+          </article>
+          <article class="product-card">
+            <div class="product-media">
+              <img src="images/product-2.jpg" alt="Пакування кави Kenya Rukira AA">
+            </div>
+            <div class="product-body">
+              <h3>Kenya Rukira AA</h3>
+              <p>Червоне вино, слива, ягідний морс. Обсмажено під фільтр.</p>
+              <div class="product-meta">
+                <span>фільтр</span>
+                <span>регіон: Nyeri</span>
+                <span>обробка: washed</span>
+              </div>
+              <a class="btn primary product-buy" href="#contact">Купити</a>
+            </div>
+          </article>
+          <article class="product-card">
+            <div class="product-media">
+              <img src="images/product-3.jpg" alt="Пакування кави Honduras Las Delicias">
+            </div>
+            <div class="product-body">
+              <h3>Honduras Las Delicias</h3>
+              <p>Виноград, червоне яблуко, персик, тростинний цукор, молочний шоколад.</p>
+              <div class="product-meta">
+                <span>фільтр</span>
+                <span>регіон: Montecillos</span>
+                <span>обробка: anaerobic honey</span>
+              </div>
+              <a class="btn primary product-buy" href="#contact">Купити</a>
+            </div>
+          </article>
+          <article class="product-card">
+            <div class="product-media">
+              <img src="images/product-4.jpg" alt="Пакування кави Colombia Decaf Caturra Bourbon">
+            </div>
+            <div class="product-body">
+              <h3>Colombia Decaf Caturra Bourbon</h3>
+              <p>Цукор panela, молочний шоколад, кокос, карамель. Обсмажено під еспресо.</p>
+              <div class="product-meta">
+                <span>decaf · еспресо</span>
+                <span>регіон: Risaralda</span>
+                <span>обробка: natural</span>
+              </div>
+              <a class="btn primary product-buy" href="#contact">Купити</a>
+            </div>
+          </article>
+          <article class="product-card">
+            <div class="product-media">
+              <img src="images/product-5.jpg" alt="Пакування кави Colombia Bella Vista Pink Bourbon">
+            </div>
+            <div class="product-body">
+              <h3>Colombia Bella Vista Pink Bourbon</h3>
+              <p>Персик, квітковий чай. Обсмажено під фільтр.</p>
+              <div class="product-meta">
+                <span>фільтр</span>
+                <span>регіон: Huila</span>
+                <span>обробка: 72 год. ферментації</span>
+              </div>
+              <a class="btn primary product-buy" href="#contact">Купити</a>
+            </div>
+          </article>
+          <article class="product-card">
+            <div class="product-media">
+              <img src="images/product-6.jpg" alt="Пакування кави Costa Rica Las Torres">
+            </div>
+            <div class="product-body">
+              <h3>Costa Rica Las Torres</h3>
+              <p>Манго, рожевий грейпфрут, ваніль, карамель. Обсмажено під фільтр.</p>
+              <div class="product-meta">
+                <span>фільтр</span>
+                <span>регіон: Brunca</span>
+                <span>обробка: anaerobic honey</span>
+              </div>
+              <a class="btn primary product-buy" href="#contact">Купити</a>
+            </div>
+          </article>
+          <article class="product-card">
+            <div class="product-media">
+              <img src="images/product-7.jpg" alt="Пакування кави Kenya Wanrich AA">
+            </div>
+            <div class="product-body">
+              <h3>Kenya Wanrich AA</h3>
+              <p>Гранат, темний виноград, бренді. Обсмажено під еспресо.</p>
+              <div class="product-meta">
+                <span>еспресо</span>
+                <span>регіон: Trans Nzoia</span>
+                <span>обробка: washed</span>
+              </div>
+              <a class="btn primary product-buy" href="#contact">Купити</a>
+            </div>
+          </article>
+          <article class="product-card">
+            <div class="product-media">
+              <img src="images/product-8.jpg" alt="Пакування кави Ethiopia Guji Uraga">
+            </div>
+            <div class="product-body">
+              <h3>Ethiopia Guji Uraga</h3>
+              <p>Квіти, сухофрукти, мед, лікер, апельсин. Обсмажено під фільтр.</p>
+              <div class="product-meta">
+                <span>фільтр</span>
+                <span>регіон: Guji Uraga</span>
+                <span>обробка: 72 год. ферментації</span>
+              </div>
+              <a class="btn primary product-buy" href="#contact">Купити</a>
+            </div>
+          </article>
+          <article class="product-card">
+            <div class="product-media">
+              <img src="images/product-9.jpg" alt="Пакування кави Rwanda Fuci">
+            </div>
+            <div class="product-body">
+              <h3>Rwanda Fuci</h3>
+              <p>Вишня, яблуко, родзинки, сухофрукти. Обсмажено під фільтр.</p>
+              <div class="product-meta">
+                <span>фільтр</span>
+                <span>регіон: Southern Province</span>
+                <span>обробка: washed</span>
+              </div>
+              <a class="btn primary product-buy" href="#contact">Купити</a>
+            </div>
+          </article>
+          <article class="product-card">
+            <div class="product-media">
+              <img src="images/product-11.jpg" alt="Пакування кави El Salvador Hacienda Dorada Washed">
+            </div>
+            <div class="product-body">
+              <h3>El Salvador Hacienda Dorada Washed</h3>
+              <p>Тростинний цукор, червоне яблуко, слива, какао. Обсмажено під еспресо.</p>
+              <div class="product-meta">
+                <span>еспресо</span>
+                <span>регіон: Apaneca-Llamatepec</span>
+                <span>обробка: washed</span>
+              </div>
+              <a class="btn primary product-buy" href="#contact">Купити</a>
+            </div>
+          </article>
+          <article class="product-card">
+            <div class="product-media">
+              <img src="images/product-10.jpg" alt="Пакування кави Rwanda Nyamasasa Red Bourbon">
+            </div>
+            <div class="product-body">
+              <h3>Rwanda Nyamasasa Red Bourbon</h3>
+              <p>Білий виноград, жовта слива, нотки ягід. Обсмажено під еспресо.</p>
+              <div class="product-meta">
+                <span>еспресо</span>
+                <span>регіон: South Kivu Province</span>
+                <span>обробка: natural</span>
+              </div>
+              <a class="btn primary product-buy" href="#contact">Купити</a>
+            </div>
+          </article>
+          <article class="product-card">
+            <div class="product-media">
+              <img src="images/product-12.jpg" alt="Пакування кави Colombia El Rincon">
+            </div>
+            <div class="product-body">
+              <h3>Colombia El Rincon</h3>
+              <p>Вишня, пряний мед, грейпфрут, ром. Обсмажено під еспресо.</p>
+              <div class="product-meta">
+                <span>еспресо</span>
+                <span>регіон: Huila</span>
+                <span>обробка: natural</span>
+              </div>
+              <a class="btn primary product-buy" href="#contact">Купити</a>
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
 
-        <ul class="menu-list">
-          <li class="menu-item">
-            <a class="menu-link dark-blue" href="index.html">Studio</a>
-          </li>
-          <li class="menu-item"><a class="menu-link" href="">Portfolio</a></li>
-          <li class="menu-item"><a class="menu-link" href="">Contacts</a></li>
-        </ul>
+    <section class="section" id="catalog">
+      <div class="container">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Каталог</p>
+            <h2>Три напрямки обсмажки</h2>
+          </div>
+          <p class="lead">Мінімалістичний вибір, де кожен лот має роль: щільний еспресо, прозорий фільтр або комфортний decaf.</p>
+        </div>
+        <div class="grid three">
+          <article class="coffee-card">
+            <h3>Espresso</h3>
+            <p>Смаки: какао, спеції, горіх. Створено для стабільної екстракції.</p>
+            <div class="card-meta">
+              <span>бленди</span>
+              <span>темний профіль</span>
+            </div>
+            <button class="btn outline" type="button">Детальніше</button>
+          </article>
+          <article class="coffee-card">
+            <h3>Filter</h3>
+            <p>Смаки: цитрус, ягоди, тропіки. Чисті, світлі обсмажки.</p>
+            <div class="card-meta">
+              <span>моносорти</span>
+              <span>світлий профіль</span>
+            </div>
+            <button class="btn outline" type="button">Детальніше</button>
+          </article>
+          <article class="coffee-card">
+            <h3>Decaf</h3>
+            <p>Смаки: карамель, печене яблуко, шоколад. Без компромісів.</p>
+            <div class="card-meta">
+              <span>без кофеїну</span>
+              <span>м'який профіль</span>
+            </div>
+            <button class="btn outline" type="button">Детальніше</button>
+          </article>
+        </div>
+      </div>
+    </section>
 
-        <address class="menu-contacts">
-          <ul class="m-contacts-list">
-            <li class="m-contacts-item">
-              <a class="m-contacts-link blue" href="mailto:info@devstudio.com"
-                >info@devstudio.com</a
-              >
-            </li>
-            <li class="m-contacts-item">
-              <a class="m-contacts-link" href="tel:+110001111111"
-                >+11 (000) 111-11-11</a
-              >
-            </li>
-          </ul>
-        </address>
+    <section class="section story" id="story">
+      <div class="container story-grid">
+        <div>
+          <p class="eyebrow">Історія</p>
+          <h2>Обсмажка, яка починається з калібру</h2>
+          <p class="lead">Ми оцінюємо зерно, підбираємо профілі та повторюємо дегустацію до того моменту, коли смак звучить стабільно в кожному пакеті.</p>
+          <p>Серед наших клієнтів - кав'ярні, студії, офіси та готелі. DAM - це про ритм міста і впевненість у кожній чашці.</p>
+        </div>
+        <div class="stats">
+          <div>
+            <span>12</span>
+            <p>років обсмажки</p>
+          </div>
+          <div>
+            <span>90+</span>
+            <p>партнерських закладів</p>
+          </div>
+          <div>
+            <span>3</span>
+            <p>власні кав'ярні</p>
+          </div>
+          <div>
+            <span>24</span>
+            <p>дегустації щомісяця</p>
+          </div>
+        </div>
+      </div>
+    </section>
 
-        <ul class="m-i-list">
-          <li class="i-item">
-            <a class="i-link" href="">
-              <svg class="i-icon" width="24" height="24">
-                <use href="./images/icons.svg#icon-instagram"></use>
-              </svg>
-            </a>
-          </li>
-          <li class="i-item">
-            <a class="i-link" href="">
-              <svg class="i-icon" width="24" height="24">
-                <use href="./images/icons.svg#icon-twitter"></use>
-              </svg>
-            </a>
-          </li>
-          <li class="i-item">
-            <a class="i-link" href="">
-              <svg class="i-icon" width="24" height="24">
-                <use href="./images/icons.svg#icon-facebook"></use>
-              </svg>
-            </a>
-          </li>
-          <li class="i-item">
-            <a class="i-link" href="">
-              <svg class="i-icon" width="24" height="24">
-                <use href="./images/icons.svg#icon-linkedin"></use>
-              </svg>
-            </a>
-          </li>
-        </ul>
+    <section class="section bars" id="bars">
+      <div class="container">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Кав'ярні</p>
+            <h2>Місця, де живе DAM</h2>
+          </div>
+          <p class="lead">Зелена гілка V60, еспресо-шоти та пекарські історії.</p>
+        </div>
+        <div class="grid three">
+          <article class="location-card">
+            <h3>Переяславська</h3>
+            <p>вул. Переяславська, 8</p>
+            <p>08:00 - 21:00</p>
+            <button class="btn outline" type="button">Прокласти маршрут</button>
+          </article>
+          <article class="location-card">
+            <h3>Морський порт</h3>
+            <p>Митна площа, 1</p>
+            <p>07:30 - 20:00</p>
+            <button class="btn outline" type="button">Прокласти маршрут</button>
+          </article>
+          <article class="location-card">
+            <h3>Фонтан</h3>
+            <p>Французький бульвар, 20</p>
+            <p>09:00 - 19:30</p>
+            <button class="btn outline" type="button">Прокласти маршрут</button>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section subscription" id="subscription">
+      <div class="container subscription-grid">
+        <div>
+          <p class="eyebrow">Підписка</p>
+          <h2>Стабільне зерно для вашого ранку</h2>
+          <p class="lead">Оберіть профіль, об'єм і частоту. Ми сформуємо добірку і привеземо її в день обсмажки.</p>
+        </div>
+        <div class="subscription-box">
+          <div>
+            <span>від 790 грн</span>
+            <p>2 пакети · 500 г · доставка включена</p>
+          </div>
+          <a class="btn primary" href="#contact">Оформити підписку</a>
+        </div>
+      </div>
+    </section>
+
+    <section class="section wholesale" id="wholesale">
+      <div class="container wholesale-grid">
+        <div>
+          <p class="eyebrow">Опт</p>
+          <h2>Партнерство для бізнесу</h2>
+          <p class="lead">Лоти під ваш формат, навчання бариста, контроль якості та стабільні поставки.</p>
+        </div>
+        <div class="wholesale-card">
+          <div>
+            <h3>Комплексна підтримка</h3>
+            <p>Розрахунок рецептур, калібрування помелу, технічна підтримка.</p>
+          </div>
+          <a class="btn light" href="#contact">Отримати прайс</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer" id="contact">
+    <div class="container footer-grid">
+      <div>
+        <a class="logo" href="#top">
+          <img src="images/logo.png" alt="Odesa Coffe Roasters">
+        </a>
+        <p>Specialty кава з Одеси для дому, офісу та бізнесу.</p>
+      </div>
+      <div>
+        <h3>Контакти</h3>
+        <p>+38 095 697 5455</p>
+        <p>office@chaicoffski.com</p>
+      </div>
+      <div>
+        <h3>Соцмережі</h3>
+        <p>Instagram</p>
+        <p>Facebook</p>
+      </div>
+      <div>
+        <h3>Доставка</h3>
+        <p>Нова Пошта 1-2 дні</p>
+        <p>Самовивіз з кав'ярні</p>
       </div>
     </div>
-  </body>
+  </footer>
+</body>
 </html>
+
