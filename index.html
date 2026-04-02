@@ -45,6 +45,9 @@
       </nav>
       <div class="header-actions">
         <a class="btn ghost" href="#subscription">Підписка</a>
+        <button class="cart-button" type="button" aria-label="Показати корзину">
+          Корзина <span class="badge" id="cart-count">0</span>
+        </button>
         <button class="menu-toggle" type="button" aria-label="Відкрити меню">Меню</button>
       </div>
     </div>
@@ -473,6 +476,16 @@
       </div>
     </div>
   </footer>
+
+  <div class="cart-modal" id="cart-modal" role="dialog" aria-modal="true" aria-labelledby="cart-title">
+    <div class="cart-modal-content">
+      <h3 id="cart-title">Ваша корзина</h3>
+      <div class="cart-items" id="cart-items"></div>
+      <p id="cart-total">Разом: 0 грн</p>
+      <button class="cart-close" type="button" id="cart-close">Закрити</button>
+    </div>
+  </div>
+
   <script src="js/site.js" defer></script>
 </body>
 </html>
