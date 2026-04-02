@@ -175,6 +175,12 @@ p {
   }
 }
 
+@media (max-width: 767px) {
+  .header-actions .btn {
+    display: none;
+  }
+}
+
 
 .nav-dropdown {
   position: relative;
@@ -271,6 +277,9 @@ p {
 }
 
 .header-actions {
+  position: absolute;
+  right: 0;
+  top: 18px;
   display: flex;
   align-items: center;
   gap: 12px;
