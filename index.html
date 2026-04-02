@@ -24,11 +24,24 @@
       </a>
       <nav class="main-nav" aria-label="Основна навігація">
         <a href="#products">Товари</a>
-        <a href="#catalog">Каталог</a>
-        <a href="#story">Про нас</a>
+        <details class="nav-dropdown">
+          <summary class="nav-dropdown-toggle">Каталог</summary>
+          <div class="nav-dropdown-menu" aria-label="Підкатегорії каталогу">
+            <a href="espresso.html">Еспресо</a>
+            <a href="filter.html">Фільтр</a>
+            <a href="drips.html">Дріпи</a>
+          </div>
+        </details>
+        <details class="nav-dropdown">
+          <summary class="nav-dropdown-toggle">Про нас</summary>
+          <div class="nav-dropdown-menu" aria-label="Розділи про компанію">
+            <a href="#story">Про компанію</a>
+            <a href="delivery.html">Доставка</a>
+            <a href="#contact">Контакти</a>
+          </div>
+        </details>
         <a href="#bars">Кав'ярні</a>
         <a href="#wholesale">Опт</a>
-        <a href="#contact">Контакти</a>
       </nav>
       <div class="header-actions">
         <a class="btn ghost" href="#subscription">Підписка</a>
@@ -302,32 +315,32 @@
           <p class="lead">Мінімалістичний вибір, де кожен лот має роль: щільний еспресо, прозорий фільтр або комфортний decaf.</p>
         </div>
         <div class="grid three">
-          <article class="coffee-card">
-            <h3>Espresso</h3>
-            <p>Смаки: какао, спеції, горіх. Створено для стабільної екстракції.</p>
+          <article class="coffee-card" id="espresso">
+            <h3>Еспресо</h3>
+            <p>Смаки: какао, спеції, горіх. Створено для стабільної та щільної екстракції.</p>
             <div class="card-meta">
               <span>бленди</span>
               <span>темний профіль</span>
             </div>
-            <button class="btn outline" type="button">Детальніше</button>
+            <a class="btn outline" href="espresso.html">Детальніше</a>
           </article>
-          <article class="coffee-card">
-            <h3>Filter</h3>
+          <article class="coffee-card" id="filter">
+            <h3>Фільтр</h3>
             <p>Смаки: цитрус, ягоди, тропіки. Чисті, світлі обсмажки.</p>
             <div class="card-meta">
               <span>моносорти</span>
               <span>світлий профіль</span>
             </div>
-            <button class="btn outline" type="button">Детальніше</button>
+            <a class="btn outline" href="filter.html">Детальніше</a>
           </article>
-          <article class="coffee-card">
-            <h3>Decaf</h3>
-            <p>Смаки: карамель, печене яблуко, шоколад. Без компромісів.</p>
+          <article class="coffee-card" id="drips">
+            <h3>Дріпи</h3>
+            <p>Смаки: карамель, яблуко, шоколад. Зручний формат для швидкого заварювання.</p>
             <div class="card-meta">
-              <span>без кофеїну</span>
-              <span>м'який профіль</span>
+              <span>порційний формат</span>
+              <span>зручно в дорогу</span>
             </div>
-            <button class="btn outline" type="button">Детальніше</button>
+            <a class="btn outline" href="drips.html">Детальніше</a>
           </article>
         </div>
       </div>
