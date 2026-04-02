@@ -111,7 +111,7 @@ p {
   display: flex;
   align-items: center;
   height: 48px;
-  margin-right: 80px;
+  margin-right: 0;
   font-family: var(--font-display);
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -192,6 +192,9 @@ p {
 @media (max-width: 767px) {
   .header-actions .btn {
     display: none;
+  }
+  .container {
+    margin: 0;
   }
 }
 
