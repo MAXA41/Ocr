@@ -307,7 +307,7 @@
       <form id="checkout-form">
         <h4>Оформлення замовлення</h4>
         <label>Ім'я<br><input type="text" name="name" required></label>
-        <label>Email<br><input type="email" name="email" required></label>
+        <label>Email<br><input type="email" name="email" required pattern="^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"></label>
         <label>Телефон<br><input type="tel" name="phone" required></label>
         <label>Адреса доставки<br><textarea name="address" rows="3" required></textarea></label>
         <button class="btn primary" type="submit">Підтвердити замовлення</button>

@@ -106,13 +106,6 @@ const cartItemsContainer = document.querySelector('#cart-items');
 const cartTotal = document.querySelector('#cart-total');
 const cartClose = document.querySelector('#cart-close');
 
-const categoryPrices = {
-  espresso: 750,
-  filter: 620,
-  decaf: 680,
-  default: 590,
-};
-
 const getCart = () => JSON.parse(localStorage.getItem(cartKey) || '[]');
 const setCart = (items) => localStorage.setItem(cartKey, JSON.stringify(items));
 
@@ -128,6 +121,7 @@ const renderCart = () => {
   cartItemsContainer.innerHTML = '';
   if (items.length === 0) {
     cartItemsContainer.innerHTML = '<p>Корзина порожня</p>';
+    cartTotal.textContent = 'Разом: 0 грн';
   } else {
     const totalCost = items.reduce((sum, item) => sum + item.price * item.qty, 0);
     items.forEach((item) => {
@@ -219,6 +213,12 @@ if (checkoutForm) {
 
     if (!name || !email || !phone || !address) {
       alert('Будь ласка, заповніть всі поля форми.');
+      return;
+    }
+
+    const emailPattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    if (!emailPattern.test(email)) {
+      alert('Будь ласка, введіть коректну email-адресу.');
       return;
     }
 
