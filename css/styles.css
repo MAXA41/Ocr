@@ -349,11 +349,37 @@ p {
 }
 
 .cart-item {
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
   gap: 8px;
   border-bottom: 1px solid rgba(31, 27, 22, 0.1);
-  padding-bottom: 8px;
+  padding: 8px 0;
+}
+
+.cart-item > div {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cart-item button.item-decrease,
+.cart-item button.item-increase,
+.cart-item button.item-remove {
+  border: 1px solid rgba(15, 15, 13, 0.2);
+  background: #fff;
+  color: var(--ink);
+  border-radius: 4px;
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+
+.cart-item button.item-remove {
+  background: rgba(226, 68, 42, 0.12);
+  border-color: rgba(226, 68, 42, 0.3);
 }
 
 .cart-close {
@@ -364,6 +390,34 @@ p {
   border-radius: 999px;
   cursor: pointer;
 }
+
+.cart-actions {
+  margin-top: 12px;
+  display: flex;
+  justify-content: flex-start;
+  gap: 8px;
+}
+
+#checkout-form {
+  margin-top: 18px;
+  display: grid;
+  gap: 12px;
+}
+
+#checkout-form label {
+  font-size: 13px;
+  color: var(--ink);
+  display: block;
+}
+
+#checkout-form input,
+#checkout-form textarea {
+  width: 100%;
+  border: 1px solid rgba(31, 27, 22, 0.2);
+  border-radius: 8px;
+  padding: 10px;
+}
+
 
 
 .hero {

@@ -133,7 +133,17 @@ const renderCart = () => {
     items.forEach((item) => {
       const row = document.createElement('div');
       row.className = 'cart-item';
-      row.innerHTML = `<span>${item.title} × ${item.qty}</span><span>${item.price * item.qty} грн</span>`;
+      row.dataset.id = item.id;
+      row.innerHTML = `
+        <span>${item.title}</span>
+        <div>
+          <button class="item-decrease" type="button" aria-label="Зменшити кількість">-</button>
+          <span>${item.qty}</span>
+          <button class="item-increase" type="button" aria-label="Збільшити кількість">+</button>
+          <button class="item-remove" type="button" aria-label="Видалити">✕</button>
+        </div>
+        <span>${item.price * item.qty} грн</span>
+      `;
       cartItemsContainer.append(row);
     });
     cartTotal.textContent = `Разом: ${totalCost} грн`;
@@ -152,23 +162,82 @@ const addToCart = (product) => {
   updateCartCounter();
 };
 
-const productBuyButtons = document.querySelectorAll('.product-buy');
-productBuyButtons.forEach((btn) => {
-  btn.addEventListener('click', (event) => {
-    event.preventDefault();
-    const card = btn.closest('.product-card');
-    if (!card) return;
-    const title = card.querySelector('h3')?.textContent?.trim() ?? 'Кавовий лот';
-    const category = card.dataset.category || 'default';
-    const price = categoryPrices[category] || categoryPrices.default;
-    const id = title.toLowerCase().replace(/\s+/g, '-');
-    addToCart({ id, title, category, price });
-    if (cartModal) {
-      cartModal.classList.add('open');
+const cartItems = document.querySelector('#cart-items');
+const clearCartBtn = document.querySelector('#clear-cart');
+const checkoutForm = document.querySelector('#checkout-form');
+
+const updateCartControls = () => {
+  if (!cartItems) return;
+  cartItems.addEventListener('click', (event) => {
+    const target = event.target;
+    const itemRow = target.closest('.cart-item');
+    if (!itemRow) return;
+    const itemId = itemRow.dataset.id;
+    if (!itemId) return;
+    const items = getCart();
+    const itemIndex = items.findIndex((n) => n.id === itemId);
+    if (itemIndex < 0) return;
+
+    if (target.matches('.item-decrease')) {
+      if (items[itemIndex].qty > 1) {
+        items[itemIndex].qty -= 1;
+      } else {
+        items.splice(itemIndex, 1);
+      }
     }
+
+    if (target.matches('.item-increase')) {
+      items[itemIndex].qty += 1;
+    }
+
+    if (target.matches('.item-remove')) {
+      items.splice(itemIndex, 1);
+    }
+
+    setCart(items);
     renderCart();
+    updateCartCounter();
   });
-});
+};
+
+if (clearCartBtn) {
+  clearCartBtn.addEventListener('click', () => {
+    setCart([]);
+    renderCart();
+    updateCartCounter();
+  });
+}
+
+if (checkoutForm) {
+  checkoutForm.addEventListener('submit', (event) => {
+    event.preventDefault();
+    const formData = new FormData(checkoutForm);
+    const name = formData.get('name')?.toString().trim();
+    const email = formData.get('email')?.toString().trim();
+    const phone = formData.get('phone')?.toString().trim();
+    const address = formData.get('address')?.toString().trim();
+
+    if (!name || !email || !phone || !address) {
+      alert('Будь ласка, заповніть всі поля форми.');
+      return;
+    }
+
+    const cart = getCart();
+    if (cart.length === 0) {
+      alert('Корзина порожня. Додайте товар перед оформленням.');
+      return;
+    }
+
+    // Mock submission for now
+    localStorage.setItem('latest_order', JSON.stringify({ name, email, phone, address, cart, total: cart.reduce((sum, item) => sum + item.price * item.qty, 0), date: new Date().toISOString() }));
+    setCart([]);
+    renderCart();
+    updateCartCounter();
+    alert('Дякуємо! Ваше замовлення прийнято.');
+    checkoutForm.reset();
+    if (cartModal) cartModal.classList.remove('open');
+  });
+}
 
 if (cartButton) {
   cartButton.addEventListener('click', () => {
@@ -193,4 +262,5 @@ if (cartModal) {
 
 updateCartCounter();
 renderCart();
+updateCartControls();
 

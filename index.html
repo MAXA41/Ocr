@@ -301,6 +301,17 @@
       <h3 id="cart-title">Ваша корзина</h3>
       <div class="cart-items" id="cart-items"></div>
       <p id="cart-total">Разом: 0 грн</p>
+      <div class="cart-actions">
+        <button class="btn ghost" id="clear-cart" type="button">Очистити корзину</button>
+      </div>
+      <form id="checkout-form">
+        <h4>Оформлення замовлення</h4>
+        <label>Ім'я<br><input type="text" name="name" required></label>
+        <label>Email<br><input type="email" name="email" required></label>
+        <label>Телефон<br><input type="tel" name="phone" required></label>
+        <label>Адреса доставки<br><textarea name="address" rows="3" required></textarea></label>
+        <button class="btn primary" type="submit">Підтвердити замовлення</button>
+      </form>
       <button class="cart-close" type="button" id="cart-close">Закрити</button>
     </div>
   </div>
