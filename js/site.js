@@ -18,34 +18,84 @@ if (menuToggle && mainNav) {
 }
 
 // Product filter (on index page)
+const productGrid = document.querySelector('#product-grid');
 const filterButtons = document.querySelectorAll('.product-filter button');
-const productCards = document.querySelectorAll('.product-card');
 
-if (filterButtons.length > 0 && productCards.length > 0) {
-  // annotate cards by first category tag in meta
-  productCards.forEach((card) => {
-    const category = card.querySelector('.product-meta span')?.textContent?.trim().toLowerCase().split(' ')[0];
-    if (category) {
-      card.dataset.category = category;
-    }
+const renderProducts = (products) => {
+  if (!productGrid) return;
+  productGrid.innerHTML = products
+    .map((product) => {
+      return `
+        <article class="product-card" data-category="${product.category}" data-price="${product.price}">
+          <div class="product-media">
+            <img src="${product.image}" alt="${product.alt}" loading="lazy" decoding="async">
+          </div>
+          <div class="product-body">
+            <h3>${product.name}</h3>
+            <p>${product.description}</p>
+            <div class="product-meta">
+              <span>${product.category}</span>
+              <span>${product.origin || ''}</span>
+              <span>${product.processing || ''}</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
+              <span style="font-weight:700;">${product.price} грн</span>
+              <button class="btn primary product-buy" data-id="${product.id}" type="button">Купити</button>
+            </div>
+          </div>
+        </article>`;
+    })
+    .join('');
+  attachBuyHandlers();
+};
+
+const applyFilter = (filter) => {
+  const cards = productGrid?.querySelectorAll('.product-card') || [];
+  cards.forEach((card) => {
+    const category = card.dataset.category;
+    card.style.display = filter === 'all' || category === filter ? 'grid' : 'none';
   });
+};
 
-  const updateFilter = (filter) => {
-    productCards.forEach((card) => {
-      const category = card.dataset.category;
-      card.style.display = filter === 'all' || category === filter ? 'grid' : 'none';
-    });
-  };
-
+const setupFilter = () => {
   filterButtons.forEach((btn) => {
     btn.addEventListener('click', () => {
       filterButtons.forEach((b) => b.classList.remove('active'));
       btn.classList.add('active');
-      const filterValue = btn.dataset.filter;
-      updateFilter(filterValue);
+      applyFilter(btn.dataset.filter);
     });
   });
-}
+};
+
+const attachBuyHandlers = () => {
+  const productBuyButtons = document.querySelectorAll('.product-buy');
+  productBuyButtons.forEach((btn) => {
+    btn.addEventListener('click', (event) => {
+      event.preventDefault();
+      const card = btn.closest('.product-card');
+      if (!card) return;
+      const title = card.querySelector('h3')?.textContent?.trim() ?? 'Кавовий лот';
+      const category = card.dataset.category || 'default';
+      const price = Number(card.dataset.price || '0');
+      const id = btn.dataset.id || title.toLowerCase().replace(/\s+/g, '-');
+      addToCart({ id, title, category, price });
+      if (cartModal) {
+        cartModal.classList.add('open');
+      }
+      renderCart();
+    });
+  });
+};
+
+fetch('products.json')
+  .then((res) => res.json())
+  .then((products) => {
+    renderProducts(products);
+    setupFilter();
+  })
+  .catch((err) => {
+    console.error('Failed to load products', err);
+  });
 
 // Cart logic
 const cartKey = 'ocr_cart_items';
