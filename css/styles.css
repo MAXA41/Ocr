@@ -111,7 +111,7 @@ p {
   display: flex;
   align-items: center;
   height: 48px;
-  margin-right: 120px;
+  margin-right: 80px;
   font-family: var(--font-display);
   letter-spacing: 0.08em;
   text-transform: uppercase;
