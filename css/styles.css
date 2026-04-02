@@ -157,10 +157,15 @@ p {
 @media (min-width: 768px) {
   .header-actions {
     position: static;
+    margin-left: auto;
   }
 
   .logo {
     margin-right: 0;
+  }
+
+  .header-inner {
+    justify-content: flex-start;
   }
 
   .main-nav {
