@@ -146,11 +146,35 @@ p {
   border-radius: 14px;
   border: 1px solid rgba(31, 27, 22, 0.16);
   box-shadow: 0 16px 28px rgba(15, 15, 13, 0.2);
+  z-index: 10;
 }
 
 .main-nav.open {
   display: flex;
 }
+
+@media (min-width: 768px) {
+  .main-nav {
+    display: flex !important;
+    position: static;
+    flex-direction: row;
+    background: transparent;
+    padding: 0;
+    border: none;
+    box-shadow: none;
+    gap: 28px;
+  }
+
+  .main-nav.open {
+    display: flex;
+  }
+
+  .nav-dropdown-menu {
+    top: calc(100% + 14px);
+    left: 0;
+  }
+}
+
 
 .nav-dropdown {
   position: relative;
