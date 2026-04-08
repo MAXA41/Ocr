@@ -1,0 +1,137 @@
+{
+  "name": "OCR Orders: Webhook to Telegram and Email",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "ocr-orders",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "1",
+      "name": "Order Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300],
+      "webhookId": "ocr-orders"
+    },
+    {
+      "parameters": {
+        "jsCode": "const incoming = $json.body && typeof $json.body === 'object' ? $json.body : $json;\nconst order = incoming.data && typeof incoming.data === 'object' ? incoming.data : incoming;\nconst expectedSharedSecret = 'REPLACE_WITH_SHARED_SECRET';\nconst hasName = Boolean(order.name && String(order.name).trim());\nconst hasPhone = Boolean(order.phone && String(order.phone).trim());\nconst hasAddress = Boolean(order.address && String(order.address).trim());\nconst hasCart = Array.isArray(order.cart) && order.cart.length > 0;\nconst sharedSecretValid = Boolean(order.sharedSecret) && order.sharedSecret === expectedSharedSecret;\nconst isValid = hasName && hasPhone && hasAddress && hasCart && sharedSecretValid;\nconst validationMessage = !sharedSecretValid ? 'Invalid shared secret' : (!hasName || !hasPhone || !hasAddress || !hasCart ? 'Invalid order payload' : 'ok');\nconst items = (order.cart || [])\n  .map((item) => `- ${item.title} x${item.qty} = ${item.price * item.qty} грн`)\n  .join('\\n');\n\nreturn [{\n  json: {\n    ...order,\n    valid: isValid,\n    sharedSecretValid,\n    validationMessage,\n    telegramText: [\n      'Нове замовлення з сайту Odesa Coffee Roasters',\n      '',\n      `Клієнт: ${order.name || '-'}`,\n      `Email: ${order.email || '-'}`,\n      `Телефон: ${order.phone || '-'}`,\n      `Адреса: ${order.address || '-'}`,\n      `Сума: ${order.totalLabel || `${order.total || 0} грн`}`,\n      '',\n      'Товари:',\n      items || '-',\n      '',\n      `Дата: ${order.createdAt || new Date().toISOString()}`,\n      `Канал: ${order.deliveryChannel || 'webhook'}`\n    ].join('\\n'),\n    emailText: [\n      'Нове замовлення з сайту Odesa Coffee Roasters',\n      '',\n      `Клієнт: ${order.name || '-'}`,\n      `Email: ${order.email || '-'}`,\n      `Телефон: ${order.phone || '-'}`,\n      `Адреса: ${order.address || '-'}`,\n      `Сума: ${order.totalLabel || `${order.total || 0} грн`}`,\n      '',\n      'Товари:',\n      items || '-',\n      '',\n      `Дата: ${order.createdAt || new Date().toISOString()}`,\n      `Джерело: ${order.source || 'website'}`\n    ].join('\\n')\n  }\n}];"
+      },
+      "id": "2",
+      "name": "Validate and Format",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [500, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{$json.valid}}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "3",
+      "name": "Payload Valid?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [760, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.telegram.org/botYOUR_TELEGRAM_BOT_TOKEN/sendMessage",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ chat_id: 'YOUR_TELEGRAM_CHAT_ID', text: $json.telegramText }) }}",
+        "options": {}
+      },
+      "id": "4",
+      "name": "Send Telegram Message",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1020, 180]
+    },
+    {
+      "parameters": {
+        "sendTo": "orders@example.com",
+        "subject": "=Нове замовлення OCR на {{$json.totalLabel || ($json.total + ' грн')}}",
+        "emailType": "text",
+        "message": "={{$json.emailText}}",
+        "options": {}
+      },
+      "id": "5",
+      "name": "Send Email",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [1280, 180],
+      "credentials": {
+        "smtp": {
+          "id": "SMTP_CREDENTIAL_ID",
+          "name": "SMTP account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"ok\": true,\n  \"message\": \"Order accepted\"\n}",
+        "options": {}
+      },
+      "id": "6",
+      "name": "Respond Success",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.3,
+      "position": [1540, 180]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseCode": 400,
+        "responseBody": "={\n  \"ok\": false,\n  \"message\": $json.validationMessage || \"Invalid order payload\"\n}",
+        "options": {}
+      },
+      "id": "7",
+      "name": "Respond Invalid",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.3,
+      "position": [1020, 420]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Order Webhook": {
+      "main": [[{ "node": "Validate and Format", "type": "main", "index": 0 }]]
+    },
+    "Validate and Format": {
+      "main": [[{ "node": "Payload Valid?", "type": "main", "index": 0 }]]
+    },
+    "Payload Valid?": {
+      "main": [
+        [{ "node": "Send Telegram Message", "type": "main", "index": 0 }],
+        [{ "node": "Respond Invalid", "type": "main", "index": 0 }]
+      ]
+    },
+    "Send Telegram Message": {
+      "main": [[{ "node": "Send Email", "type": "main", "index": 0 }]]
+    },
+    "Send Email": {
+      "main": [[{ "node": "Respond Success", "type": "main", "index": 0 }]]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "a9d5f2f5-ocr-orders-workflow",
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "id": "ocr-orders-workflow",
+  "tags": []
+}

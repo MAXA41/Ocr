@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Доставка | OCR</title>
-  <meta name="description" content="Умови доставки Odesa Coffe Roasters: відправка, самовивіз, оплата та терміни доставки.">
+  <title>Доставка | Odesa Coffee Roasters</title>
+  <meta name="description" content="Умови доставки Odesa Coffee Roasters: відправка, самовивіз, оплата та терміни доставки.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Sora:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -20,7 +20,7 @@
   <header class="site-header">
     <div class="container header-inner">
       <a class="logo" href="index.html#top">
-        <img src="images/logo.png" alt="Odesa Coffe Roasters">
+        <img src="images/logo.png" alt="Odesa Coffee Roasters">
       </a>
       <nav class="main-nav" aria-label="Основна навігація">
         <a href="index.html#products">Товари</a>
@@ -30,6 +30,7 @@
             <a href="espresso.html">Еспресо</a>
             <a href="filter.html">Фільтр</a>
             <a href="drips.html">Дріпи</a>
+            <a href="decaf.html">Декаф</a>
           </div>
         </details>
         <details class="nav-dropdown">
@@ -45,6 +46,9 @@
       </nav>
       <div class="header-actions">
         <button class="menu-toggle" type="button" aria-label="Відкрити меню">Меню</button>
+        <button class="cart-button" type="button" aria-label="Показати кошик">
+          Кошик <span class="badge" id="cart-count">0</span>
+        </button>
         <a class="btn ghost" href="index.html#subscription">Підписка</a>
       </div>
     </div>
@@ -56,10 +60,10 @@
         <div class="hero-copy">
           <p class="eyebrow">Інформація</p>
           <div class="brand-mark">
-            <img src="images/brand-logo.png" alt="Логотип Odesa Coffe Roasters">
+            <img src="images/brand-logo.png" alt="Логотип Odesa Coffee Roasters">
           </div>
           <h1>Доставка і оплата</h1>
-          <p class="lead">Відправляємо зерно, дріпи та аксесуари по Україні. Працюємо швидко, щоб кава приїжджала свіжою.</p>
+          <p class="lead">Відправляємо зерно, дріпи та аксесуари по Україні. Працюємо швидко, щоб кава приїжджала свіжою та вчасно.</p>
         </div>
         <div class="hero-panel">
           <div class="panel-card accent">
@@ -98,9 +102,9 @@
     <div class="container footer-grid">
       <div>
         <a class="logo" href="index.html#top">
-          <img src="images/logo.png" alt="Odesa Coffe Roasters">
+          <img src="images/logo.png" alt="Odesa Coffee Roasters">
         </a>
-        <p>Specialty кава з Одеси для дому, офісу та бізнесу.</p>
+        <p>Спешелті кава з Одеси для дому, офісу та бізнесу.</p>
       </div>
       <div>
         <h3>Контакти</h3>
@@ -119,5 +123,28 @@
       </div>
     </div>
   </footer>
+
+  <div class="cart-modal" id="cart-modal" role="dialog" aria-modal="true" aria-labelledby="cart-title">
+    <div class="cart-modal-content">
+      <h3 id="cart-title">Ваш кошик</h3>
+      <div class="cart-items" id="cart-items"></div>
+      <p id="cart-total">Разом: 0 грн</p>
+      <div class="cart-actions">
+        <button class="btn ghost" id="clear-cart" type="button">Очистити кошик</button>
+      </div>
+      <form id="checkout-form">
+        <h4>Оформлення замовлення</h4>
+        <label>Ім'я<br><input type="text" name="name" required></label>
+        <label>Email<br><input type="email" name="email" required pattern="^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"></label>
+        <label>Телефон<br><input type="tel" name="phone" required></label>
+        <label>Адреса доставки<br><textarea name="address" rows="3" required></textarea></label>
+        <button class="btn primary" type="submit">Підтвердити замовлення</button>
+        <p class="form-status" id="checkout-status" aria-live="polite"></p>
+      </form>
+      <button class="cart-close" type="button" id="cart-close">Закрити</button>
+    </div>
+  </div>
+
+  <script type="module" src="js/site.js"></script>
 </body>
 </html>

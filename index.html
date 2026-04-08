@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>ocr</title>
-  <meta name="description" content="Odesa Coffe Roasters - обсмажка specialty кави, підписка та зерно для дому й бізнесу.">
+  <title>Odesa Coffee Roasters</title>
+  <meta name="description" content="Odesa Coffee Roasters - спешелті-обсмажка кави, підписка та зерно для дому й бізнесу.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Sora:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -20,7 +20,7 @@
   <header class="site-header">
     <div class="container header-inner">
       <a class="logo" href="#top">
-        <img src="images/logo.png" alt="Odesa Coffe Roasters">
+        <img src="images/logo.png" alt="Odesa Coffee Roasters">
       </a>
       <nav class="main-nav" aria-label="Основна навігація">
         <a href="#products">Товари</a>
@@ -30,6 +30,7 @@
             <a href="espresso.html">Еспресо</a>
             <a href="filter.html">Фільтр</a>
             <a href="drips.html">Дріпи</a>
+            <a href="decaf.html">Декаф</a>
           </div>
         </details>
         <details class="nav-dropdown">
@@ -45,8 +46,8 @@
       </nav>
       <div class="header-actions">
         <button class="menu-toggle" type="button" aria-label="Відкрити меню">Меню</button>
-        <button class="cart-button" type="button" aria-label="Показати корзину">
-          Корзина <span class="badge" id="cart-count">0</span>
+        <button class="cart-button" type="button" aria-label="Показати кошик">
+          Кошик <span class="badge" id="cart-count">0</span>
         </button>
         <a class="btn ghost" href="#subscription">Підписка</a>
       </div>
@@ -59,12 +60,12 @@
         <div class="hero-copy">
           <p class="eyebrow">Одеська обсмажка з характером</p>
           <div class="brand-mark">
-            <img src="images/brand-logo.png" alt="Логотип Odesa Coffe Roasters">
+            <img src="images/brand-logo.png" alt="Логотип Odesa Coffee Roasters">
           </div>
           <h1>Кава з морським акцентом та щільним тілом</h1>
-          <p class="lead">Odesa Coffe Roasters працює з лотами, що залишають післясмак. Ми обсмажуємо дрібними партіями, щоб тримати профілі чистими та яскравими.</p>
+          <p class="lead">Odesa Coffee Roasters працює з лотами, що залишають післясмак. Ми обсмажуємо дрібними партіями, щоб зберігати профілі чистими, виразними та стабільними.</p>
           <div class="hero-actions">
-            <a class="btn primary" href="#catalog">Обрати зерно</a>
+            <a class="btn primary" href="#catalog">Підібрати зерно</a>
             <a class="btn ghost" href="#products">Переглянути товари</a>
             <a class="btn light" href="#bars">Знайти кав'ярню</a>
           </div>
@@ -74,7 +75,7 @@
               <p>від обсмажки до відправки</p>
             </div>
             <div>
-              <span>18</span>
+              <span>23</span>
               <p>лотів у постійному меню</p>
             </div>
             <div>
@@ -105,31 +106,25 @@
 
     <section class="marquee" aria-hidden="true">
       <div class="track">
-        <span>Odesa Coffe Roasters</span>
+        <span>Odesa Coffee Roasters</span>
         <span>ODESSA</span>
         <span>SMALL BATCH</span>
-        <span>Odesa Coffe Roasters</span>
+        <span>Odesa Coffee Roasters</span>
         <span>ODESSA</span>
         <span>SMALL BATCH</span>
       </div>
     </section>
 
-        <section class="section products" id="products">
+    <section class="section products" id="products">
       <div class="container">
         <div class="section-head">
           <div>
-            <p class="eyebrow">Товари</p>
-            <h2>Свіжі лоти та авторські бленди</h2>
+            <p class="eyebrow">Хіти продажу</p>
+            <h2>Три позиції, з яких найчастіше починають</h2>
           </div>
-          <p class="lead">Кава для еспресо, фільтру та холодних напоїв. Оберіть формат, а ми доставимо протягом 48 годин після обсмажки.</p>
+          <p class="lead">На головній залишаємо лише три бестселери: базовий еспресо-бленд, яскравий фільтр і дріпи для швидкого старту.</p>
         </div>
-        <div class="product-filter" aria-label="Фільтр товарів">
-          <button type="button" data-filter="all" class="active">Всі</button>
-          <button type="button" data-filter="espresso">Еспресо</button>
-          <button type="button" data-filter="filter">Фільтр</button>
-          <button type="button" data-filter="decaf">Декаф</button>
-        </div>
-        <div class="product-grid" id="product-grid" aria-live="polite"></div>
+        <div class="product-grid" id="bestsellers-grid" aria-live="polite"></div>
       </div>
     </section>
 
@@ -138,9 +133,9 @@
         <div class="section-head">
           <div>
             <p class="eyebrow">Каталог</p>
-            <h2>Три напрямки обсмажки</h2>
+            <h2>Чотири напрямки каталогу</h2>
           </div>
-          <p class="lead">Мінімалістичний вибір, де кожен лот має роль: щільний еспресо, прозорий фільтр або комфортний decaf.</p>
+          <p class="lead">Окремі сторінки для еспресо, фільтру, дріпів і декафу, щоб кожен формат мав власну добірку без змішування позицій.</p>
         </div>
         <div class="grid three">
           <article class="coffee-card" id="espresso">
@@ -170,6 +165,15 @@
             </div>
             <a class="btn outline" href="drips.html">Детальніше</a>
           </article>
+          <article class="coffee-card" id="decaf">
+            <h3>Декаф</h3>
+            <p>Окрема сторінка під декаф-лоти, щоб без кофеїну теж було легко обрати свій профіль.</p>
+            <div class="card-meta">
+              <span>без кофеїну</span>
+              <span>окремий розділ</span>
+            </div>
+            <a class="btn outline" href="decaf.html">Детальніше</a>
+          </article>
         </div>
       </div>
     </section>
@@ -180,7 +184,7 @@
           <p class="eyebrow">Історія</p>
           <h2>Обсмажка, яка починається з калібру</h2>
           <p class="lead">Ми оцінюємо зерно, підбираємо профілі та повторюємо дегустацію до того моменту, коли смак звучить стабільно в кожному пакеті.</p>
-          <p>Серед наших клієнтів - кав'ярні, студії, офіси та готелі. DAM - це про ритм міста і впевненість у кожній чашці.</p>
+          <p>Серед наших клієнтів - кав'ярні, студії, офіси та готелі. Odesa Coffee Roasters - це про ритм міста, точність обсмажки та впевненість у кожній чашці.</p>
         </div>
         <div class="stats">
           <div>
@@ -208,9 +212,9 @@
         <div class="section-head">
           <div>
             <p class="eyebrow">Кав'ярні</p>
-            <h2>Місця, де живе DAM</h2>
+            <h2>Місця, де живе Odesa Coffee Roasters</h2>
           </div>
-          <p class="lead">Зелена гілка V60, еспресо-шоти та пекарські історії.</p>
+          <p class="lead">V60, еспресо, зерно свіжої обсмажки та міський ритм у кожній локації.</p>
         </div>
         <div class="grid three">
           <article class="location-card">
@@ -274,9 +278,9 @@
     <div class="container footer-grid">
       <div>
         <a class="logo" href="#top">
-          <img src="images/logo.png" alt="Odesa Coffe Roasters">
+          <img src="images/logo.png" alt="Odesa Coffee Roasters">
         </a>
-        <p>Specialty кава з Одеси для дому, офісу та бізнесу.</p>
+        <p>Спешелті кава з Одеси для дому, офісу та бізнесу.</p>
       </div>
       <div>
         <h3>Контакти</h3>
@@ -298,11 +302,11 @@
 
   <div class="cart-modal" id="cart-modal" role="dialog" aria-modal="true" aria-labelledby="cart-title">
     <div class="cart-modal-content">
-      <h3 id="cart-title">Ваша корзина</h3>
+      <h3 id="cart-title">Ваш кошик</h3>
       <div class="cart-items" id="cart-items"></div>
       <p id="cart-total">Разом: 0 грн</p>
       <div class="cart-actions">
-        <button class="btn ghost" id="clear-cart" type="button">Очистити корзину</button>
+        <button class="btn ghost" id="clear-cart" type="button">Очистити кошик</button>
       </div>
       <form id="checkout-form">
         <h4>Оформлення замовлення</h4>
@@ -311,12 +315,13 @@
         <label>Телефон<br><input type="tel" name="phone" required></label>
         <label>Адреса доставки<br><textarea name="address" rows="3" required></textarea></label>
         <button class="btn primary" type="submit">Підтвердити замовлення</button>
+        <p class="form-status" id="checkout-status" aria-live="polite"></p>
       </form>
       <button class="cart-close" type="button" id="cart-close">Закрити</button>
     </div>
   </div>
 
-  <script src="js/site.js" defer></script>
+  <script type="module" src="js/site.js"></script>
 </body>
 </html>
 

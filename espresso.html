@@ -3,14 +3,14 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Еспресо | OCR</title>
-  <meta name="description" content="Еспресо-лоти Odesa Coffe Roasters для щільної солодкої чашки та стабільної екстракції.">
+  <title>Еспресо | Odesa Coffee Roasters</title>
+  <meta name="description" content="Еспресо-лоти Odesa Coffee Roasters для щільної солодкої чашки та стабільної екстракції.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Sora:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/styles.css">
 </head>
-<body class="page">
+<body class="page" data-page-category="espresso">
   <div class="backdrop" aria-hidden="true">
     <span class="glow one"></span>
     <span class="glow two"></span>
@@ -20,7 +20,7 @@
   <header class="site-header">
     <div class="container header-inner">
       <a class="logo" href="index.html#top">
-        <img src="images/logo.png" alt="Odesa Coffe Roasters">
+        <img src="images/logo.png" alt="Odesa Coffee Roasters">
       </a>
       <nav class="main-nav" aria-label="Основна навігація">
         <a href="index.html#products">Товари</a>
@@ -30,6 +30,7 @@
             <a href="espresso.html">Еспресо</a>
             <a href="filter.html">Фільтр</a>
             <a href="drips.html">Дріпи</a>
+            <a href="decaf.html">Декаф</a>
           </div>
         </details>
         <details class="nav-dropdown">
@@ -45,6 +46,9 @@
       </nav>
       <div class="header-actions">
         <button class="menu-toggle" type="button" aria-label="Відкрити меню">Меню</button>
+        <button class="cart-button" type="button" aria-label="Показати кошик">
+          Кошик <span class="badge" id="cart-count">0</span>
+        </button>
         <a class="btn ghost" href="index.html#subscription">Підписка</a>
       </div>
     </div>
@@ -56,10 +60,10 @@
         <div class="hero-copy">
           <p class="eyebrow">Каталог</p>
           <div class="brand-mark">
-            <img src="images/brand-logo.png" alt="Логотип Odesa Coffe Roasters">
+            <img src="images/brand-logo.png" alt="Логотип Odesa Coffee Roasters">
           </div>
           <h1>Еспресо</h1>
-          <p class="lead">Щільні профілі для класичних та сучасних еспресо-рецептів. Більше тіла, солодкості та стабільності у чашці.</p>
+          <p class="lead">Щільні профілі для класичних і сучасних еспресо-рецептів. Більше тіла, солодкості та стабільності в чашці.</p>
           <div class="hero-actions">
             <a class="btn primary" href="#espresso-products">Дивитися лоти</a>
             <a class="btn ghost" href="index.html#catalog">Назад до каталогу</a>
@@ -87,85 +91,9 @@
             <p class="eyebrow">Добірка</p>
             <h2>Еспресо-лоти</h2>
           </div>
-          <p class="lead">Позиції, що краще розкриваються в еспресо-машині та молочних напоях.</p>
+          <p class="lead">Тут зібрані всі актуальні еспресо-позиції: бленди, моносорти та лоти для молочних напоїв.</p>
         </div>
-        <div class="product-grid">
-          <article class="product-card">
-            <div class="product-media">
-              <img src="images/product-4.jpg" alt="Пакування кави Colombia Decaf Caturra Bourbon">
-            </div>
-            <div class="product-body">
-              <h3>Colombia Decaf Caturra Bourbon</h3>
-              <p>Цукор panela, молочний шоколад, кокос, карамель.</p>
-              <div class="product-meta">
-                <span>еспресо</span>
-                <span>Risaralda</span>
-                <span>natural</span>
-              </div>
-              <a class="btn primary product-buy" href="index.html#contact">Купити</a>
-            </div>
-          </article>
-          <article class="product-card">
-            <div class="product-media">
-              <img src="images/product-7.jpg" alt="Пакування кави Kenya Wanrich AA">
-            </div>
-            <div class="product-body">
-              <h3>Kenya Wanrich AA</h3>
-              <p>Гранат, темний виноград, бренді. Щільна ягідна чашка.</p>
-              <div class="product-meta">
-                <span>еспресо</span>
-                <span>Trans Nzoia</span>
-                <span>washed</span>
-              </div>
-              <a class="btn primary product-buy" href="index.html#contact">Купити</a>
-            </div>
-          </article>
-          <article class="product-card">
-            <div class="product-media">
-              <img src="images/product-10.jpg" alt="Пакування кави Rwanda Nyamasasa Red Bourbon">
-            </div>
-            <div class="product-body">
-              <h3>Rwanda Nyamasasa Red Bourbon</h3>
-              <p>Білий виноград, жовта слива, ягідні ноти та солодкий фініш.</p>
-              <div class="product-meta">
-                <span>еспресо</span>
-                <span>South Kivu</span>
-                <span>natural</span>
-              </div>
-              <a class="btn primary product-buy" href="index.html#contact">Купити</a>
-            </div>
-          </article>
-          <article class="product-card">
-            <div class="product-media">
-              <img src="images/product-11.jpg" alt="Пакування кави El Salvador Hacienda Dorada Washed">
-            </div>
-            <div class="product-body">
-              <h3>El Salvador Hacienda Dorada Washed</h3>
-              <p>Тростинний цукор, червоне яблуко, слива, какао.</p>
-              <div class="product-meta">
-                <span>еспресо</span>
-                <span>Apaneca-Llamatepec</span>
-                <span>washed</span>
-              </div>
-              <a class="btn primary product-buy" href="index.html#contact">Купити</a>
-            </div>
-          </article>
-          <article class="product-card">
-            <div class="product-media">
-              <img src="images/product-12.jpg" alt="Пакування кави Colombia El Rincon">
-            </div>
-            <div class="product-body">
-              <h3>Colombia El Rincon</h3>
-              <p>Вишня, пряний мед, грейпфрут, ром. Яскравий солодкий еспресо.</p>
-              <div class="product-meta">
-                <span>еспресо</span>
-                <span>Huila</span>
-                <span>natural</span>
-              </div>
-              <a class="btn primary product-buy" href="index.html#contact">Купити</a>
-            </div>
-          </article>
-        </div>
+        <div class="product-grid" id="category-grid" aria-live="polite"></div>
       </div>
     </section>
   </main>
@@ -174,9 +102,9 @@
     <div class="container footer-grid">
       <div>
         <a class="logo" href="index.html#top">
-          <img src="images/logo.png" alt="Odesa Coffe Roasters">
+          <img src="images/logo.png" alt="Odesa Coffee Roasters">
         </a>
-        <p>Specialty кава з Одеси для дому, офісу та бізнесу.</p>
+        <p>Спешелті кава з Одеси для дому, офісу та бізнесу.</p>
       </div>
       <div>
         <h3>Контакти</h3>
@@ -195,5 +123,28 @@
       </div>
     </div>
   </footer>
+
+  <div class="cart-modal" id="cart-modal" role="dialog" aria-modal="true" aria-labelledby="cart-title">
+    <div class="cart-modal-content">
+      <h3 id="cart-title">Ваш кошик</h3>
+      <div class="cart-items" id="cart-items"></div>
+      <p id="cart-total">Разом: 0 грн</p>
+      <div class="cart-actions">
+        <button class="btn ghost" id="clear-cart" type="button">Очистити кошик</button>
+      </div>
+      <form id="checkout-form">
+        <h4>Оформлення замовлення</h4>
+        <label>Ім'я<br><input type="text" name="name" required></label>
+        <label>Email<br><input type="email" name="email" required pattern="^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"></label>
+        <label>Телефон<br><input type="tel" name="phone" required></label>
+        <label>Адреса доставки<br><textarea name="address" rows="3" required></textarea></label>
+        <button class="btn primary" type="submit">Підтвердити замовлення</button>
+        <p class="form-status" id="checkout-status" aria-live="polite"></p>
+      </form>
+      <button class="cart-close" type="button" id="cart-close">Закрити</button>
+    </div>
+  </div>
+
+  <script type="module" src="js/site.js"></script>
 </body>
 </html>

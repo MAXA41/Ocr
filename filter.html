@@ -3,14 +3,14 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Фільтр | OCR</title>
-  <meta name="description" content="Фільтр-лоти Odesa Coffe Roasters з чистим профілем, кислотністю та яскравою ароматикою.">
+  <title>Фільтр | Odesa Coffee Roasters</title>
+  <meta name="description" content="Фільтр-лоти Odesa Coffee Roasters з чистим профілем, кислотністю та яскравою ароматикою.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Sora:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/styles.css">
 </head>
-<body class="page">
+<body class="page" data-page-category="filter">
   <div class="backdrop" aria-hidden="true">
     <span class="glow one"></span>
     <span class="glow two"></span>
@@ -20,7 +20,7 @@
   <header class="site-header">
     <div class="container header-inner">
       <a class="logo" href="index.html#top">
-        <img src="images/logo.png" alt="Odesa Coffe Roasters">
+        <img src="images/logo.png" alt="Odesa Coffee Roasters">
       </a>
       <nav class="main-nav" aria-label="Основна навігація">
         <a href="index.html#products">Товари</a>
@@ -30,6 +30,7 @@
             <a href="espresso.html">Еспресо</a>
             <a href="filter.html">Фільтр</a>
             <a href="drips.html">Дріпи</a>
+            <a href="decaf.html">Декаф</a>
           </div>
         </details>
         <details class="nav-dropdown">
@@ -45,6 +46,9 @@
       </nav>
       <div class="header-actions">
         <button class="menu-toggle" type="button" aria-label="Відкрити меню">Меню</button>
+        <button class="cart-button" type="button" aria-label="Показати кошик">
+          Кошик <span class="badge" id="cart-count">0</span>
+        </button>
         <a class="btn ghost" href="index.html#subscription">Підписка</a>
       </div>
     </div>
@@ -56,10 +60,10 @@
         <div class="hero-copy">
           <p class="eyebrow">Каталог</p>
           <div class="brand-mark">
-            <img src="images/brand-logo.png" alt="Логотип Odesa Coffe Roasters">
+            <img src="images/brand-logo.png" alt="Логотип Odesa Coffee Roasters">
           </div>
           <h1>Фільтр</h1>
-          <p class="lead">Світлі обсмажки з прозорою чашкою, фруктовістю та чистою солодкістю для V60, Kalita та Aeropress.</p>
+          <p class="lead">Світлі обсмажки з прозорою чашкою, фруктовістю та чистою солодкістю для V60, Kalita й AeroPress.</p>
           <div class="hero-actions">
             <a class="btn primary" href="#filter-products">Дивитися лоти</a>
             <a class="btn ghost" href="index.html#catalog">Назад до каталогу</a>
@@ -87,115 +91,9 @@
             <p class="eyebrow">Добірка</p>
             <h2>Фільтр-лоти</h2>
           </div>
-          <p class="lead">Моносорти та яскраві мікролоти для чистого альтернативного заварювання.</p>
+          <p class="lead">Всі актуальні фільтр-лоти в одному розділі: від щоденних моносортів до більш виразних мікролотів.</p>
         </div>
-        <div class="product-grid">
-          <article class="product-card">
-            <div class="product-media">
-              <img src="images/product-1.jpg" alt="Пакування кави Colombia Alto Cielo Tabi">
-            </div>
-            <div class="product-body">
-              <h3>Colombia Alto Cielo Tabi</h3>
-              <p>Темний виноград, мандарин, ром. Соковита та глибока чашка.</p>
-              <div class="product-meta">
-                <span>фільтр</span>
-                <span>Huila</span>
-                <span>natural</span>
-              </div>
-              <a class="btn primary product-buy" href="index.html#contact">Купити</a>
-            </div>
-          </article>
-          <article class="product-card">
-            <div class="product-media">
-              <img src="images/product-2.jpg" alt="Пакування кави Kenya Rukira AA">
-            </div>
-            <div class="product-body">
-              <h3>Kenya Rukira AA</h3>
-              <p>Червоне вино, слива, ягідний морс. Насичений ягідний профіль.</p>
-              <div class="product-meta">
-                <span>фільтр</span>
-                <span>Nyeri</span>
-                <span>washed</span>
-              </div>
-              <a class="btn primary product-buy" href="index.html#contact">Купити</a>
-            </div>
-          </article>
-          <article class="product-card">
-            <div class="product-media">
-              <img src="images/product-3.jpg" alt="Пакування кави Honduras Las Delicias">
-            </div>
-            <div class="product-body">
-              <h3>Honduras Las Delicias</h3>
-              <p>Виноград, яблуко, персик, тростинний цукор, молочний шоколад.</p>
-              <div class="product-meta">
-                <span>фільтр</span>
-                <span>Montecillos</span>
-                <span>anaerobic honey</span>
-              </div>
-              <a class="btn primary product-buy" href="index.html#contact">Купити</a>
-            </div>
-          </article>
-          <article class="product-card">
-            <div class="product-media">
-              <img src="images/product-5.jpg" alt="Пакування кави Colombia Bella Vista Pink Bourbon">
-            </div>
-            <div class="product-body">
-              <h3>Colombia Bella Vista Pink Bourbon</h3>
-              <p>Персик, квітковий чай та м'яка солодкість у післясмаку.</p>
-              <div class="product-meta">
-                <span>фільтр</span>
-                <span>Huila</span>
-                <span>72 год. ферментації</span>
-              </div>
-              <a class="btn primary product-buy" href="index.html#contact">Купити</a>
-            </div>
-          </article>
-          <article class="product-card">
-            <div class="product-media">
-              <img src="images/product-6.jpg" alt="Пакування кави Costa Rica Las Torres">
-            </div>
-            <div class="product-body">
-              <h3>Costa Rica Las Torres</h3>
-              <p>Манго, рожевий грейпфрут, ваніль, карамель та соковитий фініш.</p>
-              <div class="product-meta">
-                <span>фільтр</span>
-                <span>Brunca</span>
-                <span>anaerobic honey</span>
-              </div>
-              <a class="btn primary product-buy" href="index.html#contact">Купити</a>
-            </div>
-          </article>
-          <article class="product-card">
-            <div class="product-media">
-              <img src="images/product-8.jpg" alt="Пакування кави Ethiopia Guji Uraga">
-            </div>
-            <div class="product-body">
-              <h3>Ethiopia Guji Uraga</h3>
-              <p>Квіти, сухофрукти, мед, лікер, апельсин. Ароматна легка чашка.</p>
-              <div class="product-meta">
-                <span>фільтр</span>
-                <span>Guji Uraga</span>
-                <span>72 год. ферментації</span>
-              </div>
-              <a class="btn primary product-buy" href="index.html#contact">Купити</a>
-            </div>
-          </article>
-          <article class="product-card">
-            <div class="product-media">
-              <img src="images/product-9.jpg" alt="Пакування кави Rwanda Fuci">
-            </div>
-            <div class="product-body">
-              <h3>Rwanda Fuci</h3>
-              <p>Вишня, яблуко, родзинки, сухофрукти. Збалансований фруктовий фільтр.</p>
-              <div class="product-meta">
-                <span>фільтр</span>
-                <span>Southern Province</span>
-                <span>washed</span>
-              </div>
-              <a class="btn primary product-buy" href="index.html#contact">Купити</a>
-            </div>
-          </article>
-        </div>
+        <div class="product-grid" id="category-grid" aria-live="polite"></div>
       </div>
     </section>
   </main>
@@ -204,9 +102,9 @@
     <div class="container footer-grid">
       <div>
         <a class="logo" href="index.html#top">
-          <img src="images/logo.png" alt="Odesa Coffe Roasters">
+          <img src="images/logo.png" alt="Odesa Coffee Roasters">
         </a>
-        <p>Specialty кава з Одеси для дому, офісу та бізнесу.</p>
+        <p>Спешелті кава з Одеси для дому, офісу та бізнесу.</p>
       </div>
       <div>
         <h3>Контакти</h3>
@@ -225,5 +123,28 @@
       </div>
     </div>
   </footer>
+
+  <div class="cart-modal" id="cart-modal" role="dialog" aria-modal="true" aria-labelledby="cart-title">
+    <div class="cart-modal-content">
+      <h3 id="cart-title">Ваш кошик</h3>
+      <div class="cart-items" id="cart-items"></div>
+      <p id="cart-total">Разом: 0 грн</p>
+      <div class="cart-actions">
+        <button class="btn ghost" id="clear-cart" type="button">Очистити кошик</button>
+      </div>
+      <form id="checkout-form">
+        <h4>Оформлення замовлення</h4>
+        <label>Ім'я<br><input type="text" name="name" required></label>
+        <label>Email<br><input type="email" name="email" required pattern="^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"></label>
+        <label>Телефон<br><input type="tel" name="phone" required></label>
+        <label>Адреса доставки<br><textarea name="address" rows="3" required></textarea></label>
+        <button class="btn primary" type="submit">Підтвердити замовлення</button>
+        <p class="form-status" id="checkout-status" aria-live="polite"></p>
+      </form>
+      <button class="cart-close" type="button" id="cart-close">Закрити</button>
+    </div>
+  </div>
+
+  <script type="module" src="js/site.js"></script>
 </body>
 </html>

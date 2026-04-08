@@ -3,14 +3,14 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Дріпи | Odesa Coffee Roasters</title>
-  <meta name="description" content="Дріпи Odesa Coffee Roasters для швидкого заварювання вдома, в офісі та в дорозі.">
+  <title>Лот | Odesa Coffee Roasters</title>
+  <meta name="description" content="Сторінка товару Odesa Coffee Roasters з описом, параметрами лоту та рекомендаціями по заварюванню.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Sora:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/styles.css">
 </head>
-<body class="page" data-page-category="drips">
+<body class="page">
   <div class="backdrop" aria-hidden="true">
     <span class="glow one"></span>
     <span class="glow two"></span>
@@ -54,49 +54,20 @@
     </div>
   </header>
 
-  <main>
-    <section class="hero">
-      <div class="container hero-grid">
-        <div class="hero-copy">
-          <p class="eyebrow">Каталог</p>
-          <div class="brand-mark">
-            <img src="images/brand-logo.png" alt="Логотип Odesa Coffee Roasters">
-          </div>
-          <h1>Дріпи</h1>
-          <p class="lead">Порційна кава для швидкого та акуратного заварювання без додаткового обладнання. Формат для дому, офісу й поїздок.</p>
-          <div class="hero-actions">
-            <a class="btn primary" href="#drip-products">Дивитися набори</a>
-            <a class="btn ghost" href="index.html#catalog">Назад до каталогу</a>
-          </div>
-        </div>
-        <div class="hero-panel">
-          <div class="panel-card accent">
-            <p class="label">Формат</p>
-            <h3>1 пакет = 1 чашка</h3>
-            <p>Заварювання за 2-3 хвилини без воронки та ваг.</p>
-          </div>
-          <div class="panel-card">
-            <p class="label">Сценарій</p>
-            <h3>Подорожі та офіс</h3>
-            <p>Компактні набори, які легко брати із собою щодня.</p>
-          </div>
-        </div>
-      </div>
-    </section>
+  <main id="product-detail"></main>
 
-    <section class="section products" id="drip-products">
-      <div class="container">
-        <div class="section-head">
-          <div>
-            <p class="eyebrow">Добірка</p>
-            <h2>Дріп-позиції</h2>
-          </div>
-          <p class="lead">Окремий розділ для дріпів і коробок, які зручно брати в дорогу, в офіс чи на подарунок.</p>
+  <section class="section">
+    <div class="container">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">Схожі позиції</p>
+          <h2>Ще з цієї ж категорії</h2>
         </div>
-        <div class="product-grid" id="category-grid" aria-live="polite"></div>
+        <p class="lead">Якщо хочеться порівняти профілі, нижче зібрали ще кілька близьких за форматом позицій.</p>
       </div>
-    </section>
-  </main>
+      <div class="product-grid" id="related-grid" aria-live="polite"></div>
+    </div>
+  </section>
 
   <footer class="site-footer" id="contact">
     <div class="container footer-grid">
