@@ -256,11 +256,14 @@ const renderProductNotFound = () => {
 
 const getProductPayload = (button) => {
   const card = button.closest('.product-card');
-  if (!card) return null;
+  const detailSection = button.closest('.product-detail-copy');
 
-  const title = button.dataset.name || card.querySelector('h3')?.textContent?.trim() || 'Кавовий лот';
-  const category = button.dataset.category || card.dataset.category || 'default';
-  const price = Number(button.dataset.price || card.dataset.price || '0');
+  const title = button.dataset.name
+    || card?.querySelector('h3')?.textContent?.trim()
+    || detailSection?.querySelector('h1')?.textContent?.trim()
+    || 'Кавовий лот';
+  const category = button.dataset.category || card?.dataset.category || 'default';
+  const price = Number(button.dataset.price || card?.dataset.price || '0');
   const id = button.dataset.id || title.toLowerCase().replace(/\s+/g, '-');
 
   return { id, title, category, price };
