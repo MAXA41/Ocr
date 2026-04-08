@@ -1,9 +1,17 @@
 // Mobile menu toggle
-const orderProvider = (import.meta.env.VITE_ORDER_PROVIDER || 'web3forms').trim();
-const web3FormsAccessKey = (import.meta.env.VITE_WEB3FORMS_ACCESS_KEY || '').trim();
-const fallbackWebhookUrl = (import.meta.env.VITE_ORDER_FALLBACK_WEBHOOK_URL || '').trim();
-const duplicateToWebhook = (import.meta.env.VITE_ORDER_DUPLICATE_TO_WEBHOOK || 'false').trim() === 'true';
-const webhookSharedSecret = (import.meta.env.VITE_ORDER_WEBHOOK_SHARED_SECRET || '').trim();
+const viteEnv = import.meta.env || {};
+const runtimeEnv = globalThis.__OCR_ENV__ || {};
+
+const getEnv = (key, fallback = '') => {
+  const value = runtimeEnv[key] ?? viteEnv[key] ?? fallback;
+  return String(value).trim();
+};
+
+const orderProvider = getEnv('VITE_ORDER_PROVIDER', 'web3forms');
+const web3FormsAccessKey = getEnv('VITE_WEB3FORMS_ACCESS_KEY');
+const fallbackWebhookUrl = getEnv('VITE_ORDER_FALLBACK_WEBHOOK_URL');
+const duplicateToWebhook = getEnv('VITE_ORDER_DUPLICATE_TO_WEBHOOK', 'false') === 'true';
+const webhookSharedSecret = getEnv('VITE_ORDER_WEBHOOK_SHARED_SECRET');
 
 const menuToggle = document.querySelector('.menu-toggle');
 const mainNav = document.querySelector('.main-nav');
