@@ -134,10 +134,47 @@
       </div>
       <form id="checkout-form">
         <h4>Оформлення замовлення</h4>
-        <label>Ім'я<br><input type="text" name="name" required></label>
-        <label>Email<br><input type="email" name="email" required pattern="^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"></label>
-        <label>Телефон<br><input type="tel" name="phone" required></label>
-        <label>Адреса доставки<br><textarea name="address" rows="3" required></textarea></label>
+        <div class="checkout-grid">
+          <div class="checkout-section">
+            <p class="checkout-section-title">Контакти</p>
+            <label>Ім'я<br><input type="text" name="name" autocomplete="name" required></label>
+            <label>Телефон<br><input type="tel" name="phone" autocomplete="tel" required></label>
+            <label>Email<br><input type="email" name="email" autocomplete="email" required pattern="^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"></label>
+          </div>
+          <div class="checkout-section">
+            <p class="checkout-section-title">Доставка</p>
+            <label>Спосіб доставки<br>
+              <select name="deliveryMethod" required>
+                <option value="">Оберіть спосіб доставки</option>
+                <option value="nova-branch">Нова Пошта: відділення</option>
+                <option value="nova-locker">Нова Пошта: поштомат</option>
+                <option value="courier">Адресна доставка</option>
+                <option value="pickup">Самовивіз з кав'ярні партнера</option>
+              </select>
+            </label>
+            <label data-field="city">Місто<br><input type="text" name="city" autocomplete="address-level2" data-list-id="partner-cities-list" required><datalist id="partner-cities-list"></datalist><small class="field-hint" data-field-hint="city"></small></label>
+            <label data-field="deliveryDetails">Відділення / адреса<br><textarea name="deliveryDetails" rows="3" required></textarea><input type="text" name="deliveryLocation" hidden disabled autocomplete="off" aria-label="Пункт доставки Нової Пошти"><select name="pickupLocation" hidden disabled aria-label="Кав'ярня для самовивозу"></select><small class="field-hint" data-field-hint="pickup"></small><small class="field-hint" data-field-hint="np"></small></label>
+          </div>
+          <div class="checkout-section">
+            <p class="checkout-section-title">Оплата і коментар</p>
+            <label>Спосіб оплати<br>
+              <select name="paymentMethod" required>
+                <option value="">Оберіть спосіб оплати</option>
+                <option value="card-transfer">Переказ на картку</option>
+                <option value="bank-details">Оплата за реквізитами</option>
+                <option value="cod">Післяплата</option>
+                <option value="cash-pickup">Готівкою при самовивозі</option>
+              </select>
+            </label>
+            <label>Коментар до замовлення<br><textarea name="comment" rows="3" placeholder="Наприклад: зателефонувати перед відправкою"></textarea></label>
+          </div>
+          <div class="checkout-section checkout-section summary">
+            <p class="checkout-section-title">Підсумок замовлення</p>
+            <div class="checkout-summary" id="checkout-summary">
+              <p>Додайте товари в кошик, щоб побачити підсумок.</p>
+            </div>
+          </div>
+        </div>
         <button class="btn primary" type="submit">Підтвердити замовлення</button>
         <p class="form-status" id="checkout-status" aria-live="polite"></p>
       </form>

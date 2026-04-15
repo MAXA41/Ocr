@@ -9,7 +9,13 @@
   "name": "Ім'я клієнта",
   "email": "client@example.com",
   "phone": "+380991112233",
-  "address": "Одеса, вул. ...",
+  "city": "Одеса",
+  "deliveryMethod": "nova-branch",
+  "deliveryMethodLabel": "Нова Пошта: відділення",
+  "deliveryDetails": "Відділення №7",
+  "paymentMethod": "card-transfer",
+  "paymentMethodLabel": "Переказ на картку",
+  "comment": "Подзвонити перед відправкою",
   "total": 1560,
   "totalLabel": "1560 грн",
   "cart": [
@@ -18,7 +24,9 @@
       "title": "Kenya Wanrich AA",
       "category": "espresso",
       "price": 810,
-      "qty": 1
+      "qty": 1,
+      "grindMethod": "filter",
+      "grindLabel": "Помол під фільтр"
     }
   ],
   "orderItems": "Kenya Wanrich AA x1 - 810 грн, Rwanda Fuci x1 - 750 грн",
@@ -89,7 +97,11 @@ https://YOUR-N8N-DOMAIN/webhook/ocr-orders
 Клієнт: {{$json.name}}
 Email: {{$json.email}}
 Телефон: {{$json.phone}}
-Адреса: {{$json.address}}
+Місто: {{$json.city}}
+Доставка: {{$json.deliveryMethodLabel}}
+Деталі доставки: {{$json.deliveryDetails}}
+Оплата: {{$json.paymentMethodLabel}}
+Коментар: {{$json.comment}}
 Сума: {{$json.totalLabel}}
 
 Товари:
@@ -112,7 +124,10 @@ const expectedSharedSecret = "REPLACE_WITH_SHARED_SECRET";
 const sharedSecretValid =
   Boolean(order.sharedSecret) && order.sharedSecret === expectedSharedSecret;
 const items = (order.cart || [])
-  .map((item) => `- ${item.title} x${item.qty} = ${item.price * item.qty} грн`)
+  .map(
+    (item) =>
+      `- ${item.title} (${item.grindLabel || item.grindMethod || "без уточнення"}) x${item.qty} = ${item.price * item.qty} грн`,
+  )
   .join("\n");
 
 return [
@@ -127,7 +142,11 @@ return [
         `Клієнт: ${order.name || "-"}`,
         `Email: ${order.email || "-"}`,
         `Телефон: ${order.phone || "-"}`,
-        `Адреса: ${order.address || "-"}`,
+        `Місто: ${order.city || "-"}`,
+        `Доставка: ${order.deliveryMethodLabel || order.deliveryMethod || "-"}`,
+        `Деталі доставки: ${order.deliveryDetails || "-"}`,
+        `Оплата: ${order.paymentMethodLabel || order.paymentMethod || "-"}`,
+        `Коментар: ${order.comment || "-"}`,
         `Сума: ${order.totalLabel || `${order.total} грн`}`,
         "",
         "Товари:",
