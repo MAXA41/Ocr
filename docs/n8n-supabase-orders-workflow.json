@@ -1,0 +1,394 @@
+{
+  "name": "OCR Orders: Webhook to Supabase and Telegram",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "ocr-orders-supabase",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "1",
+      "name": "Order Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        240,
+        320
+      ],
+      "webhookId": "ocr-orders-supabase"
+    },
+    {
+      "parameters": {
+        "jsCode": "const incoming = $json.body && typeof $json.body === 'object' ? $json.body : $json;\nconst payload = incoming.data && typeof incoming.data === 'object' ? incoming.data : incoming;\nconst expectedSharedSecret = $env.ORDER_WEBHOOK_SHARED_SECRET || '';\nconst normalizedEmail = String(payload.customerEmail || payload.email || '').trim().toLowerCase();\nconst normalizedCustomerId = String(payload.customerId || '').trim();\nconst safeCustomerId = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(normalizedCustomerId)\n  ? normalizedCustomerId\n  : '00000000-0000-0000-0000-000000000000';\nconst safeEmail = normalizedEmail || '__missing_email__@local.invalid';\nconst hasName = Boolean(String(payload.name || '').trim());\nconst hasPhone = Boolean(String(payload.phone || '').trim());\nconst hasEmail = Boolean(normalizedEmail);\nconst hasDeliveryMethod = Boolean(String(payload.deliveryMethod || '').trim());\nconst cart = Array.isArray(payload.cart) ? payload.cart : [];\nconst hasCart = cart.length > 0;\nconst sharedSecretValid = !expectedSharedSecret || (Boolean(payload.sharedSecret) && payload.sharedSecret === expectedSharedSecret);\nconst isValid = hasName && hasPhone && hasEmail && hasDeliveryMethod && hasCart && sharedSecretValid;\nconst validationMessage = !sharedSecretValid\n  ? 'Invalid shared secret'\n  : (!hasName || !hasPhone || !hasEmail || !hasDeliveryMethod || !hasCart\n      ? 'Invalid order payload'\n      : 'ok');\nconst itemsText = cart\n  .map((item) => {\n    const qty = Number(item.qty || 0);\n    const price = Number(item.price || 0);\n    const lineTotal = qty * price;\n    const grind = item.grindLabel ? ` (${item.grindLabel})` : '';\n    return `- ${item.title || 'Item'} x${qty}${grind} = ${lineTotal} грн`;\n  })\n  .join('\\n');\nconst totalLabel = payload.totalLabel || `${Number(payload.total || 0)} грн`;\nconst telegramText = [\n  'Нове замовлення з сайту Odesa Coffee Roasters',\n  '',\n  `Клієнт: ${payload.name || '-'}`,\n  `Email: ${payload.email || payload.customerEmail || '-'}`,\n  `Телефон: ${payload.phone || '-'}`,\n  `Місто: ${payload.city || '-'}`,\n  `Доставка: ${payload.deliveryMethodLabel || payload.deliveryMethod || '-'}`,\n  `Деталі доставки: ${payload.deliveryDetails || '-'}`,\n  `Оплата: ${payload.paymentMethodLabel || payload.paymentMethod || '-'}`,\n  `Сума: ${totalLabel}`,\n  '',\n  'Товари:',\n  itemsText || '-',\n  '',\n  `Дата: ${payload.createdAt || new Date().toISOString()}`,\n  `Джерело: ${payload.source || 'website'}`\n].join('\\n');\n\nreturn [{\n  json: {\n    payload,\n    cart,\n    valid: isValid,\n    sharedSecretValid,\n    validationMessage,\n    customerId: normalizedCustomerId || null,\n    safeCustomerId,\n    email: safeEmail,\n    telegramText\n  }\n}];"
+      },
+      "id": "2",
+      "name": "Validate Order",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        500,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{$json.valid}}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "3",
+      "name": "Payload Valid?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        760,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{$env.SUPABASE_URL + '/rest/v1/profiles?id=eq.' + $json.safeCustomerId + '&select=id,email'}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{$env.SUPABASE_SECRET_KEY}}"
+            },
+            {
+              "name": "Authorization",
+              "value": "={{'Bearer ' + $env.SUPABASE_SECRET_KEY}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "4",
+      "name": "Find Profile By Customer Id",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1020,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{$env.SUPABASE_URL + '/rest/v1/profiles?select=id,email&email=ilike.' + encodeURIComponent($('Validate Order').item.json.email)}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{$env.SUPABASE_SECRET_KEY}}"
+            },
+            {
+              "name": "Authorization",
+              "value": "={{'Bearer ' + $env.SUPABASE_SECRET_KEY}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "5",
+      "name": "Find Profile By Email",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1280,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const source = $('Validate Order').item.json;\nconst payload = source.payload;\nconst byCustomerId = $('Find Profile By Customer Id').first()?.json || [];\nconst byEmail = $('Find Profile By Email').first()?.json || [];\nconst customerFromId = Array.isArray(byCustomerId) && byCustomerId.length > 0 ? byCustomerId[0] : null;\nconst customerFromEmail = Array.isArray(byEmail) && byEmail.length > 0 ? byEmail[0] : null;\nconst resolvedCustomer = customerFromId || customerFromEmail;\n\nreturn [{\n  json: {\n    payload,\n    telegramText: source.telegramText,\n    customerId: resolvedCustomer?.id || null,\n    customerEmail: resolvedCustomer?.email || payload.customerEmail || payload.email || null\n  }\n}];"
+      },
+      "id": "6",
+      "name": "Resolve Customer",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1540,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.SUPABASE_URL + '/rest/v1/orders'}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{$env.SUPABASE_SECRET_KEY}}"
+            },
+            {
+              "name": "Authorization",
+              "value": "={{'Bearer ' + $env.SUPABASE_SECRET_KEY}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=representation"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ customer_id: $json.customerId, source: $json.payload.source || 'website', status: 'new', customer_name: $json.payload.name, customer_email: $json.payload.email, customer_phone: $json.payload.phone, city: $json.payload.city || null, delivery_method: $json.payload.deliveryMethod || null, delivery_method_label: $json.payload.deliveryMethodLabel || null, delivery_details: $json.payload.deliveryDetails || null, payment_method: $json.payload.paymentMethod || null, payment_method_label: $json.payload.paymentMethodLabel || null, comment: $json.payload.comment || null, currency: $json.payload.currency || 'UAH', subtotal_amount: Number($json.payload.total || 0), discount_percent: 0, discount_amount: 0, total_amount: Number($json.payload.total || 0), accumulation_amount: 0, items_summary: $json.payload.orderItems || null, raw_payload: $json.payload, placed_at: $json.payload.createdAt || new Date().toISOString() }) }}",
+        "options": {}
+      },
+      "id": "7",
+      "name": "Insert Order",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1800,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const payload = $('Resolve Customer').item.json.payload;\nconst telegramText = $('Resolve Customer').item.json.telegramText;\nconst orderResponse = $json;\nconst createdOrder = Array.isArray(orderResponse) ? orderResponse[0] : orderResponse;\nconst orderId = createdOrder?.id || null;\nconst orderNumber = createdOrder?.order_number || null;\nconst cart = Array.isArray(payload.cart) ? payload.cart : [];\nconst items = cart.map((item) => ({\n  order_id: orderId,\n  product_id: item.id || null,\n  product_title: item.title || 'Item',\n  category: item.category || null,\n  quantity: Number(item.qty || 0),\n  unit_price: Number(item.price || 0),\n  grind_method: item.grindMethod || null,\n  grind_label: item.grindLabel || null,\n  raw_item: item,\n}));\n\nreturn [{\n  json: {\n    orderId,\n    orderNumber,\n    payload,\n    telegramText: orderNumber ? `${telegramText}\\nНомер замовлення: #${orderNumber}` : telegramText,\n    items\n  }\n}];"
+      },
+      "id": "8",
+      "name": "Prepare Order Items",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2060,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.SUPABASE_URL + '/rest/v1/order_items'}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{$env.SUPABASE_SECRET_KEY}}"
+            },
+            {
+              "name": "Authorization",
+              "value": "={{'Bearer ' + $env.SUPABASE_SECRET_KEY}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=minimal"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.items) }}",
+        "options": {}
+      },
+      "id": "9",
+      "name": "Insert Order Items",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2320,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{'https://api.telegram.org/bot' + $env.TELEGRAM_BOT_TOKEN + '/sendMessage'}}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ chat_id: $env.TELEGRAM_CHAT_ID, text: $('Prepare Order Items').item.json.telegramText }) }}",
+        "options": {}
+      },
+      "id": "10",
+      "name": "Notify Telegram",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2580,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"ok\": true,\n  \"message\": \"Order accepted\"\n}",
+        "options": {}
+      },
+      "id": "11",
+      "name": "Respond Success",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.3,
+      "position": [
+        2840,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseCode": 400,
+        "responseBody": "={\n  \"ok\": false,\n  \"message\": $json.validationMessage || \"Invalid order payload\"\n}",
+        "options": {}
+      },
+      "id": "12",
+      "name": "Respond Invalid",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.3,
+      "position": [
+        1020,
+        460
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Order Webhook": {
+      "main": [
+        [
+          {
+            "node": "Validate Order",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Order": {
+      "main": [
+        [
+          {
+            "node": "Payload Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Payload Valid?": {
+      "main": [
+        [
+          {
+            "node": "Find Profile By Customer Id",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Invalid",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find Profile By Customer Id": {
+      "main": [
+        [
+          {
+            "node": "Find Profile By Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find Profile By Email": {
+      "main": [
+        [
+          {
+            "node": "Resolve Customer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Resolve Customer": {
+      "main": [
+        [
+          {
+            "node": "Insert Order",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insert Order": {
+      "main": [
+        [
+          {
+            "node": "Prepare Order Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Order Items": {
+      "main": [
+        [
+          {
+            "node": "Insert Order Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insert Order Items": {
+      "main": [
+        [
+          {
+            "node": "Notify Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notify Telegram": {
+      "main": [
+        [
+          {
+            "node": "Respond Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "0f01e5fb-ocr-orders-supabase-workflow",
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "id": "ocr-orders-supabase-workflow",
+  "tags": []
+}

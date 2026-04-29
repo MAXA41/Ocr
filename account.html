@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="uk">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Кабінет | Odesa Coffee Roasters</title>
+  <meta name="description" content="Особистий кабінет Odesa Coffee Roasters: профіль, замовлення та накопичувальна знижка.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Sora:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body class="page">
+  <div class="backdrop" aria-hidden="true">
+    <span class="glow one"></span>
+    <span class="glow two"></span>
+    <span class="grain"></span>
+  </div>
+
+  <header class="site-header">
+    <div class="container header-inner">
+      <a class="logo" href="index.html#top">
+        <img src="images/logo.png" alt="Odesa Coffee Roasters">
+      </a>
+      <nav class="main-nav" aria-label="Основна навігація">
+        <a href="index.html#products">Товари</a>
+        <details class="nav-dropdown">
+          <summary class="nav-dropdown-toggle">Каталог</summary>
+          <div class="nav-dropdown-menu" aria-label="Підкатегорії каталогу">
+            <a href="espresso.html">Еспресо</a>
+            <a href="filter.html">Фільтр</a>
+            <a href="drips.html">Дріпи</a>
+            <a href="decaf.html">Декаф</a>
+          </div>
+        </details>
+        <details class="nav-dropdown">
+          <summary class="nav-dropdown-toggle">Про нас</summary>
+          <div class="nav-dropdown-menu" aria-label="Розділи про компанію">
+            <a href="index.html#story">Про компанію</a>
+            <a href="delivery.html">Доставка</a>
+            <a href="index.html#contact">Контакти</a>
+          </div>
+        </details>
+        <a href="index.html#bars">Кав'ярні</a>
+        <a href="index.html#wholesale">Опт</a>
+        <a href="account.html">Кабінет</a>
+      </nav>
+      <div class="header-actions">
+        <button class="menu-toggle" type="button" aria-label="Відкрити меню">Меню</button>
+        <a class="btn ghost" href="index.html#subscription">Підписка</a>
+      </div>
+    </div>
+  </header>
+
+  <main id="top">
+    <section class="hero account-hero">
+      <div class="container account-shell">
+        <div class="hero-copy account-hero-copy">
+          <p class="eyebrow">Особистий кабінет</p>
+          <h1>Замовлення, профіль та накопичувальна знижка</h1>
+          <p class="lead">Увійдіть за email без пароля. Після входу тут будуть ваші замовлення, поточний рівень знижки та збережені контактні дані.</p>
+        </div>
+        <div class="account-auth-card" id="account-auth-card">
+          <div class="account-auth-state" id="account-auth-state" hidden>
+            <p class="eyebrow">Статус</p>
+            <h2>Ви увійшли</h2>
+            <p id="account-user-email"></p>
+            <button class="btn ghost" type="button" id="account-signout">Вийти</button>
+          </div>
+          <form class="account-auth-form" id="account-auth-form">
+            <p class="eyebrow">Вхід по email</p>
+            <h2>Отримати magic link</h2>
+            <label>Email<br><input type="email" name="email" autocomplete="email" required></label>
+            <button class="btn primary" type="submit">Надіслати посилання</button>
+            <p class="form-status" id="account-auth-status" aria-live="polite"></p>
+          </form>
+        </div>
+      </div>
+    </section>
+
+    <section class="section account-dashboard" id="account-dashboard" hidden>
+      <div class="container account-grid">
+        <section class="account-panel account-panel-profile">
+          <div class="section-head compact">
+            <div>
+              <p class="eyebrow">Профіль</p>
+              <h2>Ваші дані</h2>
+            </div>
+          </div>
+          <div class="account-profile-list" id="account-profile-list"></div>
+        </section>
+
+        <section class="account-panel account-panel-discount">
+          <div class="section-head compact">
+            <div>
+              <p class="eyebrow">Накопичення</p>
+              <h2>Поточна знижка</h2>
+            </div>
+          </div>
+          <div class="account-discount-card" id="account-discount-card"></div>
+        </section>
+
+        <section class="account-panel account-panel-orders">
+          <div class="section-head compact">
+            <div>
+              <p class="eyebrow">Замовлення</p>
+              <h2>Історія</h2>
+            </div>
+          </div>
+          <div class="account-orders" id="account-orders"></div>
+        </section>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer" id="contact">
+    <div class="container footer-grid">
+      <div>
+        <a class="logo" href="index.html#top">
+          <img src="images/logo.png" alt="Odesa Coffee Roasters">
+        </a>
+        <p>Спешелті кава з Одеси для дому, офісу та бізнесу.</p>
+      </div>
+      <div>
+        <h3>Контакти</h3>
+        <p>+38 095 697 5455</p>
+        <p>office@chaicoffski.com</p>
+      </div>
+      <div>
+        <h3>Соцмережі</h3>
+        <p>Instagram</p>
+        <p>Facebook</p>
+      </div>
+      <div>
+        <h3>Доставка</h3>
+        <p>Нова Пошта 1-2 дні</p>
+        <p>Самовивіз з кав'ярні</p>
+      </div>
+    </div>
+  </footer>
+
+  <script type="module" src="js/account.js"></script>
+</body>
+</html>

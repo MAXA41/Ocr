@@ -12,8 +12,13 @@
     "check": "npm run lint && npm run test"
   },
   "devDependencies": {
+    "@supabase/supabase-js": "^2.49.8",
     "eslint": "^8.0.0",
     "prettier": "^3.0.0",
+    "sharp": "^0.34.5",
     "vite": "^5.0.0"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.103.0"
   }
 }

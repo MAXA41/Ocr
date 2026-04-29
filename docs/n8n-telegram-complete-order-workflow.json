@@ -1,0 +1,382 @@
+{
+  "name": "OCR Orders: Telegram Admin Commands",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "ocr-telegram-admin",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "1",
+      "name": "Telegram Admin Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        240,
+        340
+      ],
+      "webhookId": "ocr-telegram-admin"
+    },
+    {
+      "parameters": {
+        "jsCode": "const update = $json.body && typeof $json.body === 'object' ? $json.body : $json;\nconst message = update.message || update.edited_message || null;\nconst chatId = message?.chat?.id ? String(message.chat.id) : '';\nconst text = String(message?.text || '').trim();\nconst allowedChatIds = String($env.TELEGRAM_ADMIN_CHAT_ID || '')\n  .split(',')\n  .map((value) => value.trim())\n  .filter(Boolean);\nconst chatAllowed = allowedChatIds.length > 0 && allowedChatIds.includes(chatId);\nconst normalizedText = text.replace(/\s+/g, ' ').trim();\nconst isHelp = normalizedText === '/start' || normalizedText === '/help';\nconst completeMatch = normalizedText.match(/^\/complete\s+(.+)$/i);\nconst rawReference = completeMatch ? completeMatch[1].trim() : '';\nconst isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(rawReference);\nconst numericOrder = Number(rawReference);\nconst orderNumber = Number.isInteger(numericOrder) && numericOrder > 0 ? numericOrder : null;\nconst orderId = isUuid ? rawReference : null;\nconst isCompleteCommand = Boolean(completeMatch) && Boolean(orderId || orderNumber);\nconst isListCommand = /^\/(orders|new|neworders)$/i.test(normalizedText);\nconst helpText = [\n  'Команди менеджера OCR:',\n  '',\n  '/orders',\n  '/new',\n  '/neworders',\n  '/complete 123',\n  '/complete uuid-замовлення',\n  '',\n  'Приклади:',\n  '/orders',\n  '/complete 154'\n].join('\\n');\n\nlet replyText = helpText;\nif (!chatAllowed) {\n  replyText = 'Цей чат не має доступу до admin-команд.';\n} else if (isCompleteCommand) {\n  replyText = orderNumber\n    ? `Пробую завершити замовлення #${orderNumber}...`\n    : `Пробую завершити замовлення ${orderId}...`;\n} else if (isListCommand) {\n  replyText = 'Завантажую список відкритих замовлень...';\n} else if (!isHelp) {\n  replyText = 'Невідома команда. Використай /help';\n}\n\nreturn [{\n  json: {\n    update,\n    chatId,\n    text: normalizedText,\n    chatAllowed,\n    isHelp,\n    isCompleteCommand,\n    isListCommand,\n    orderId,\n    orderNumber,\n    replyText,\n    helpText\n  }\n}];"
+      },
+      "id": "2",
+      "name": "Parse Telegram Command",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        500,
+        340
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{$json.chatAllowed}}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "3",
+      "name": "Chat Allowed?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        760,
+        340
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{$json.isCompleteCommand}}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "4",
+      "name": "Has Complete Command?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1020,
+        260
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.ORDER_COMPLETION_WEBHOOK_URL}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ orderId: $json.orderId, orderNumber: $json.orderNumber, adminSecret: $env.ORDER_ADMIN_SHARED_SECRET }) }}",
+        "options": {}
+      },
+      "id": "5",
+      "name": "Call Completion Webhook",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1280,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const request = $('Parse Telegram Command').item.json;\nconst response = $json;\nconst ok = Boolean(response.ok);\nconst message = String(response.message || (ok ? 'Готово' : 'Не вдалося виконати команду'));\nconst orderNumber = response.orderNumber || request.orderNumber || '-';\nconst finalText = ok\n  ? [`Готово.`, '', `Замовлення: #${orderNumber}`, `Результат: ${message}`].join('\\n')\n  : [`Помилка.`, '', `Замовлення: #${orderNumber}`, `Причина: ${message}`].join('\\n');\n\nreturn [{\n  json: {\n    chatId: request.chatId,\n    finalText\n  }\n}];"
+      },
+      "id": "6",
+      "name": "Format Completion Reply",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1540,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{$json.isListCommand}}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "10",
+      "name": "Has List Command?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1280,
+        460
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{$env.SUPABASE_URL + '/rest/v1/orders?status=in.(new,paid,processing,shipped)&select=id,order_number,status,total_amount,customer_name,city,delivery_method_label,placed_at&order=placed_at.desc&limit=10'}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{$env.SUPABASE_SECRET_KEY}}"
+            },
+            {
+              "name": "Authorization",
+              "value": "={{'Bearer ' + $env.SUPABASE_SECRET_KEY}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "11",
+      "name": "Load Open Orders",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1540,
+        420
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const request = $('Parse Telegram Command').item.json;\nconst rows = Array.isArray($json) ? $json : [];\nconst openOrders = rows.filter(Boolean);\n\nconst finalText = openOrders.length === 0\n  ? 'Зараз немає відкритих замовлень.'\n  : [\n      'Відкриті замовлення:',\n      '',\n      ...openOrders.map((order) => {\n        const number = order.order_number || '-';\n        const customer = order.customer_name || '-';\n        const status = order.status || '-';\n        const city = order.city || '-';\n        const delivery = order.delivery_method_label || '-';\n        const total = Number(order.total_amount || 0);\n        return `#${number} | ${customer} | ${total} грн | ${status} | ${city} | ${delivery}`;\n      }),\n      '',\n      'Щоб завершити:',\n      '/complete 123'\n    ].join('\\n');\n\nreturn [{\n  json: {\n    chatId: request.chatId,\n    finalText\n  }\n}];"
+      },
+      "id": "12",
+      "name": "Format Orders Reply",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1800,
+        420
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{'https://api.telegram.org/bot' + $env.TELEGRAM_BOT_TOKEN + '/sendMessage'}}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ chat_id: $json.chatId, text: $json.finalText }) }}",
+        "options": {}
+      },
+      "id": "7",
+      "name": "Send Telegram Reply",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1800,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{'https://api.telegram.org/bot' + $env.TELEGRAM_BOT_TOKEN + '/sendMessage'}}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ chat_id: $json.chatId, text: $json.replyText }) }}",
+        "options": {}
+      },
+      "id": "8",
+      "name": "Send Help Or Reject",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+        "position": [
+        1280,
+        620
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"ok\": true\n}",
+        "options": {}
+      },
+      "id": "9",
+      "name": "Respond Telegram",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.3,
+      "position": [
+        2060,
+        340
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Telegram Admin Webhook": {
+      "main": [
+        [
+          {
+            "node": "Parse Telegram Command",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Telegram Command": {
+      "main": [
+        [
+          {
+            "node": "Chat Allowed?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chat Allowed?": {
+      "main": [
+        [
+          {
+            "node": "Has Complete Command?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Help Or Reject",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Complete Command?": {
+      "main": [
+        [
+          {
+            "node": "Call Completion Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Has List Command?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has List Command?": {
+      "main": [
+        [
+          {
+            "node": "Load Open Orders",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Help Or Reject",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call Completion Webhook": {
+      "main": [
+        [
+          {
+            "node": "Format Completion Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Completion Reply": {
+      "main": [
+        [
+          {
+            "node": "Send Telegram Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load Open Orders": {
+      "main": [
+        [
+          {
+            "node": "Format Orders Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Orders Reply": {
+      "main": [
+        [
+          {
+            "node": "Send Telegram Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Telegram Reply": {
+      "main": [
+        [
+          {
+            "node": "Respond Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Help Or Reject": {
+      "main": [
+        [
+          {
+            "node": "Respond Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "b7c0a8f6-ocr-telegram-admin-workflow",
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "id": "ocr-telegram-admin-workflow",
+  "tags": []
+}

@@ -1,0 +1,481 @@
+{
+  "name": "OCR Orders: Complete Order and Recalculate Discount",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "ocr-orders-complete",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "1",
+      "name": "Complete Order Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        240,
+        340
+      ],
+      "webhookId": "ocr-orders-complete"
+    },
+    {
+      "parameters": {
+        "jsCode": "const incoming = $json.body && typeof $json.body === 'object' ? $json.body : $json;\nconst payload = incoming.data && typeof incoming.data === 'object' ? incoming.data : incoming;\nconst expectedAdminSecret = $env.ORDER_ADMIN_SHARED_SECRET || '';\nconst rawOrderId = String(payload.orderId || payload.id || '').trim();\nconst rawOrderNumber = String(payload.orderNumber || '').trim();\nconst safeOrderId = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(rawOrderId)\n  ? rawOrderId\n  : '00000000-0000-0000-0000-000000000000';\nconst parsedOrderNumber = Number(rawOrderNumber);\nconst safeOrderNumber = Number.isInteger(parsedOrderNumber) && parsedOrderNumber > 0 ? parsedOrderNumber : -1;\nconst hasReference = Boolean(rawOrderId) || safeOrderNumber > 0;\nconst sharedSecretValid = Boolean(expectedAdminSecret) && payload.adminSecret === expectedAdminSecret;\nconst isValid = hasReference && sharedSecretValid;\nconst validationMessage = !sharedSecretValid\n  ? 'Invalid admin secret'\n  : (!hasReference ? 'Order reference is required' : 'ok');\n\nreturn [{\n  json: {\n    payload,\n    valid: isValid,\n    validationMessage,\n    safeOrderId,\n    safeOrderNumber\n  }\n}];"
+      },
+      "id": "2",
+      "name": "Validate Completion Request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        500,
+        340
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{$json.valid}}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "3",
+      "name": "Request Valid?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        760,
+        340
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{$env.SUPABASE_URL + '/rest/v1/orders?id=eq.' + $json.safeOrderId + '&select=id,order_number,status,total_amount,customer_name,customer_email,completed_at'}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{$env.SUPABASE_SECRET_KEY}}"
+            },
+            {
+              "name": "Authorization",
+              "value": "={{'Bearer ' + $env.SUPABASE_SECRET_KEY}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "4",
+      "name": "Find Order By Id",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1020,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{$env.SUPABASE_URL + '/rest/v1/orders?order_number=eq.' + $json.safeOrderNumber + '&select=id,order_number,status,total_amount,customer_name,customer_email,completed_at'}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{$env.SUPABASE_SECRET_KEY}}"
+            },
+            {
+              "name": "Authorization",
+              "value": "={{'Bearer ' + $env.SUPABASE_SECRET_KEY}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "5",
+      "name": "Find Order By Number",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1280,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const byId = $('Find Order By Id').first()?.json || [];\nconst byNumber = $('Find Order By Number').first()?.json || [];\nconst found = (Array.isArray(byId) && byId.length > 0 ? byId[0] : null) || (Array.isArray(byNumber) && byNumber.length > 0 ? byNumber[0] : null);\n\nif (!found) {\n  return [{\n    json: {\n      orderFound: false,\n      alreadyCompleted: false,\n      invalidStatus: false,\n      shouldComplete: false,\n      responseMessage: 'Order not found'\n    }\n  }];\n}\n\nconst status = String(found.status || 'new');\nconst alreadyCompleted = status === 'completed';\nconst invalidStatus = ['canceled', 'refunded'].includes(status);\nconst shouldComplete = !alreadyCompleted && !invalidStatus;\nconst customerLabel = found.customer_name || found.customer_email || '-';\nconst totalAmount = Number(found.total_amount || 0);\n\nreturn [{\n  json: {\n    orderFound: true,\n    alreadyCompleted,\n    invalidStatus,\n    shouldComplete,\n    orderId: found.id,\n    orderNumber: found.order_number,\n    status,\n    totalAmount,\n    customerLabel,\n    responseMessage: alreadyCompleted\n      ? 'Order is already completed'\n      : (invalidStatus ? `Order cannot be completed from status ${status}` : 'ok'),\n    telegramText: [\n      'Замовлення переведено в completed',\n      '',\n      `Номер замовлення: #${found.order_number || '-'}`,\n      `Клієнт: ${customerLabel}`,\n      `Сума до накопичення: ${totalAmount} грн`,\n      `Новий статус: completed`\n    ].join('\\n')\n  }\n}];"
+      },
+      "id": "6",
+      "name": "Resolve Target Order",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1540,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{$json.orderFound}}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "7",
+      "name": "Order Found?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1800,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{$json.alreadyCompleted}}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "8",
+      "name": "Already Completed?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        2060,
+        180
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{$json.shouldComplete}}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "9",
+      "name": "Can Complete?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        2320,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "={{$env.SUPABASE_URL + '/rest/v1/orders?id=eq.' + $json.orderId}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{$env.SUPABASE_SECRET_KEY}}"
+            },
+            {
+              "name": "Authorization",
+              "value": "={{'Bearer ' + $env.SUPABASE_SECRET_KEY}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=representation"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ status: 'completed', completed_at: new Date().toISOString(), accumulation_amount: Number($json.totalAmount || 0) }) }}",
+        "options": {}
+      },
+      "id": "10",
+      "name": "Update Order Completed",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2580,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{'https://api.telegram.org/bot' + $env.TELEGRAM_BOT_TOKEN + '/sendMessage'}}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ chat_id: $env.TELEGRAM_CHAT_ID, text: $('Resolve Target Order').item.json.telegramText }) }}",
+        "options": {}
+      },
+      "id": "11",
+      "name": "Notify Completion Telegram",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2840,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"ok\": true,\n  \"message\": \"Order marked as completed\",\n  \"orderId\": $('Resolve Target Order').item.json.orderId,\n  \"orderNumber\": $('Resolve Target Order').item.json.orderNumber\n}",
+        "options": {}
+      },
+      "id": "12",
+      "name": "Respond Success",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.3,
+      "position": [
+        3100,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseCode": 400,
+        "responseBody": "={\n  \"ok\": false,\n  \"message\": $json.validationMessage || \"Invalid completion request\"\n}",
+        "options": {}
+      },
+      "id": "13",
+      "name": "Respond Invalid Request",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.3,
+      "position": [
+        1020,
+        500
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseCode": 404,
+        "responseBody": "={\n  \"ok\": false,\n  \"message\": \"Order not found\"\n}",
+        "options": {}
+      },
+      "id": "14",
+      "name": "Respond Not Found",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.3,
+      "position": [
+        2060,
+        420
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"ok\": true,\n  \"message\": \"Order is already completed\",\n  \"orderId\": $json.orderId,\n  \"orderNumber\": $json.orderNumber\n}",
+        "options": {}
+      },
+      "id": "15",
+      "name": "Respond Already Completed",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.3,
+      "position": [
+        2320,
+        80
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseCode": 409,
+        "responseBody": "={\n  \"ok\": false,\n  \"message\": $json.responseMessage || \"Order cannot be completed from current status\"\n}",
+        "options": {}
+      },
+      "id": "16",
+      "name": "Respond Invalid Status",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.3,
+      "position": [
+        2580,
+        80
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Complete Order Webhook": {
+      "main": [
+        [
+          {
+            "node": "Validate Completion Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Completion Request": {
+      "main": [
+        [
+          {
+            "node": "Request Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Request Valid?": {
+      "main": [
+        [
+          {
+            "node": "Find Order By Id",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Invalid Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find Order By Id": {
+      "main": [
+        [
+          {
+            "node": "Find Order By Number",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find Order By Number": {
+      "main": [
+        [
+          {
+            "node": "Resolve Target Order",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Resolve Target Order": {
+      "main": [
+        [
+          {
+            "node": "Order Found?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Order Found?": {
+      "main": [
+        [
+          {
+            "node": "Already Completed?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Not Found",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Already Completed?": {
+      "main": [
+        [
+          {
+            "node": "Respond Already Completed",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Can Complete?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Can Complete?": {
+      "main": [
+        [
+          {
+            "node": "Update Order Completed",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Invalid Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Order Completed": {
+      "main": [
+        [
+          {
+            "node": "Notify Completion Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notify Completion Telegram": {
+      "main": [
+        [
+          {
+            "node": "Respond Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "7ef0261c-ocr-orders-complete-workflow",
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "id": "ocr-orders-complete-workflow",
+  "tags": []
+}

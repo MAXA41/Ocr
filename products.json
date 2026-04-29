@@ -172,6 +172,8 @@
     "description": "Квіти, сухофрукти, мед, лікер і апельсин. Ароматний фільтр з довгим aftertaste.",
     "image": "images/ethiopia-guji-uraga-png-2-731x638.webp",
     "alt": "Пакування кави Ethiopia Guji Uraga",
+    "giftImage": "images/ПОДАРУНОК.webp",
+    "giftAlt": "Подарункове пакування кави Odesa Coffee Roasters",
     "category": "filter",
     "price": 555,
     "origin": "Guji Uraga",

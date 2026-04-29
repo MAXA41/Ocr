@@ -1,3 +1,5 @@
+import { supabase, isSupabaseConfigured } from './supabase-client.js';
+
 // Mobile menu toggle
 const viteEnv = import.meta.env || {};
 const runtimeEnv = globalThis.__OCR_ENV__ || {};
@@ -180,12 +182,27 @@ const renderProductDetail = (product, allProducts) => {
     metaDescription.setAttribute('content', `${product.name} від Odesa Coffee Roasters: ${product.description}`);
   }
 
+  const productMediaMarkup = product.giftImage
+    ? `
+        <div class="product-detail-media-stack">
+          <figure class="product-detail-media">
+            <img src="${product.image}" alt="${product.alt}">
+            <figcaption>Основне пакування</figcaption>
+          </figure>
+          <figure class="product-detail-media gift-variant">
+            <img src="${product.giftImage}" alt="${product.giftAlt || 'Подарункове пакування'}">
+            <figcaption>Подарункове пакування</figcaption>
+          </figure>
+        </div>`
+    : `
+        <div class="product-detail-media">
+          <img src="${product.image}" alt="${product.alt}">
+        </div>`;
+
   productDetailRoot.innerHTML = `
     <section class="hero product-hero">
       <div class="container product-detail-grid">
-        <div class="product-detail-media">
-          <img src="${product.image}" alt="${product.alt}">
-        </div>
+        ${productMediaMarkup}
         <div class="hero-copy product-detail-copy">
           <p class="eyebrow">${copy.eyebrow}</p>
           <h1>${product.name}</h1>
@@ -194,6 +211,7 @@ const renderProductDetail = (product, allProducts) => {
             <span>${copy.categoryLabel}</span>
             ${product.origin ? `<span>${product.origin}</span>` : ''}
             ${product.processing ? `<span>${product.processing}</span>` : ''}
+            ${product.giftImage ? '<span>Є подарункове пакування</span>' : ''}
           </div>
           <div class="product-detail-price-row">
             <span class="product-detail-price">${product.price} грн</span>
@@ -444,6 +462,8 @@ let currentDeliveryLocationOptions = [];
 let novaPoshtaLookupTimer;
 let novaPoshtaDeliveryLookupTimer;
 let lastNovaPoshtaBaseLookupKey = '';
+let currentSupabaseSession = null;
+let currentSupabaseProfile = null;
 
 const novaPoshtaSettlementRefCache = new Map();
 const novaPoshtaLocationsCache = new Map();
@@ -541,6 +561,78 @@ const checkoutLabels = {
 };
 
 const getCheckoutField = (name) => checkoutForm?.elements.namedItem(name) || null;
+
+const applyAuthenticatedProfileToCheckout = () => {
+  if (!checkoutForm || !currentSupabaseSession?.user) return;
+
+  const emailField = getCheckoutField('email');
+  const nameField = getCheckoutField('name');
+  const phoneField = getCheckoutField('phone');
+  const cityField = getCheckoutField('city');
+  const deliveryMethodField = getCheckoutField('deliveryMethod');
+  const deliveryDetailsField = getCheckoutField('deliveryDetails');
+
+  if (emailField && !emailField.value.trim()) {
+    emailField.value = currentSupabaseSession.user.email || '';
+  }
+
+  if (nameField && !nameField.value.trim() && currentSupabaseProfile?.full_name) {
+    nameField.value = currentSupabaseProfile.full_name;
+  }
+
+  if (phoneField && !phoneField.value.trim() && currentSupabaseProfile?.phone) {
+    phoneField.value = currentSupabaseProfile.phone;
+  }
+
+  if (cityField && !cityField.value.trim() && currentSupabaseProfile?.default_city) {
+    cityField.value = currentSupabaseProfile.default_city;
+  }
+
+  if (deliveryMethodField && !deliveryMethodField.value && currentSupabaseProfile?.default_delivery_method) {
+    deliveryMethodField.value = currentSupabaseProfile.default_delivery_method;
+  }
+
+  if (deliveryDetailsField && !deliveryDetailsField.value.trim() && currentSupabaseProfile?.default_delivery_details) {
+    deliveryDetailsField.value = currentSupabaseProfile.default_delivery_details;
+  }
+};
+
+const loadAuthenticatedProfile = async () => {
+  if (!supabase || !currentSupabaseSession?.user) {
+    currentSupabaseProfile = null;
+    return;
+  }
+
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('id', currentSupabaseSession.user.id)
+    .maybeSingle();
+
+  if (error) {
+    console.error('Failed to load Supabase profile', error);
+    currentSupabaseProfile = null;
+    return;
+  }
+
+  currentSupabaseProfile = data || null;
+  applyAuthenticatedProfileToCheckout();
+  syncDeliveryFields();
+  renderCheckoutSummary();
+};
+
+const initSupabaseCheckoutContext = async () => {
+  if (!isSupabaseConfigured || !supabase) return;
+
+  const { data } = await supabase.auth.getSession();
+  currentSupabaseSession = data.session || null;
+  await loadAuthenticatedProfile();
+
+  supabase.auth.onAuthStateChange(async (_event, session) => {
+    currentSupabaseSession = session || null;
+    await loadAuthenticatedProfile();
+  });
+};
 
 const ensureCityAutocompleteMenu = () => {
   if (!checkoutForm) return null;
@@ -1365,6 +1457,8 @@ const buildOrderPayload = ({
   cart,
   total,
 }) => {
+  const user = currentSupabaseSession?.user || null;
+
   return {
     name,
     email,
@@ -1385,6 +1479,9 @@ const buildOrderPayload = ({
     orderItems: buildCartSummary(cart),
     createdAt: new Date().toISOString(),
     source: 'website',
+    customerId: user?.id || null,
+    customerEmail: user?.email || null,
+    authProvider: user?.app_metadata?.provider || 'anonymous',
     brand: 'Odesa Coffee Roasters',
     sharedSecret: webhookSharedSecret,
   };
@@ -1795,4 +1892,5 @@ hydrateCheckoutForm();
 syncDeliveryFields();
 renderCheckoutSummary();
 updateCartControls();
+initSupabaseCheckoutContext();
 
