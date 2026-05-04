@@ -1,4 +1,4 @@
-import { supabase, isSupabaseConfigured } from './supabase-client.js';
+import { supabase, isSupabaseConfigured } from './supabase-client.js?v=2';
 
 const menuToggle = document.querySelector('.menu-toggle');
 const mainNav = document.querySelector('.main-nav');
