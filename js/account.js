@@ -16,7 +16,6 @@ const confirmationHint = document.querySelector('#account-confirmation-hint');
 const resendConfirmationButton = document.querySelector('#account-resend-confirmation');
 const authNameField = document.querySelector('[data-auth-name-field]');
 const authPasswordField = document.querySelector('[data-auth-password-field]');
-const authConfirmField = document.querySelector('[data-auth-confirm-field]');
 const passwordRules = document.querySelector('#account-password-rules');
 const passwordRuleItems = document.querySelectorAll('[data-password-rule]');
 const userEmail = document.querySelector('#account-user-email');
@@ -27,7 +26,6 @@ const discountCard = document.querySelector('#account-discount-card');
 const ordersRoot = document.querySelector('#account-orders');
 const fullNameInput = authForm?.querySelector('input[name="fullName"]') || null;
 const passwordInput = authForm?.querySelector('input[name="password"]') || null;
-const passwordConfirmInput = authForm?.querySelector('input[name="passwordConfirm"]') || null;
 let pendingConfirmationEmail = '';
 
 const AUTH_MODE_CONFIG = {
@@ -144,17 +142,14 @@ const setAuthMode = (mode) => {
   if (authSubmit) authSubmit.textContent = config.submit;
   if (authNameField) authNameField.hidden = !isRegisterMode;
   if (authPasswordField) authPasswordField.hidden = !(isLoginMode || isRegisterMode);
-  if (authConfirmField) authConfirmField.hidden = !isRegisterMode;
   if (passwordRules) passwordRules.hidden = !isRegisterMode;
   if (passwordInput) {
     passwordInput.required = isLoginMode || isRegisterMode;
     passwordInput.autocomplete = isRegisterMode ? 'new-password' : 'current-password';
   }
-  if (passwordConfirmInput) passwordConfirmInput.required = isRegisterMode;
   hideSecondaryAuthActions();
 
   if (!isRegisterMode) {
-    if (passwordConfirmInput) passwordConfirmInput.value = '';
     renderPasswordChecks('');
   }
 };
@@ -377,16 +372,10 @@ authForm?.addEventListener('submit', async (event) => {
 
   if (authMode === 'register') {
     const fullName = String(formData.get('fullName') || '').trim();
-    const passwordConfirm = String(formData.get('passwordConfirm') || '');
     const checks = renderPasswordChecks(password);
 
     if (!isPasswordValid(checks)) {
       setAuthStatus('Пароль не відповідає вимогам для реєстрації.', 'error');
-      return;
-    }
-
-    if (password !== passwordConfirm) {
-      setAuthStatus('Паролі не збігаються.', 'error');
       return;
     }
 
