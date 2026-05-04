@@ -43,11 +43,11 @@
         </details>
         <a href="index.html#bars">Кав'ярні</a>
         <a href="index.html#wholesale">Опт</a>
-        <a href="account.html">Кабінет</a>
+          <a href="index.html#subscription">Підписка</a>
       </nav>
       <div class="header-actions">
         <button class="menu-toggle" type="button" aria-label="Відкрити меню">Меню</button>
-        <a class="btn ghost" href="index.html#subscription">Підписка</a>
+          <a class="btn ghost" href="account.html">Кабінет</a>
       </div>
     </div>
   </header>
@@ -58,7 +58,7 @@
         <div class="hero-copy account-hero-copy">
           <p class="eyebrow">Особистий кабінет</p>
           <h1>Замовлення, профіль та накопичувальна знижка</h1>
-          <p class="lead">Увійдіть за email без пароля. Після входу тут будуть ваші замовлення, поточний рівень знижки та збережені контактні дані.</p>
+          <p class="lead">Увійдіть за email або створіть акаунт з паролем. Після входу тут будуть ваші замовлення, поточний рівень знижки та збережені контактні дані.</p>
         </div>
         <div class="account-auth-card" id="account-auth-card">
           <div class="account-auth-state" id="account-auth-state" hidden>
@@ -67,12 +67,33 @@
             <p id="account-user-email"></p>
             <button class="btn ghost" type="button" id="account-signout">Вийти</button>
           </div>
-          <form class="account-auth-form" id="account-auth-form">
-            <p class="eyebrow">Вхід по email</p>
-            <h2>Отримати magic link</h2>
+          <div class="account-auth-toggle" role="tablist" aria-label="Вхід або реєстрація">
+            <button class="account-auth-mode is-active" type="button" data-auth-mode-trigger="login" aria-pressed="true">Вхід</button>
+            <button class="account-auth-mode" type="button" data-auth-mode-trigger="register" aria-pressed="false">Реєстрація</button>
+          </div>
+          <form class="account-auth-form" id="account-auth-form" data-auth-mode="login">
+            <p class="eyebrow" id="account-auth-eyebrow">Вхід</p>
+            <h2 id="account-auth-title">Увійти в кабінет</h2>
+            <p class="account-auth-help" id="account-auth-help">Введіть email і пароль, щоб увійти в особистий кабінет.</p>
+            <label data-auth-name-field hidden>Ім'я<br><input type="text" name="fullName" autocomplete="name"></label>
             <label>Email<br><input type="email" name="email" autocomplete="email" required></label>
-            <button class="btn primary" type="submit">Надіслати посилання</button>
+            <label data-auth-password-field>Пароль<br><input type="password" name="password" autocomplete="current-password" required></label>
+            <label data-auth-confirm-field hidden>Підтвердіть пароль<br><input type="password" name="passwordConfirm" autocomplete="new-password"></label>
+            <div class="account-password-rules" id="account-password-rules" hidden>
+              <p>Пароль має містити:</p>
+              <ul>
+                <li data-password-rule="length">щонайменше 8 символів</li>
+                <li data-password-rule="lowercase">малу латинську літеру</li>
+                <li data-password-rule="uppercase">велику латинську літеру</li>
+                <li data-password-rule="digit">хоча б одну цифру</li>
+              </ul>
+            </div>
+            <button class="btn primary" type="submit" id="account-auth-submit">Увійти</button>
             <p class="form-status" id="account-auth-status" aria-live="polite"></p>
+            <div class="account-auth-secondary" id="account-auth-secondary" hidden>
+              <p id="account-confirmation-hint">Підтвердіть email і запитайте новий лист, якщо попередній не дійшов.</p>
+              <button class="btn ghost" type="button" id="account-resend-confirmation">Надіслати лист ще раз</button>
+            </div>
           </form>
         </div>
       </div>

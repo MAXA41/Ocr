@@ -35,10 +35,19 @@ set search_path = public
 as $$
 begin
   insert into public.profiles (id, email)
-  values (new.id, new.email)
+  values (
+    new.id,
+    new.email
+  )
   on conflict (id) do update
     set email = excluded.email,
+        full_name = coalesce(public.profiles.full_name, new.raw_user_meta_data ->> 'full_name'),
         updated_at = timezone('utc', now());
+
+  update public.profiles
+    set full_name = coalesce(public.profiles.full_name, new.raw_user_meta_data ->> 'full_name'),
+        updated_at = timezone('utc', now())
+  where id = new.id;
 
   return new;
 end;
