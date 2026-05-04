@@ -63,8 +63,11 @@ const setAuthStatus = (message, tone = 'neutral') => {
   authStatus.dataset.tone = tone;
 };
 
+const runtimeConfig = globalThis.__OCR_CONFIG__ || {};
+const env = typeof import.meta !== 'undefined' && import.meta.env ? import.meta.env : {};
+
 const buildEmailRedirectUrl = () => {
-  const configuredUrl = String(import.meta.env.VITE_AUTH_REDIRECT_URL || '').trim();
+  const configuredUrl = String(env.VITE_AUTH_REDIRECT_URL || runtimeConfig.authRedirectUrl || '').trim();
   if (configuredUrl) return configuredUrl;
   return new URL(window.location.pathname, window.location.origin).toString();
 };
