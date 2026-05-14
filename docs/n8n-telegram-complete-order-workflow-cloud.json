@@ -1,5 +1,5 @@
 {
-  "name": "OCR Orders: Telegram Admin Commands",
+  "name": "OCR Orders: Telegram Admin Commands (Cloud Friendly)",
   "nodes": [
     {
       "parameters": {
@@ -20,7 +20,20 @@
     },
     {
       "parameters": {
-        "jsCode": "const update = $json.body && typeof $json.body === 'object' ? $json.body : $json;\nconst message = update.message || update.edited_message || null;\nconst chatId = message?.chat?.id ? String(message.chat.id) : '';\nconst text = String(message?.text || '').trim();\nconst allowedChatIds = String($env.TELEGRAM_ADMIN_CHAT_ID || '')\n  .split(',')\n  .map((value) => value.trim())\n  .filter(Boolean);\nconst chatAllowed = allowedChatIds.length > 0 && allowedChatIds.includes(chatId);\nconst normalizedText = text.replace(/\\s+/g, ' ').trim();\nconst isHelp = normalizedText === '/start' || normalizedText === '/help';\nconst completeMatch = normalizedText.match(/^\\/complete\\s+(.+)$/i);\nconst rawReference = completeMatch ? completeMatch[1].trim() : '';\nconst isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(rawReference);\nconst numericOrder = Number(rawReference);\nconst orderNumber = Number.isInteger(numericOrder) && numericOrder > 0 ? numericOrder : null;\nconst orderId = isUuid ? rawReference : null;\nconst isCompleteCommand = Boolean(completeMatch) && Boolean(orderId || orderNumber);\nconst isListCommand = /^\\/(orders|new|neworders)$/i.test(normalizedText);\nconst helpText = [\n  'Команди менеджера OCR:',\n  '',\n  '/orders',\n  '/new',\n  '/neworders',\n  '/complete 123',\n  '/complete uuid-замовлення',\n  '',\n  'Приклади:',\n  '/orders',\n  '/complete 154'\n].join('\\n');\n\nlet replyText = helpText;\nif (!chatAllowed) {\n  replyText = 'Цей чат не має доступу до admin-команд.';\n} else if (isCompleteCommand) {\n  replyText = orderNumber\n    ? `Пробую завершити замовлення #${orderNumber}...`\n    : `Пробую завершити замовлення ${orderId}...`;\n} else if (isListCommand) {\n  replyText = 'Завантажую список відкритих замовлень...';\n} else if (!isHelp) {\n  replyText = 'Невідома команда. Використай /help';\n}\n\nreturn [{\n  json: {\n    update,\n    chatId,\n    text: normalizedText,\n    chatAllowed,\n    isHelp,\n    isCompleteCommand,\n    isListCommand,\n    orderId,\n    orderNumber,\n    replyText,\n    helpText\n  }\n}];"
+        "jsCode": "return [{\n  json: {\n    TELEGRAM_BOT_TOKEN: \"PASTE_TELEGRAM_BOT_TOKEN_HERE\",\n    TELEGRAM_ADMIN_CHAT_ID: \"PASTE_TELEGRAM_ADMIN_CHAT_ID_HERE\",\n    ORDER_COMPLETION_WEBHOOK_URL: \"PASTE_ORDER_COMPLETION_WEBHOOK_URL_HERE\",\n    ORDER_ADMIN_SHARED_SECRET: \"PASTE_ORDER_ADMIN_SHARED_SECRET_HERE\",\n    SUPABASE_URL: \"https://your-project.supabase.co\",\n    SUPABASE_SECRET_KEY: \"PASTE_SUPABASE_SECRET_KEY_HERE\"\n  }\n}];"
+      },
+      "id": "config",
+      "name": "Workflow Config",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        380,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const update = $('Telegram Admin Webhook').first().json.body && typeof $('Telegram Admin Webhook').first().json.body === 'object' ? $('Telegram Admin Webhook').first().json.body : $('Telegram Admin Webhook').first().json;\nconst message = update.message || update.edited_message || null;\nconst chatId = message?.chat?.id ? String(message.chat.id) : '';\nconst text = String(message?.text || '').trim();\nconst allowedChatIds = String($('Workflow Config').first().json.TELEGRAM_ADMIN_CHAT_ID || '')\n  .split(',')\n  .map((value) => value.trim())\n  .filter(Boolean);\nconst chatAllowed = allowedChatIds.length > 0 && allowedChatIds.includes(chatId);\nconst normalizedText = text.replace(/\\s+/g, ' ').trim();\nconst isHelp = normalizedText === '/start' || normalizedText === '/help';\nconst completeMatch = normalizedText.match(/^\\/complete\\s+(.+)$/i);\nconst rawReference = completeMatch ? completeMatch[1].trim() : '';\nconst isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(rawReference);\nconst numericOrder = Number(rawReference);\nconst orderNumber = Number.isInteger(numericOrder) && numericOrder > 0 ? numericOrder : null;\nconst orderId = isUuid ? rawReference : null;\nconst isCompleteCommand = Boolean(completeMatch) && Boolean(orderId || orderNumber);\nconst isListCommand = /^\\/(orders|new|neworders)$/i.test(normalizedText);\nconst helpText = [\n  'Команди менеджера OCR:',\n  '',\n  '/orders',\n  '/new',\n  '/neworders',\n  '/complete 123',\n  '/complete uuid-замовлення',\n  '',\n  'Приклади:',\n  '/orders',\n  '/complete 154'\n].join('\\n');\n\nlet replyText = helpText;\nif (!chatAllowed) {\n  replyText = 'Цей чат не має доступу до admin-команд.';\n} else if (isCompleteCommand) {\n  replyText = orderNumber\n    ? `Пробую завершити замовлення #${orderNumber}...`\n    : `Пробую завершити замовлення ${orderId}...`;\n} else if (isListCommand) {\n  replyText = 'Завантажую список відкритих замовлень...';\n} else if (!isHelp) {\n  replyText = 'Невідома команда. Використай /help';\n}\n\nreturn [{\n  json: {\n    update,\n    chatId,\n    text: normalizedText,\n    chatAllowed,\n    isHelp,\n    isCompleteCommand,\n    isListCommand,\n    orderId,\n    orderNumber,\n    replyText,\n    helpText\n  }\n}];"
       },
       "id": "2",
       "name": "Parse Telegram Command",
@@ -74,7 +87,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "={{$env.ORDER_COMPLETION_WEBHOOK_URL}}",
+        "url": "={{$('Workflow Config').first().json.ORDER_COMPLETION_WEBHOOK_URL}}",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -86,7 +99,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ orderId: $json.orderId, orderNumber: $json.orderNumber, adminSecret: $env.ORDER_ADMIN_SHARED_SECRET }) }}",
+        "jsonBody": "={{ JSON.stringify({ orderId: $json.orderId, orderNumber: $json.orderNumber, adminSecret: $('Workflow Config').first().json.ORDER_ADMIN_SHARED_SECRET }) }}",
         "options": {}
       },
       "id": "5",
@@ -134,17 +147,17 @@
     {
       "parameters": {
         "method": "GET",
-        "url": "={{$env.SUPABASE_URL + '/rest/v1/orders?status=in.(new,paid,processing,shipped)&select=id,order_number,status,total_amount,customer_name,city,delivery_method_label,placed_at&order=placed_at.desc&limit=10'}}",
+        "url": "={{$('Workflow Config').first().json.SUPABASE_URL + '/rest/v1/orders?status=in.(new,paid,processing,shipped)&select=id,order_number,status,total_amount,customer_name,city,delivery_method_label,placed_at&order=placed_at.desc&limit=10'}}",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
             {
               "name": "apikey",
-              "value": "={{$env.SUPABASE_SECRET_KEY}}"
+              "value": "={{$('Workflow Config').first().json.SUPABASE_SECRET_KEY}}"
             },
             {
               "name": "Authorization",
-              "value": "={{'Bearer ' + $env.SUPABASE_SECRET_KEY}}"
+              "value": "={{'Bearer ' + $('Workflow Config').first().json.SUPABASE_SECRET_KEY}}"
             }
           ]
         },
@@ -175,7 +188,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "={{'https://api.telegram.org/bot' + $env.TELEGRAM_BOT_TOKEN + '/sendMessage'}}",
+        "url": "={{'https://api.telegram.org/bot' + $('Workflow Config').first().json.TELEGRAM_BOT_TOKEN + '/sendMessage'}}",
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({ chat_id: $json.chatId, text: $json.finalText }) }}",
@@ -193,7 +206,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "={{'https://api.telegram.org/bot' + $env.TELEGRAM_BOT_TOKEN + '/sendMessage'}}",
+        "url": "={{'https://api.telegram.org/bot' + $('Workflow Config').first().json.TELEGRAM_BOT_TOKEN + '/sendMessage'}}",
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({ chat_id: $json.chatId, text: $json.replyText }) }}",
@@ -203,7 +216,7 @@
       "name": "Send Help Or Reject",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-        "position": [
+      "position": [
         1280,
         620
       ]
@@ -230,7 +243,7 @@
       "main": [
         [
           {
-            "node": "Parse Telegram Command",
+            "node": "Workflow Config",
             "type": "main",
             "index": 0
           }
@@ -362,6 +375,17 @@
         [
           {
             "node": "Respond Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Workflow Config": {
+      "main": [
+        [
+          {
+            "node": "Parse Telegram Command",
             "type": "main",
             "index": 0
           }
