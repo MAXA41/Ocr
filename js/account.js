@@ -1,4 +1,5 @@
-import { supabase, isSupabaseConfigured } from './supabase-client.js?v=2';
+import { supabase, isSupabaseConfigured } from './supabase-client.js';
+import { normalizeCatalogState } from './catalog-state.js';
 
 const menuToggle = document.querySelector('.menu-toggle');
 const mainNav = document.querySelector('.main-nav');
@@ -24,9 +25,18 @@ const dashboard = document.querySelector('#account-dashboard');
 const profileList = document.querySelector('#account-profile-list');
 const discountCard = document.querySelector('#account-discount-card');
 const ordersRoot = document.querySelector('#account-orders');
+const catalogAdminPanel = document.querySelector('#catalog-admin-panel');
+const catalogAdminLead = document.querySelector('#catalog-admin-lead');
+const catalogAdminSearch = document.querySelector('#catalog-admin-search');
+const catalogAdminFilter = document.querySelector('#catalog-admin-filter');
+const catalogAdminRefresh = document.querySelector('#catalog-admin-refresh');
+const catalogAdminStatus = document.querySelector('#catalog-admin-status');
+const catalogAdminList = document.querySelector('#catalog-admin-list');
 const fullNameInput = authForm?.querySelector('input[name="fullName"]') || null;
 const passwordInput = authForm?.querySelector('input[name="password"]') || null;
 let pendingConfirmationEmail = '';
+let currentSession = null;
+let catalogAdminRows = [];
 
 const AUTH_MODE_CONFIG = {
   login: {
@@ -61,6 +71,12 @@ const setAuthStatus = (message, tone = 'neutral') => {
   if (!authStatus) return;
   authStatus.textContent = message;
   authStatus.dataset.tone = tone;
+};
+
+const setCatalogAdminStatus = (message, tone = 'neutral') => {
+  if (!catalogAdminStatus) return;
+  catalogAdminStatus.textContent = message;
+  catalogAdminStatus.dataset.tone = tone;
 };
 
 const runtimeConfig = globalThis.__OCR_CONFIG__ || {};
@@ -234,7 +250,260 @@ const renderOrders = (orders) => {
     .join('');
 };
 
+const hideCatalogAdmin = () => {
+  catalogAdminRows = [];
+  if (catalogAdminPanel) catalogAdminPanel.hidden = true;
+  if (catalogAdminList) catalogAdminList.innerHTML = '';
+  setCatalogAdminStatus('', 'neutral');
+};
+
+const getCatalogRowTone = (row) => {
+  if (!row.state.isAvailable) return 'disabled';
+  if (row.availableNow !== null && row.availableNow <= 0) return 'out';
+  if (row.availableNow !== null && row.availableNow <= 5) return 'low';
+  return 'available';
+};
+
+const getCatalogRowLabel = (row) => {
+  const tone = getCatalogRowTone(row);
+
+  if (tone === 'disabled') return 'Вимкнено';
+  if (tone === 'out') return 'Немає в наявності';
+  if (tone === 'low') return 'Малий залишок';
+  return 'У продажу';
+};
+
+const buildCatalogAdminRows = (products, stateRows) => {
+  const stateById = new Map((stateRows || []).map((row) => [row.product_id, normalizeCatalogState(row)]));
+
+  return products.map((product) => {
+    const state = stateById.get(product.id) || normalizeCatalogState({ product_id: product.id });
+    const availableNow = state.stockQuantity === null ? null : Math.max(state.stockQuantity - state.soldQuantity, 0);
+
+    return {
+      ...product,
+      state,
+      availableNow,
+    };
+  });
+};
+
+const renderCatalogAdminList = () => {
+  if (!catalogAdminList) return;
+
+  const searchValue = catalogAdminSearch?.value.trim().toLowerCase() || '';
+  const filterValue = catalogAdminFilter?.value || 'all';
+  const filteredRows = catalogAdminRows
+    .filter((row) => {
+      if (!searchValue) return true;
+
+      const haystack = [row.name, row.category, row.origin, row.processing]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+
+      return haystack.includes(searchValue);
+    })
+    .filter((row) => {
+      const tone = getCatalogRowTone(row);
+      if (filterValue === 'all') return true;
+      if (filterValue === 'available') return tone === 'available' || tone === 'low';
+      return tone === filterValue;
+    })
+    .sort((left, right) => {
+      const toneOrder = { out: 0, low: 1, disabled: 2, available: 3 };
+      const toneDelta = toneOrder[getCatalogRowTone(left)] - toneOrder[getCatalogRowTone(right)];
+      if (toneDelta !== 0) return toneDelta;
+      return left.name.localeCompare(right.name, 'uk');
+    });
+
+  if (filteredRows.length === 0) {
+    catalogAdminList.innerHTML = '<p class="catalog-admin-empty">Нічого не знайдено за поточними фільтрами.</p>';
+    return;
+  }
+
+  catalogAdminList.innerHTML = filteredRows.map((row) => {
+    const tone = getCatalogRowTone(row);
+    const stateLabel = getCatalogRowLabel(row);
+    const stockValue = row.state.stockQuantity ?? '';
+    const soldLabel = row.state.soldQuantity;
+    const availableLabel = row.availableNow === null ? 'Без ліміту' : `${row.availableNow} шт.`;
+    const stockLabel = row.state.stockQuantity === null ? 'Без ліміту' : `${row.state.stockQuantity} шт.`;
+
+    return `
+      <article class="catalog-admin-card" data-product-id="${row.id}" data-tone="${tone}">
+        <div class="catalog-admin-card-head">
+          <div class="catalog-admin-summary">
+            <div class="catalog-admin-media">
+              <img src="${row.image}" alt="${row.alt}">
+            </div>
+            <div class="catalog-admin-copy">
+              <p class="eyebrow">${row.category || 'Каталог'}</p>
+              <h3>${row.name}</h3>
+              <p>${row.description}</p>
+              <div class="product-meta">
+                ${row.origin ? `<span>${row.origin}</span>` : ''}
+                ${row.processing ? `<span>${row.processing}</span>` : ''}
+              </div>
+            </div>
+          </div>
+          <span class="catalog-admin-pill catalog-admin-pill-${tone}">${stateLabel}</span>
+        </div>
+        <div class="catalog-admin-metrics">
+          <div class="catalog-admin-metric">
+            <span>Заведено на склад</span>
+            <strong>${stockLabel}</strong>
+          </div>
+          <div class="catalog-admin-metric">
+            <span>Продано / в обробці</span>
+            <strong>${soldLabel} шт.</strong>
+          </div>
+          <div class="catalog-admin-metric">
+            <span>Доступно зараз</span>
+            <strong>${availableLabel}</strong>
+          </div>
+        </div>
+        <div class="catalog-admin-controls">
+          <label class="catalog-admin-toggle">
+            <input type="checkbox" data-catalog-availability ${row.state.isAvailable ? 'checked' : ''}>
+            <span>Показувати в продажу</span>
+          </label>
+          <label class="catalog-admin-field">
+            <span>Заведено на склад, шт.</span>
+            <input type="number" min="0" step="1" value="${stockValue}" data-catalog-stock placeholder="Порожньо = без ліміту">
+          </label>
+          <button class="btn light" type="button" data-catalog-save>Зберегти</button>
+        </div>
+        <p class="form-status" data-catalog-row-status></p>
+      </article>`;
+  }).join('');
+};
+
+const loadCatalogAdmin = async (session) => {
+  if (!supabase || !session?.user) {
+    hideCatalogAdmin();
+    return;
+  }
+
+  const { data: adminRows, error: adminError } = await supabase
+    .from('catalog_admins')
+    .select('email')
+    .limit(1);
+
+  if (adminError) {
+    console.error('Failed to verify catalog admin access', adminError);
+    hideCatalogAdmin();
+    return;
+  }
+
+  if (!adminRows || adminRows.length === 0) {
+    hideCatalogAdmin();
+    return;
+  }
+
+  if (catalogAdminPanel) catalogAdminPanel.hidden = false;
+  if (catalogAdminLead) {
+    catalogAdminLead.textContent = `Ви увійшли як оператор каталогу (${session.user.email}). Тут можна вмикати продаж, виставляти залишок і бачити вже продані або зарезервовані позиції.`;
+  }
+
+  setCatalogAdminStatus('Оновлюємо стан каталогу...', 'neutral');
+
+  const [products, stateResponse] = await Promise.all([
+    fetch('products.json').then((response) => response.json()),
+    supabase
+      .from('product_catalog_state')
+      .select('product_id, is_available, stock_quantity, sold_quantity, updated_at')
+      .order('product_id', { ascending: true }),
+  ]);
+
+  if (stateResponse.error) {
+    console.error('Failed to load product catalog state', stateResponse.error);
+    setCatalogAdminStatus('Не вдалося завантажити стан каталогу. Перевірте таблиці product_catalog_state і catalog_admins у Supabase.', 'error');
+    return;
+  }
+
+  catalogAdminRows = buildCatalogAdminRows(products, stateResponse.data || []);
+  renderCatalogAdminList();
+  setCatalogAdminStatus('Каталог готовий до редагування.', 'success');
+};
+
+const saveCatalogRow = async (card) => {
+  if (!supabase || !currentSession?.user || !card) return;
+
+  const productId = card.dataset.productId;
+  const availabilityField = card.querySelector('[data-catalog-availability]');
+  const stockField = card.querySelector('[data-catalog-stock]');
+  const rowStatus = card.querySelector('[data-catalog-row-status]');
+  const saveButton = card.querySelector('[data-catalog-save]');
+  const row = catalogAdminRows.find((item) => item.id === productId);
+
+  if (!productId || !(availabilityField instanceof HTMLInputElement) || !(stockField instanceof HTMLInputElement) || !row) {
+    return;
+  }
+
+  const rawStock = stockField.value.trim();
+  let stockQuantity = null;
+
+  if (rawStock) {
+    const parsedStock = Number(rawStock);
+    if (!Number.isInteger(parsedStock) || parsedStock < 0) {
+      if (rowStatus) {
+        rowStatus.textContent = 'Вкажіть ціле число або залиште поле порожнім для необмеженого залишку.';
+        rowStatus.dataset.tone = 'error';
+      }
+      return;
+    }
+
+    stockQuantity = parsedStock;
+  }
+
+  if (saveButton instanceof HTMLButtonElement) {
+    saveButton.disabled = true;
+  }
+  if (rowStatus) {
+    rowStatus.textContent = 'Зберігаємо зміни...';
+    rowStatus.dataset.tone = 'neutral';
+  }
+
+  const { data, error } = await supabase
+    .from('product_catalog_state')
+    .upsert({
+      product_id: productId,
+      is_available: availabilityField.checked,
+      stock_quantity: stockQuantity,
+      updated_by: currentSession.user.id,
+    }, { onConflict: 'product_id' })
+    .select('product_id, is_available, stock_quantity, sold_quantity, updated_at')
+    .single();
+
+  if (saveButton instanceof HTMLButtonElement) {
+    saveButton.disabled = false;
+  }
+
+  if (error) {
+    console.error('Failed to save product catalog state', error);
+    if (rowStatus) {
+      rowStatus.textContent = error.message || 'Не вдалося зберегти зміни.';
+      rowStatus.dataset.tone = 'error';
+    }
+    return;
+  }
+
+  const nextState = normalizeCatalogState(data || { product_id: productId, is_available: availabilityField.checked, stock_quantity: stockQuantity, sold_quantity: row.state.soldQuantity });
+  catalogAdminRows = catalogAdminRows.map((item) => item.id === productId
+    ? {
+      ...item,
+      state: nextState,
+      availableNow: nextState.stockQuantity === null ? null : Math.max(nextState.stockQuantity - nextState.soldQuantity, 0),
+    }
+    : item);
+
+  renderCatalogAdminList();
+  setCatalogAdminStatus(`Оновлено товар: ${row.name}.`, 'success');
+};
+
 const setSignedInState = (session) => {
+  currentSession = session || null;
   const isSignedIn = Boolean(session?.user);
   if (dashboard) dashboard.hidden = !isSignedIn;
   if (authForm) authForm.hidden = isSignedIn;
@@ -244,6 +513,7 @@ const setSignedInState = (session) => {
     renderProfile(null);
     renderDiscountState(null);
     renderOrders([]);
+    hideCatalogAdmin();
   }
 };
 
@@ -282,6 +552,7 @@ const init = async () => {
   if (data.session) {
     await syncProfile(data.session);
     await loadDashboard(data.session);
+    await loadCatalogAdmin(data.session);
   }
 
   supabase.auth.onAuthStateChange(async (_event, session) => {
@@ -291,6 +562,7 @@ const init = async () => {
       await syncProfile(session);
       setAuthStatus('Вхід підтверджено.', 'success');
       await loadDashboard(session);
+      await loadCatalogAdmin(session);
     }
   });
 };
@@ -419,6 +691,32 @@ signOutButton?.addEventListener('click', async () => {
   if (!supabase) return;
   await supabase.auth.signOut();
   setAuthStatus('Ви вийшли з кабінету.', 'neutral');
+});
+
+catalogAdminSearch?.addEventListener('input', () => {
+  renderCatalogAdminList();
+});
+
+catalogAdminFilter?.addEventListener('change', () => {
+  renderCatalogAdminList();
+});
+
+catalogAdminRefresh?.addEventListener('click', async () => {
+  if (!currentSession) return;
+  await loadCatalogAdmin(currentSession);
+});
+
+catalogAdminList?.addEventListener('click', async (event) => {
+  const target = event.target;
+  if (!(target instanceof HTMLElement)) return;
+
+  const saveButton = target.closest('[data-catalog-save]');
+  if (!(saveButton instanceof HTMLButtonElement)) return;
+
+  const card = saveButton.closest('.catalog-admin-card');
+  if (!(card instanceof HTMLElement)) return;
+
+  await saveCatalogRow(card);
 });
 
 setAuthMode('login');

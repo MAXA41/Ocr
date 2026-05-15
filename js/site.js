@@ -1,4 +1,11 @@
 import { supabase, isSupabaseConfigured } from './supabase-client.js';
+import {
+  fetchCatalogStateMap,
+  getAvailabilityPresentation,
+  getProductCatalogState,
+  isProductAvailableForPurchase,
+  mergeProductsWithCatalogState,
+} from './catalog-state.js';
 
 // Mobile menu toggle
 const viteEnv = import.meta.env || {};
@@ -71,6 +78,7 @@ const categoryGrid = document.querySelector('#category-grid');
 const pageCategory = document.body.dataset.pageCategory || '';
 const productDetailRoot = document.querySelector('#product-detail');
 const relatedGrid = document.querySelector('#related-grid');
+let catalogProductsById = new Map();
 const categoryLabels = {
   all: 'Всі',
   espresso: 'Еспресо',
@@ -112,6 +120,9 @@ const buildMetaItems = (product, showCategory = false) => {
 };
 
 const renderProductCard = (product, showCategory = false) => {
+  const availability = getAvailabilityPresentation(product);
+  const canBuy = isProductAvailableForPurchase(product);
+
   return `
     <article class="product-card" data-category="${product.category}" data-price="${product.price}">
       <div class="product-media">
@@ -123,10 +134,11 @@ const renderProductCard = (product, showCategory = false) => {
         <h3><a href="product.html?id=${product.id}">${product.name}</a></h3>
         <p>${product.description}</p>
         <div class="product-meta">${buildMetaItems(product, showCategory)}</div>
+        <div class="product-availability product-availability-${availability.tone}">${availability.label}</div>
         <div class="product-card-actions">
           <span class="product-price">${product.price} грн</span>
           <a class="btn outline" href="product.html?id=${product.id}">Детальніше</a>
-          <button class="btn primary product-buy" data-id="${product.id}" data-name="${product.name}" data-category="${product.category}" data-price="${product.price}" type="button">Купити</button>
+          <button class="btn primary product-buy" data-id="${product.id}" data-name="${product.name}" data-category="${product.category}" data-price="${product.price}" data-available="${String(canBuy)}" type="button" ${canBuy ? '' : 'disabled'}>${availability.buttonLabel}</button>
         </div>
       </div>
     </article>`;
@@ -171,10 +183,73 @@ const getProductPageCopy = (product) => {
   };
 };
 
+const formatProductCode = (product) => {
+  return String(product.id || product.name || 'lot')
+    .replace(/[^a-zA-Z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .toUpperCase();
+};
+
+const getPrimaryTasteNotes = (description = '') => {
+  return description
+    .split('.')
+    .map((part) => part.trim())
+    .find(Boolean) || description;
+};
+
+const inferProductCountry = (product) => {
+  if (product.country) return product.country;
+
+  const source = `${product.name || ''} ${product.origin || ''}`.toLowerCase();
+  const countries = [
+    ['el salvador', 'El Salvador'],
+    ['guatemala', 'Guatemala'],
+    ['ethiopia', 'Ethiopia'],
+    ['colombia', 'Colombia'],
+    ['rwanda', 'Rwanda'],
+    ['kenya', 'Kenya'],
+    ['brazil', 'Brazil'],
+    ['india', 'India'],
+    ['salvador', 'El Salvador'],
+  ];
+
+  return countries.find(([needle]) => source.includes(needle))?.[1] || '';
+};
+
+const getProductFormatLabel = (product) => {
+  if (product.weight) return product.weight;
+  if (product.category === 'drips') return '10 шт / готові дріпи';
+  return 'Зерно або помел під замовлення';
+};
+
+const buildProductSpecs = (product, copy) => {
+  const country = inferProductCountry(product);
+  const region = product.region || (!country && product.origin ? '' : product.origin || '');
+  const specs = [
+    ['Категорія', copy.categoryLabel],
+    country ? ['Країна', country] : null,
+    region ? ['Регіон', region] : product.origin ? ['Походження', product.origin] : null,
+    product.farm ? ['Ферма', product.farm] : null,
+    product.processing ? ['Обробка', product.processing] : null,
+    product.variety ? ['Різновид', product.variety] : null,
+    product.altitude ? ['Висота', product.altitude] : null,
+    product.score ? ['Оцінка якості', String(product.score)] : null,
+    ['Формат', getProductFormatLabel(product)],
+    product.giftImage ? ['Пакування', 'Є подарунковий варіант'] : null,
+  ].filter(Boolean);
+
+  return specs;
+};
+
 const renderProductDetail = (product, allProducts) => {
   if (!productDetailRoot) return;
 
   const copy = getProductPageCopy(product);
+  const availability = getAvailabilityPresentation(product);
+  const canBuy = isProductAvailableForPurchase(product);
+  const productCode = formatProductCode(product);
+  const tasteNotes = getPrimaryTasteNotes(product.description);
+  const specs = buildProductSpecs(product, copy);
   document.title = `${product.name} | Odesa Coffee Roasters`;
 
   const metaDescription = document.querySelector('meta[name="description"]');
@@ -201,47 +276,68 @@ const renderProductDetail = (product, allProducts) => {
 
   productDetailRoot.innerHTML = `
     <section class="hero product-hero">
-      <div class="container product-detail-grid">
-        ${productMediaMarkup}
-        <div class="hero-copy product-detail-copy">
-          <p class="eyebrow">${copy.eyebrow}</p>
-          <h1>${product.name}</h1>
-          <p class="lead">${product.description}</p>
-          <div class="product-meta product-detail-meta">
-            <span>${copy.categoryLabel}</span>
-            ${product.origin ? `<span>${product.origin}</span>` : ''}
-            ${product.processing ? `<span>${product.processing}</span>` : ''}
-            ${product.giftImage ? '<span>Є подарункове пакування</span>' : ''}
+      <div class="container">
+        <article class="product-showcase-card">
+          <div class="product-detail-grid">
+            <div class="product-showcase-media">${productMediaMarkup}</div>
+            <div class="hero-copy product-detail-copy product-showcase-copy">
+              <div class="product-showcase-head">
+                <p class="product-code">Код товару: ${productCode}</p>
+                <div>
+                  <p class="eyebrow">${copy.eyebrow}</p>
+                  <h1>${product.name}</h1>
+                </div>
+              </div>
+              <div class="product-spec-card">
+                <div class="product-spec-list">
+                  ${specs.map(([label, value]) => `
+                    <div class="product-spec-row">
+                      <span>${label}:</span>
+                      <strong>${value}</strong>
+                    </div>
+                  `).join('')}
+                </div>
+              </div>
+              <div class="product-detail-price-row product-showcase-actions">
+                <span class="product-detail-price">${product.price} грн</span>
+                <button class="btn primary product-buy" data-id="${product.id}" data-name="${product.name}" data-category="${product.category}" data-price="${product.price}" data-available="${String(canBuy)}" type="button" ${canBuy ? '' : 'disabled'}>${canBuy ? 'Додати до кошика' : availability.buttonLabel}</button>
+              </div>
+            </div>
           </div>
-          <div class="product-detail-price-row">
-            <span class="product-detail-price">${product.price} грн</span>
-            <button class="btn primary product-buy" data-id="${product.id}" data-name="${product.name}" data-category="${product.category}" data-price="${product.price}" type="button">Додати в кошик</button>
+          <div class="product-showcase-foot">
+            <div class="product-taste-line">
+              <span>Смак:</span>
+              <p>${tasteNotes}</p>
+            </div>
+            <div class="product-showcase-side">
+              <p class="product-availability product-availability-${availability.tone}">${availability.detail}</p>
+              <div class="hero-actions product-showcase-links">
+                <a class="btn ghost" href="${product.category}.html">Назад до категорії</a>
+                <a class="btn light" href="index.html#products">До хітів продажу</a>
+              </div>
+            </div>
           </div>
-          <div class="hero-actions">
-            <a class="btn ghost" href="${product.category}.html">Назад до категорії</a>
-            <a class="btn light" href="index.html#products">До хітів продажу</a>
-          </div>
-        </div>
+        </article>
       </div>
     </section>
     <section class="section">
       <div class="container product-info-grid">
-        <article class="coffee-card">
+        <article class="coffee-card product-info-card">
           <p class="eyebrow">Що в чашці</p>
           <h2>Смаковий профіль</h2>
           <p>${product.description}</p>
         </article>
-        <article class="coffee-card">
+        <article class="coffee-card product-info-card">
           <p class="eyebrow">Походження</p>
           <h2>${product.origin || 'Лот у процесі оновлення'}</h2>
           <p>Спосіб обробки: ${product.processing || 'уточнюємо найближчим оновленням каталогу'}.</p>
         </article>
-        <article class="coffee-card">
+        <article class="coffee-card product-info-card">
           <p class="eyebrow">Як заварювати</p>
           <h2>${copy.guideTitle}</h2>
           <p>${copy.guideText}</p>
         </article>
-        <article class="coffee-card">
+        <article class="coffee-card product-info-card">
           <p class="eyebrow">Кому підійде</p>
           <h2>Для щоденного меню</h2>
           <p>${copy.whyItFits}</p>
@@ -291,6 +387,68 @@ const getProductPayload = (button) => {
   return { id, title, category, price };
 };
 
+const syncCatalogProducts = (products) => {
+  catalogProductsById = new Map(products.map((product) => [product.id, product]));
+};
+
+const getCatalogProductById = (productId) => {
+  return catalogProductsById.get(productId) || null;
+};
+
+const formatAvailabilityLimitMessage = (product, availableQuantity) => {
+  if (availableQuantity === 0) {
+    return `${product.name || product.title} більше немає в наявності.`;
+  }
+
+  return `${product.name || product.title} доступний у обмеженій кількості.`;
+};
+
+const reconcileCartWithCatalogState = (notify = false) => {
+  if (catalogProductsById.size === 0) return true;
+
+  const items = getCart();
+  const notices = [];
+  let changed = false;
+
+  const nextItems = items.flatMap((item) => {
+    const catalogProduct = getCatalogProductById(item.id);
+    if (!catalogProduct) return [item];
+
+    const state = getProductCatalogState(catalogProduct);
+    if (state.availabilityStatus !== 'available') {
+      changed = true;
+      notices.push(`${item.title} прибрано з кошика, бо позиція зараз недоступна.`);
+      return [];
+    }
+
+    if (state.availableQuantity !== null && item.qty > state.availableQuantity) {
+      changed = true;
+      notices.push(formatAvailabilityLimitMessage(catalogProduct, state.availableQuantity));
+
+      if (state.availableQuantity <= 0) {
+        return [];
+      }
+
+      return [{ ...item, qty: state.availableQuantity }];
+    }
+
+    return [item];
+  });
+
+  if (!changed) return true;
+
+  setCart(nextItems);
+  renderCart();
+  updateCartCounter();
+  renderCheckoutSummary();
+
+  if (notify && notices[0]) {
+    showToast(notices[0], 'error');
+  }
+
+  return false;
+};
+
 const attachBuyHandlers = () => {
   const productBuyButtons = document.querySelectorAll('.product-buy');
   productBuyButtons.forEach((btn) => {
@@ -299,9 +457,11 @@ const attachBuyHandlers = () => {
 
     btn.addEventListener('click', (event) => {
       event.preventDefault();
+      if (btn.disabled || btn.dataset.available === 'false') return;
+
       const product = getProductPayload(btn);
       if (!product) return;
-      addToCart(product);
+      if (!addToCart(product)) return;
       showToast(`${product.title} додано до кошика.`, 'success');
       if (cartModal) {
         cartModal.classList.add('open');
@@ -314,14 +474,19 @@ const attachBuyHandlers = () => {
 if (bestsellerGrid || categoryGrid || productDetailRoot) {
   fetch('products.json')
     .then((res) => res.json())
-    .then((products) => {
+    .then(async (products) => {
+      const stateMap = await fetchCatalogStateMap(products.map((product) => product.id));
+      const enrichedProducts = mergeProductsWithCatalogState(products, stateMap);
+      syncCatalogProducts(enrichedProducts);
+      reconcileCartWithCatalogState();
+
       if (bestsellerGrid) {
-        const featuredProducts = products.filter((product) => product.featured).slice(0, 3);
+        const featuredProducts = enrichedProducts.filter((product) => product.featured).slice(0, 3);
         renderProductCollection(bestsellerGrid, featuredProducts, true);
       }
 
       if (categoryGrid && pageCategory) {
-        const categoryProducts = products.filter((product) => product.category === pageCategory);
+        const categoryProducts = enrichedProducts.filter((product) => product.category === pageCategory);
         if (categoryProducts.length > 0) {
           renderProductCollection(categoryGrid, categoryProducts, false);
         } else {
@@ -331,9 +496,9 @@ if (bestsellerGrid || categoryGrid || productDetailRoot) {
 
       if (productDetailRoot) {
         const productId = new URLSearchParams(window.location.search).get('id');
-        const product = products.find((item) => item.id === productId);
+        const product = enrichedProducts.find((item) => item.id === productId);
         if (product) {
-          renderProductDetail(product, products);
+          renderProductDetail(product, enrichedProducts);
         } else {
           renderProductNotFound();
         }
@@ -441,7 +606,22 @@ const renderCart = () => {
 
 const addToCart = (product) => {
   const items = getCart();
+  const catalogProduct = getCatalogProductById(product.id);
+  const catalogState = catalogProduct ? getProductCatalogState(catalogProduct) : null;
+
+  if (catalogState && catalogState.availabilityStatus !== 'available') {
+    showToast(`${product.title} зараз недоступний для замовлення.`, 'error');
+    return false;
+  }
+
   const existing = items.find((i) => i.id === product.id);
+  const nextQty = (existing?.qty || 0) + 1;
+
+  if (catalogState?.availableQuantity !== null && nextQty > catalogState.availableQuantity) {
+    showToast(formatAvailabilityLimitMessage(catalogProduct || product, catalogState.availableQuantity), 'error');
+    return false;
+  }
+
   if (existing) {
     existing.qty += 1;
   } else {
@@ -449,6 +629,8 @@ const addToCart = (product) => {
   }
   setCart(items);
   updateCartCounter();
+  renderCheckoutSummary();
+  return true;
 };
 
 const cartItems = document.querySelector('#cart-items');
@@ -1571,6 +1753,13 @@ const submitViaWeb3Forms = async ({
 const submitOrder = async (order) => {
   const payload = buildOrderPayload(order);
 
+  const shouldUseWebhookFirst = orderProvider === 'webhook' || (orderProvider === 'web3forms' && !web3FormsAccessKey && Boolean(fallbackWebhookUrl));
+
+  if (shouldUseWebhookFirst) {
+    const webhookResult = await submitToWebhook({ ...payload, deliveryChannel: 'primary-webhook' });
+    return { channel: 'webhook', result: webhookResult };
+  }
+
   try {
     const primaryResult = await submitViaWeb3Forms(order);
 
@@ -1632,6 +1821,24 @@ const updateCartControls = () => {
     }
 
     if (actionButton.matches('.item-increase')) {
+      const catalogProduct = getCatalogProductById(itemId);
+      const state = catalogProduct ? getProductCatalogState(catalogProduct) : null;
+
+      if (state && state.availabilityStatus !== 'available') {
+        items.splice(itemIndex, 1);
+        setCart(items);
+        renderCart();
+        updateCartCounter();
+        renderCheckoutSummary();
+        showToast(`${items[itemIndex]?.title || 'Товар'} більше недоступний для замовлення.`, 'error');
+        return;
+      }
+
+      if (state?.availableQuantity !== null && items[itemIndex].qty >= state.availableQuantity) {
+        showToast(formatAvailabilityLimitMessage(catalogProduct || items[itemIndex], state.availableQuantity), 'error');
+        return;
+      }
+
       items[itemIndex].qty += 1;
     }
 
@@ -1664,6 +1871,11 @@ const updateCartControls = () => {
 };
 
 const validateCartItems = () => {
+  if (!reconcileCartWithCatalogState(true)) {
+    setCheckoutStatus('Кошик оновлено відповідно до актуальної наявності товарів.', 'error');
+    return false;
+  }
+
   const cart = getCart();
   const invalidItem = cart.find((item) => item.category !== 'drips' && !item.grindMethod);
 
@@ -1796,6 +2008,11 @@ if (checkoutForm) {
     const cart = getCart();
     if (cart.length === 0) {
       setCheckoutStatus('Кошик порожній. Додайте товар перед оформленням замовлення.', 'error');
+      return;
+    }
+
+    if (!reconcileCartWithCatalogState(true)) {
+      setCheckoutStatus('Перевірте кошик ще раз: наявність деяких позицій змінилася.', 'error');
       return;
     }
 

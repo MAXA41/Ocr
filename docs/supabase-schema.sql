@@ -154,6 +154,170 @@ create table if not exists public.customer_discount_state (
   updated_at timestamptz not null default timezone('utc', now())
 );
 
+create table if not exists public.catalog_admins (
+  email text primary key,
+  created_at timestamptz not null default timezone('utc', now())
+);
+
+insert into public.catalog_admins (email)
+values ('office@chaicoffski.com')
+on conflict (email) do nothing;
+
+create table if not exists public.product_catalog_state (
+  product_id text primary key,
+  is_available boolean not null default true,
+  stock_quantity integer check (stock_quantity is null or stock_quantity >= 0),
+  sold_quantity integer not null default 0 check (sold_quantity >= 0),
+  updated_by uuid references public.profiles(id) on delete set null,
+  created_at timestamptz not null default timezone('utc', now()),
+  updated_at timestamptz not null default timezone('utc', now())
+);
+
+create index if not exists order_items_product_id_idx on public.order_items (product_id);
+
+create or replace function public.is_catalog_admin()
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from public.catalog_admins
+    where lower(email) = lower(coalesce(auth.jwt() ->> 'email', ''))
+  );
+$$;
+
+create or replace function public.recalculate_product_catalog_sales(target_product_id text)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_sold_quantity integer;
+begin
+  if target_product_id is null or btrim(target_product_id) = '' then
+    return;
+  end if;
+
+  insert into public.product_catalog_state (product_id)
+  values (target_product_id)
+  on conflict (product_id) do nothing;
+
+  select coalesce(sum(order_items.quantity), 0)::integer
+  into v_sold_quantity
+  from public.order_items
+  join public.orders on public.orders.id = public.order_items.order_id
+  where public.order_items.product_id = target_product_id
+    and public.orders.status in ('new', 'paid', 'processing', 'shipped', 'completed');
+
+  update public.product_catalog_state
+    set sold_quantity = coalesce(v_sold_quantity, 0),
+        updated_at = timezone('utc', now())
+  where product_id = target_product_id;
+end;
+$$;
+
+create or replace function public.recalculate_product_catalog_sales_for_order(target_order_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_product_id text;
+begin
+  if target_order_id is null then
+    return;
+  end if;
+
+  for v_product_id in
+    select distinct product_id
+    from public.order_items
+    where order_id = target_order_id
+      and product_id is not null
+  loop
+    perform public.recalculate_product_catalog_sales(v_product_id);
+  end loop;
+end;
+$$;
+
+create or replace function public.handle_product_catalog_item_change()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if tg_op in ('UPDATE', 'DELETE') and old.product_id is not null then
+    perform public.recalculate_product_catalog_sales(old.product_id);
+  end if;
+
+  if tg_op in ('INSERT', 'UPDATE') and new.product_id is not null then
+    perform public.recalculate_product_catalog_sales(new.product_id);
+  end if;
+
+  return coalesce(new, old);
+end;
+$$;
+
+create or replace function public.handle_product_catalog_order_change()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if tg_op in ('UPDATE', 'DELETE') and old.id is not null then
+    perform public.recalculate_product_catalog_sales_for_order(old.id);
+  end if;
+
+  if tg_op in ('INSERT', 'UPDATE') and new.id is not null then
+    perform public.recalculate_product_catalog_sales_for_order(new.id);
+  end if;
+
+  return coalesce(new, old);
+end;
+$$;
+
+drop trigger if exists product_catalog_state_set_updated_at on public.product_catalog_state;
+create trigger product_catalog_state_set_updated_at
+before update on public.product_catalog_state
+for each row
+execute function public.set_updated_at();
+
+drop trigger if exists order_items_catalog_state_trigger on public.order_items;
+create trigger order_items_catalog_state_trigger
+after insert or update or delete on public.order_items
+for each row
+execute function public.handle_product_catalog_item_change();
+
+drop trigger if exists orders_catalog_state_trigger on public.orders;
+create trigger orders_catalog_state_trigger
+after insert or update or delete on public.orders
+for each row
+execute function public.handle_product_catalog_order_change();
+
+create or replace view public.product_catalog_public as
+select
+  product_id,
+  is_available,
+  case
+    when stock_quantity is null then null
+    else greatest(stock_quantity - sold_quantity, 0)
+  end as available_quantity,
+  case
+    when is_available = false then 'disabled'
+    when stock_quantity is not null and greatest(stock_quantity - sold_quantity, 0) <= 0 then 'out_of_stock'
+    else 'available'
+  end as availability_status,
+  updated_at
+from public.product_catalog_state;
+
+grant select on public.product_catalog_public to anon, authenticated;
+
 create or replace function public.recalculate_customer_discount_state(target_customer_id uuid)
 returns void
 language plpgsql
@@ -277,6 +441,8 @@ alter table public.discount_tiers enable row level security;
 alter table public.orders enable row level security;
 alter table public.order_items enable row level security;
 alter table public.customer_discount_state enable row level security;
+alter table public.catalog_admins enable row level security;
+alter table public.product_catalog_state enable row level security;
 
 drop policy if exists "profiles_select_own" on public.profiles;
 create policy "profiles_select_own"
@@ -327,3 +493,28 @@ create policy "customer_discount_state_select_own"
 on public.customer_discount_state
 for select
 using (customer_id = auth.uid());
+
+drop policy if exists "catalog_admins_select_own" on public.catalog_admins;
+create policy "catalog_admins_select_own"
+on public.catalog_admins
+for select
+using (lower(email) = lower(coalesce(auth.jwt() ->> 'email', '')));
+
+drop policy if exists "product_catalog_state_admin_select" on public.product_catalog_state;
+create policy "product_catalog_state_admin_select"
+on public.product_catalog_state
+for select
+using (public.is_catalog_admin());
+
+drop policy if exists "product_catalog_state_admin_insert" on public.product_catalog_state;
+create policy "product_catalog_state_admin_insert"
+on public.product_catalog_state
+for insert
+with check (public.is_catalog_admin());
+
+drop policy if exists "product_catalog_state_admin_update" on public.product_catalog_state;
+create policy "product_catalog_state_admin_update"
+on public.product_catalog_state
+for update
+using (public.is_catalog_admin())
+with check (public.is_catalog_admin());

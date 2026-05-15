@@ -14,7 +14,7 @@
 Перед запуском workflow проверь:
 
 1. SQL из [docs/supabase-schema.sql](docs/supabase-schema.sql) уже выполнен
-2. magic link auth в Supabase уже включен
+2. в Supabase уже настроен `Email + Password` auth и подтверждение email
 3. сайт уже отправляет актуальный order payload
 4. у тебя есть `SUPABASE_SECRET_KEY`
 5. у тебя есть Telegram bot token
@@ -167,3 +167,16 @@ https://api.telegram.org/bot<TELEGRAM_BOT_TOKEN>/setWebhook?url=<N8N_TELEGRAM_WE
 Подробная сборка Telegram admin workflow: [docs/n8n-telegram-complete-order-guide.md](docs/n8n-telegram-complete-order-guide.md)
 
 Отдельная настройка Telegram bot и webhook: [docs/telegram-bot-setup.md](docs/telegram-bot-setup.md)
+
+---
+
+## 10. Что уже видно в этом проекте
+
+По текущему коду и локальному конфигу уже подготовлено:
+
+1. production domain `https://odesacoffeeroasters.info`
+2. заполнены `VITE_ORDER_FALLBACK_WEBHOOK_URL`, `VITE_NOVA_POSHTA_API_KEY`, `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`, `VITE_AUTH_REDIRECT_URL`
+3. фронтенд уже умеет писать `customerId`, `customerEmail`, `sharedSecret`, список `orderItems` и детали помола в order payload
+4. админ-учет товара уже ожидает таблицы `catalog_admins`, `product_catalog_state` и `product_catalog_public`
+
+Это значит, что основная оставшаяся работа перед запуском не во фронтенде, а в активации схемы Supabase и в end-to-end проверке order flow.
