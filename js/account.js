@@ -12,6 +12,7 @@ const authSubmit = document.querySelector('#account-auth-submit');
 const authStatus = document.querySelector('#account-auth-status');
 const authState = document.querySelector('#account-auth-state');
 const authCard = document.querySelector('#account-auth-card');
+const authToggle = document.querySelector('.account-auth-toggle');
 const authSecondary = document.querySelector('#account-auth-secondary');
 const confirmationHint = document.querySelector('#account-confirmation-hint');
 const resendConfirmationButton = document.querySelector('#account-resend-confirmation');
@@ -36,6 +37,7 @@ const fullNameInput = authForm?.querySelector('input[name="fullName"]') || null;
 const passwordInput = authForm?.querySelector('input[name="password"]') || null;
 let pendingConfirmationEmail = '';
 let currentSession = null;
+let currentProfile = null;
 let catalogAdminRows = [];
 
 const AUTH_MODE_CONFIG = {
@@ -175,23 +177,89 @@ const setAuthMode = (mode) => {
 
 const renderProfile = (profile) => {
   if (!profileList) return;
+  currentProfile = profile || null;
 
-  const items = [
-    ['Email', profile?.email || 'Не вказано'],
-    ['Імʼя', profile?.full_name || 'Не вказано'],
-    ['Телефон', profile?.phone || 'Не вказано'],
-    ['Місто', profile?.default_city || 'Не вказано'],
-    ['Доставка', profile?.default_delivery_method || 'Не вказано'],
-    ['Деталі доставки', profile?.default_delivery_details || 'Не вказано'],
-  ];
+  const deliveryMethod = profile?.default_delivery_method || '';
 
-  profileList.innerHTML = items
-    .map(([label, value]) => `
+  profileList.innerHTML = `
+    <form class="account-profile-form" id="account-profile-form">
       <div class="account-stat-row">
-        <span>${label}</span>
-        <strong>${value}</strong>
-      </div>`)
-    .join('');
+        <span>Email</span>
+        <strong>${profile?.email || 'Не вказано'}</strong>
+      </div>
+      <label class="account-profile-field">
+        <span>Ім'я</span>
+        <input type="text" name="full_name" value="${profile?.full_name || ''}" placeholder="Вкажіть ім'я">
+      </label>
+      <label class="account-profile-field">
+        <span>Телефон</span>
+        <input type="tel" name="phone" value="${profile?.phone || ''}" placeholder="+380...">
+      </label>
+      <label class="account-profile-field">
+        <span>Місто</span>
+        <input type="text" name="default_city" value="${profile?.default_city || ''}" placeholder="Наприклад, Одеса">
+      </label>
+      <label class="account-profile-field">
+        <span>Доставка</span>
+        <select name="default_delivery_method">
+          <option value="">Не вказано</option>
+          <option value="nova-branch" ${deliveryMethod === 'nova-branch' ? 'selected' : ''}>Нова Пошта: відділення</option>
+          <option value="nova-locker" ${deliveryMethod === 'nova-locker' ? 'selected' : ''}>Нова Пошта: поштомат</option>
+          <option value="pickup" ${deliveryMethod === 'pickup' ? 'selected' : ''}>Самовивіз</option>
+        </select>
+      </label>
+      <label class="account-profile-field">
+        <span>Деталі доставки</span>
+        <textarea name="default_delivery_details" rows="3" placeholder="Відділення, поштомат або адреса самовивозу">${profile?.default_delivery_details || ''}</textarea>
+      </label>
+      <div class="account-profile-actions">
+        <button class="btn primary" type="submit">Зберегти дані</button>
+        <p class="form-status" id="account-profile-status" aria-live="polite"></p>
+      </div>
+    </form>`;
+};
+
+const saveProfile = async (form) => {
+  if (!supabase || !currentSession?.user) return;
+
+  const statusNode = profileList?.querySelector('#account-profile-status');
+  const formData = new FormData(form);
+  const payload = {
+    id: currentSession.user.id,
+    email: currentSession.user.email || currentProfile?.email || null,
+    full_name: String(formData.get('full_name') || '').trim() || null,
+    phone: String(formData.get('phone') || '').trim() || null,
+    default_city: String(formData.get('default_city') || '').trim() || null,
+    default_delivery_method: String(formData.get('default_delivery_method') || '').trim() || null,
+    default_delivery_details: String(formData.get('default_delivery_details') || '').trim() || null,
+  };
+
+  if (statusNode) {
+    statusNode.textContent = 'Зберігаємо зміни...';
+    statusNode.dataset.tone = 'neutral';
+  }
+
+  const { data, error } = await supabase
+    .from('profiles')
+    .upsert(payload, { onConflict: 'id' })
+    .select('*')
+    .single();
+
+  if (error) {
+    if (statusNode) {
+      statusNode.textContent = 'Не вдалося зберегти профіль. Перевірте RLS та таблицю profiles.';
+      statusNode.dataset.tone = 'error';
+    }
+    return;
+  }
+
+  renderProfile(data || payload);
+  setAuthStatus('Профіль оновлено.', 'success');
+  const nextStatusNode = profileList?.querySelector('#account-profile-status');
+  if (nextStatusNode) {
+    nextStatusNode.textContent = 'Дані збережено.';
+    nextStatusNode.dataset.tone = 'success';
+  }
 };
 
 const renderDiscountState = (state) => {
@@ -506,10 +574,12 @@ const setSignedInState = (session) => {
   currentSession = session || null;
   const isSignedIn = Boolean(session?.user);
   if (dashboard) dashboard.hidden = !isSignedIn;
+  if (authToggle) authToggle.hidden = isSignedIn;
   if (authForm) authForm.hidden = isSignedIn;
   if (authState) authState.hidden = !isSignedIn;
   if (userEmail) userEmail.textContent = session?.user?.email || '';
   if (!isSignedIn) {
+    currentProfile = null;
     renderProfile(null);
     renderDiscountState(null);
     renderOrders([]);
@@ -717,6 +787,13 @@ catalogAdminList?.addEventListener('click', async (event) => {
   if (!(card instanceof HTMLElement)) return;
 
   await saveCatalogRow(card);
+});
+
+profileList?.addEventListener('submit', async (event) => {
+  const form = event.target;
+  if (!(form instanceof HTMLFormElement) || form.id !== 'account-profile-form') return;
+  event.preventDefault();
+  await saveProfile(form);
 });
 
 setAuthMode('login');

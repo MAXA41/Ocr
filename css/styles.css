@@ -1129,6 +1129,44 @@ p {
   text-align: right;
 }
 
+.account-profile-form {
+  display: grid;
+  gap: 14px;
+}
+
+.account-profile-field {
+  display: grid;
+  gap: 8px;
+}
+
+.account-profile-field span {
+  color: var(--olive);
+  font-size: 14px;
+}
+
+.account-profile-field input,
+.account-profile-field select,
+.account-profile-field textarea {
+  width: 100%;
+  border: 1px solid rgba(31, 27, 22, 0.14);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.78);
+  padding: 12px 14px;
+  font: inherit;
+  color: var(--ink);
+}
+
+.account-profile-field textarea {
+  resize: vertical;
+  min-height: 88px;
+}
+
+.account-profile-actions {
+  display: grid;
+  gap: 10px;
+  justify-items: start;
+}
+
 .account-stat-big {
   font-family: var(--font-display);
   font-size: clamp(44px, 8vw, 82px);
