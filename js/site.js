@@ -18,7 +18,7 @@ const getEnv = (key, fallback = '') => {
 
 const orderProvider = getEnv('VITE_ORDER_PROVIDER', 'webhook');
 const web3FormsAccessKey = getEnv('VITE_WEB3FORMS_ACCESS_KEY');
-const fallbackWebhookUrl = getEnv('VITE_ORDER_FALLBACK_WEBHOOK_URL', 'https://zdrastvyite11.app.n8n.cloud/webhook/ocr-orders-supabase');
+const fallbackWebhookUrl = getEnv('VITE_ORDER_FALLBACK_WEBHOOK_URL', 'https://brrr111.app.n8n.cloud/webhook/ocr-orders-supabase');
 const duplicateToWebhook = getEnv('VITE_ORDER_DUPLICATE_TO_WEBHOOK', 'true') === 'true';
 const webhookSharedSecret = getEnv('VITE_ORDER_WEBHOOK_SHARED_SECRET', 'ocr_4f9b8d2c7a1e63f0c5b9a472de18f6c3a9e54b7d1c8f20ea6b3d91f472ac58e1');
 const novaPoshtaApiKey = getEnv('VITE_NOVA_POSHTA_API_KEY', '5d7e7680adca1bbc14e0f9e9ef86b750');
