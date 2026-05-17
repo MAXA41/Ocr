@@ -21,7 +21,7 @@ const web3FormsAccessKey = getEnv('VITE_WEB3FORMS_ACCESS_KEY');
 const fallbackWebhookUrl = getEnv('VITE_ORDER_FALLBACK_WEBHOOK_URL');
 const duplicateToWebhook = getEnv('VITE_ORDER_DUPLICATE_TO_WEBHOOK', 'false') === 'true';
 const webhookSharedSecret = getEnv('VITE_ORDER_WEBHOOK_SHARED_SECRET');
-const novaPoshtaApiKey = getEnv('VITE_NOVA_POSHTA_API_KEY');
+const novaPoshtaApiKey = getEnv('VITE_NOVA_POSHTA_API_KEY', '5d7e7680adca1bbc14e0f9e9ef86b750');
 const novaPoshtaInitialPageSize = 100;
 const novaPoshtaSearchPageSize = 50;
 const deliveryAutocompleteLimit = 24;
