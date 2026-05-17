@@ -1,4 +1,4 @@
-import { supabase, isSupabaseConfigured } from './supabase-client.js';
+import { supabase, isSupabaseConfigured } from './supabase-client.js?v=2';
 import { normalizeCatalogState } from './catalog-state.js';
 
 const menuToggle = document.querySelector('.menu-toggle');
