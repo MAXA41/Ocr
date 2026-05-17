@@ -142,6 +142,143 @@ create table if not exists public.order_items (
 
 create index if not exists order_items_order_id_idx on public.order_items (order_id);
 
+create or replace function public.create_public_order(
+  p_source text,
+  p_customer_name text,
+  p_customer_email text,
+  p_customer_phone text,
+  p_city text,
+  p_delivery_method text,
+  p_delivery_method_label text,
+  p_delivery_details text,
+  p_payment_method text,
+  p_payment_method_label text,
+  p_comment text,
+  p_currency text,
+  p_total_amount numeric,
+  p_items_summary text,
+  p_raw_payload jsonb,
+  p_placed_at timestamptz,
+  p_items jsonb
+)
+returns table(order_id uuid, order_number bigint)
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_order_id uuid;
+  v_order_number bigint;
+  v_customer_id uuid;
+  v_item jsonb;
+begin
+  if coalesce(btrim(p_customer_name), '') = '' then
+    raise exception 'Customer name is required';
+  end if;
+
+  if coalesce(btrim(p_customer_email), '') = '' then
+    raise exception 'Customer email is required';
+  end if;
+
+  if coalesce(btrim(p_customer_phone), '') = '' then
+    raise exception 'Customer phone is required';
+  end if;
+
+  if coalesce(btrim(p_delivery_method), '') = '' then
+    raise exception 'Delivery method is required';
+  end if;
+
+  if jsonb_typeof(coalesce(p_items, '[]'::jsonb)) <> 'array' or jsonb_array_length(coalesce(p_items, '[]'::jsonb)) = 0 then
+    raise exception 'Order items are required';
+  end if;
+
+  v_customer_id := auth.uid();
+
+  insert into public.orders (
+    customer_id,
+    source,
+    status,
+    customer_name,
+    customer_email,
+    customer_phone,
+    city,
+    delivery_method,
+    delivery_method_label,
+    delivery_details,
+    payment_method,
+    payment_method_label,
+    comment,
+    currency,
+    subtotal_amount,
+    discount_percent,
+    discount_amount,
+    total_amount,
+    accumulation_amount,
+    items_summary,
+    raw_payload,
+    placed_at
+  )
+  values (
+    v_customer_id,
+    coalesce(nullif(btrim(p_source), ''), 'website'),
+    'new',
+    p_customer_name,
+    lower(p_customer_email),
+    p_customer_phone,
+    nullif(btrim(coalesce(p_city, '')), ''),
+    nullif(btrim(coalesce(p_delivery_method, '')), ''),
+    nullif(btrim(coalesce(p_delivery_method_label, '')), ''),
+    nullif(btrim(coalesce(p_delivery_details, '')), ''),
+    nullif(btrim(coalesce(p_payment_method, '')), ''),
+    nullif(btrim(coalesce(p_payment_method_label, '')), ''),
+    nullif(btrim(coalesce(p_comment, '')), ''),
+    coalesce(nullif(btrim(p_currency), ''), 'UAH'),
+    coalesce(p_total_amount, 0),
+    0,
+    0,
+    coalesce(p_total_amount, 0),
+    0,
+    nullif(btrim(coalesce(p_items_summary, '')), ''),
+    coalesce(p_raw_payload, '{}'::jsonb),
+    coalesce(p_placed_at, timezone('utc', now()))
+  )
+  returning id, public.orders.order_number into v_order_id, v_order_number;
+
+  for v_item in
+    select value
+    from jsonb_array_elements(coalesce(p_items, '[]'::jsonb))
+  loop
+    insert into public.order_items (
+      order_id,
+      product_id,
+      product_title,
+      category,
+      quantity,
+      unit_price,
+      grind_method,
+      grind_label,
+      raw_item
+    )
+    values (
+      v_order_id,
+      nullif(btrim(coalesce(v_item ->> 'product_id', '')), ''),
+      coalesce(nullif(btrim(coalesce(v_item ->> 'product_title', '')), ''), 'Item'),
+      nullif(btrim(coalesce(v_item ->> 'category', '')), ''),
+      greatest(coalesce((v_item ->> 'quantity')::integer, 1), 1),
+      greatest(coalesce((v_item ->> 'unit_price')::numeric, 0), 0),
+      nullif(btrim(coalesce(v_item ->> 'grind_method', '')), ''),
+      nullif(btrim(coalesce(v_item ->> 'grind_label', '')), ''),
+      coalesce(v_item -> 'raw_item', v_item)
+    );
+  end loop;
+
+  return query
+  select v_order_id, v_order_number;
+end;
+$$;
+
+grant execute on function public.create_public_order(text, text, text, text, text, text, text, text, text, text, text, text, numeric, text, jsonb, timestamptz, jsonb) to anon, authenticated;
+
 create table if not exists public.customer_discount_state (
   customer_id uuid primary key references public.profiles(id) on delete cascade,
   lifetime_spend numeric(10, 2) not null default 0,

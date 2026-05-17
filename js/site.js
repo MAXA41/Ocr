@@ -1694,6 +1694,54 @@ const submitToWebhook = async (payload) => {
   return result;
 };
 
+const submitToSupabase = async (payload) => {
+  if (!isSupabaseConfigured || !supabase) {
+    throw new Error('Прямий канал Supabase не налаштований.');
+  }
+
+  const orderItems = (Array.isArray(payload.cart) ? payload.cart : []).map((item) => ({
+    product_id: item.id || null,
+    product_title: item.title || 'Item',
+    category: item.category || null,
+    quantity: Number(item.qty || 0),
+    unit_price: Number(item.price || 0),
+    grind_method: item.grindMethod || null,
+    grind_label: item.grindLabel || null,
+    raw_item: item,
+  }));
+
+  const { data, error } = await supabase.rpc('create_public_order', {
+    p_source: payload.source || 'website',
+    p_customer_name: payload.name,
+    p_customer_email: payload.email,
+    p_customer_phone: payload.phone,
+    p_city: payload.city || null,
+    p_delivery_method: payload.deliveryMethod || null,
+    p_delivery_method_label: payload.deliveryMethodLabel || null,
+    p_delivery_details: payload.deliveryDetails || null,
+    p_payment_method: payload.paymentMethod || null,
+    p_payment_method_label: payload.paymentMethodLabel || null,
+    p_comment: payload.comment || null,
+    p_currency: payload.currency || 'UAH',
+    p_total_amount: Number(payload.total || 0),
+    p_items_summary: payload.orderItems || null,
+    p_raw_payload: payload,
+    p_placed_at: payload.createdAt || new Date().toISOString(),
+    p_items: orderItems,
+  });
+
+  const createdOrder = Array.isArray(data) ? data[0] : data;
+
+  if (error || !createdOrder?.order_id) {
+    throw new Error(error?.message || 'Не вдалося зберегти замовлення в Supabase.');
+  }
+
+  return {
+    orderId: createdOrder.order_id,
+    orderNumber: createdOrder.order_number || null,
+  };
+};
+
 const submitViaWeb3Forms = async ({
   name,
   email,
@@ -1752,6 +1800,27 @@ const submitViaWeb3Forms = async ({
 
 const submitOrder = async (order) => {
   const payload = buildOrderPayload(order);
+
+  if (isSupabaseConfigured && supabase) {
+    try {
+      const supabaseResult = await submitToSupabase({ ...payload, deliveryChannel: 'direct-supabase' });
+
+      if (fallbackWebhookUrl) {
+        submitToWebhook({
+          ...payload,
+          deliveryChannel: 'supabase-backup-webhook',
+          orderId: supabaseResult.orderId,
+          orderNumber: supabaseResult.orderNumber,
+        }).catch((error) => {
+          console.error('Supabase backup webhook notification failed', error);
+        });
+      }
+
+      return { channel: 'supabase', result: supabaseResult };
+    } catch (supabaseError) {
+      console.error('Direct Supabase order insert failed', supabaseError);
+    }
+  }
 
   const shouldUseWebhookFirst = orderProvider === 'webhook' || (orderProvider === 'web3forms' && !web3FormsAccessKey && Boolean(fallbackWebhookUrl));
 
@@ -2054,7 +2123,10 @@ if (checkoutForm) {
       renderCart();
       updateCartCounter();
       renderCheckoutSummary();
-      const successMessage = submission.channel === 'webhook'
+      const orderNumberLabel = submission.result?.orderNumber ? ` #${submission.result.orderNumber}` : '';
+      const successMessage = submission.channel === 'supabase'
+        ? `Замовлення${orderNumberLabel} прийнято. Ми зв'яжемося з вами найближчим часом для підтвердження деталей і помолу.`
+        : submission.channel === 'webhook'
         ? 'Замовлення відправлено через резервний канал. Ми зв\'яжемося з вами найближчим часом для підтвердження деталей і помолу.'
         : `Замовлення прийнято. Доставка: ${getCheckoutLabel('deliveryMethod', deliveryMethod)}. Помол по кожній позиції збережено.`;
       setCheckoutStatus(successMessage, 'success');
