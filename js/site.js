@@ -190,6 +190,55 @@ const formatProductCode = (product) => {
     .toUpperCase();
 };
 
+const fetchActivePriceOverrides = async () => {
+  if (!isSupabaseConfigured || !supabase) {
+    return new Map();
+  }
+
+  const { data, error } = await supabase
+    .from('product_price_overrides')
+    .select('product_id, override_price, currency, is_active, updated_at')
+    .eq('is_active', true);
+
+  if (error) {
+    console.error('Failed to load product price overrides', error);
+    return new Map();
+  }
+
+  return new Map(
+    (data || [])
+      .filter((row) => row?.product_id)
+      .map((row) => [row.product_id, row])
+  );
+};
+
+const applyPriceOverrides = (products, priceOverrideMap) => {
+  if (!(priceOverrideMap instanceof Map) || priceOverrideMap.size === 0) {
+    return products;
+  }
+
+  return products.map((product) => {
+    const override = priceOverrideMap.get(product.id);
+    if (!override) {
+      return product;
+    }
+
+    const overridePrice = Number(override.override_price);
+    if (!Number.isFinite(overridePrice) || overridePrice < 0) {
+      return product;
+    }
+
+    return {
+      ...product,
+      basePrice: Number(product.basePrice ?? product.price ?? 0),
+      price: overridePrice,
+      priceSource: 'override',
+      priceCurrency: override.currency || 'UAH',
+      priceUpdatedAt: override.updated_at || null,
+    };
+  });
+};
+
 const getPrimaryTasteNotes = (description = '') => {
   return description
     .split('.')
@@ -409,10 +458,19 @@ const reconcileCartWithCatalogState = (notify = false) => {
   const items = getCart();
   const notices = [];
   let changed = false;
+  let priceChanged = false;
 
   const nextItems = items.flatMap((item) => {
     const catalogProduct = getCatalogProductById(item.id);
     if (!catalogProduct) return [item];
+
+    let nextItem = item;
+
+    if (Number(item.price) !== Number(catalogProduct.price)) {
+      changed = true;
+      priceChanged = true;
+      nextItem = { ...item, price: Number(catalogProduct.price) };
+    }
 
     const state = getProductCatalogState(catalogProduct);
     if (state.availabilityStatus !== 'available') {
@@ -429,13 +487,17 @@ const reconcileCartWithCatalogState = (notify = false) => {
         return [];
       }
 
-      return [{ ...item, qty: state.availableQuantity }];
+      return [{ ...nextItem, qty: state.availableQuantity }];
     }
 
-    return [item];
+    return [nextItem];
   });
 
   if (!changed) return true;
+
+  if (priceChanged) {
+    notices.unshift('Ціни в кошику оновлено відповідно до актуального прайсу.');
+  }
 
   setCart(nextItems);
   renderCart();
@@ -475,8 +537,10 @@ if (bestsellerGrid || categoryGrid || productDetailRoot) {
   fetch('products.json')
     .then((res) => res.json())
     .then(async (products) => {
+      const priceOverrideMap = await fetchActivePriceOverrides();
+      const pricedProducts = applyPriceOverrides(products, priceOverrideMap);
       const stateMap = await fetchCatalogStateMap(products.map((product) => product.id));
-      const enrichedProducts = mergeProductsWithCatalogState(products, stateMap);
+      const enrichedProducts = mergeProductsWithCatalogState(pricedProducts, stateMap);
       syncCatalogProducts(enrichedProducts);
       reconcileCartWithCatalogState();
 

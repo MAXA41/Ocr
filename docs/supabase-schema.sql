@@ -310,6 +310,21 @@ create table if not exists public.product_catalog_state (
   updated_at timestamptz not null default timezone('utc', now())
 );
 
+create table if not exists public.product_price_overrides (
+  product_id text primary key,
+  override_price numeric(10, 2) not null check (override_price >= 0),
+  currency text not null default 'UAH',
+  is_active boolean not null default true,
+  source text not null default 'telegram',
+  note text,
+  updated_by uuid references public.profiles(id) on delete set null,
+  created_at timestamptz not null default timezone('utc', now()),
+  updated_at timestamptz not null default timezone('utc', now())
+);
+
+create index if not exists product_price_overrides_active_idx
+  on public.product_price_overrides (is_active, updated_at desc);
+
 create index if not exists order_items_product_id_idx on public.order_items (product_id);
 
 create or replace function public.is_catalog_admin()
@@ -573,6 +588,12 @@ before update on public.customer_discount_state
 for each row
 execute function public.set_updated_at();
 
+drop trigger if exists product_price_overrides_set_updated_at on public.product_price_overrides;
+create trigger product_price_overrides_set_updated_at
+before update on public.product_price_overrides
+for each row
+execute function public.set_updated_at();
+
 alter table public.profiles enable row level security;
 alter table public.discount_tiers enable row level security;
 alter table public.orders enable row level security;
@@ -580,6 +601,7 @@ alter table public.order_items enable row level security;
 alter table public.customer_discount_state enable row level security;
 alter table public.catalog_admins enable row level security;
 alter table public.product_catalog_state enable row level security;
+alter table public.product_price_overrides enable row level security;
 
 drop policy if exists "profiles_select_own" on public.profiles;
 create policy "profiles_select_own"
@@ -655,3 +677,28 @@ on public.product_catalog_state
 for update
 using (public.is_catalog_admin())
 with check (public.is_catalog_admin());
+
+drop policy if exists "product_price_overrides_select_active" on public.product_price_overrides;
+create policy "product_price_overrides_select_active"
+on public.product_price_overrides
+for select
+using (is_active or public.is_catalog_admin());
+
+drop policy if exists "product_price_overrides_admin_insert" on public.product_price_overrides;
+create policy "product_price_overrides_admin_insert"
+on public.product_price_overrides
+for insert
+with check (public.is_catalog_admin());
+
+drop policy if exists "product_price_overrides_admin_update" on public.product_price_overrides;
+create policy "product_price_overrides_admin_update"
+on public.product_price_overrides
+for update
+using (public.is_catalog_admin())
+with check (public.is_catalog_admin());
+
+drop policy if exists "product_price_overrides_admin_delete" on public.product_price_overrides;
+create policy "product_price_overrides_admin_delete"
+on public.product_price_overrides
+for delete
+using (public.is_catalog_admin());

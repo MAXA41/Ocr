@@ -33,7 +33,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const update = $('Telegram Admin Webhook').first().json.body && typeof $('Telegram Admin Webhook').first().json.body === 'object' ? $('Telegram Admin Webhook').first().json.body : $('Telegram Admin Webhook').first().json;\nconst message = update.message || update.edited_message || null;\nconst chatId = message?.chat?.id ? String(message.chat.id) : '';\nconst text = String(message?.text || '').trim();\nconst allowedChatIds = String($('Workflow Config').first().json.TELEGRAM_ADMIN_CHAT_ID || '')\n  .split(',')\n  .map((value) => value.trim())\n  .filter(Boolean);\nconst chatAllowed = allowedChatIds.length > 0 && allowedChatIds.includes(chatId);\nconst normalizedText = text.replace(/\\s+/g, ' ').trim();\nconst isHelp = normalizedText === '/start' || normalizedText === '/help';\nconst completeMatch = normalizedText.match(/^\\/complete\\s+(.+)$/i);\nconst rawReference = completeMatch ? completeMatch[1].trim() : '';\nconst isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(rawReference);\nconst numericOrder = Number(rawReference);\nconst orderNumber = Number.isInteger(numericOrder) && numericOrder > 0 ? numericOrder : null;\nconst orderId = isUuid ? rawReference : null;\nconst isCompleteCommand = Boolean(completeMatch) && Boolean(orderId || orderNumber);\nconst isListCommand = /^\\/(orders|new|neworders)$/i.test(normalizedText);\nconst helpText = [\n  'Команди менеджера OCR:',\n  '',\n  '/orders',\n  '/new',\n  '/neworders',\n  '/complete 123',\n  '/complete uuid-замовлення',\n  '',\n  'Приклади:',\n  '/orders',\n  '/complete 154'\n].join('\\n');\n\nlet replyText = helpText;\nif (!chatAllowed) {\n  replyText = 'Цей чат не має доступу до admin-команд.';\n} else if (isCompleteCommand) {\n  replyText = orderNumber\n    ? `Пробую завершити замовлення #${orderNumber}...`\n    : `Пробую завершити замовлення ${orderId}...`;\n} else if (isListCommand) {\n  replyText = 'Завантажую список відкритих замовлень...';\n} else if (!isHelp) {\n  replyText = 'Невідома команда. Використай /help';\n}\n\nreturn [{\n  json: {\n    update,\n    chatId,\n    text: normalizedText,\n    chatAllowed,\n    isHelp,\n    isCompleteCommand,\n    isListCommand,\n    orderId,\n    orderNumber,\n    replyText,\n    helpText\n  }\n}];"
+        "jsCode": "const update = $('Telegram Admin Webhook').first().json.body && typeof $('Telegram Admin Webhook').first().json.body === 'object' ? $('Telegram Admin Webhook').first().json.body : $('Telegram Admin Webhook').first().json;\nconst message = update.message || update.edited_message || null;\nconst from = message?.from || {};\nconst chatId = message?.chat?.id ? String(message.chat.id) : '';\nconst senderId = from?.id ? String(from.id) : '';\nconst senderUsername = String(from?.username || '').trim();\nconst text = String(message?.text || '').trim();\nconst allowedChatIds = String($('Workflow Config').first().json.TELEGRAM_ADMIN_CHAT_ID || '')\n  .split(',')\n  .map((value) => value.trim())\n  .filter(Boolean);\nconst chatAllowed = allowedChatIds.length > 0 && allowedChatIds.includes(chatId);\nconst normalizedText = text.replace(/\\s+/g, ' ').trim();\nconst isHelp = normalizedText === '/start' || normalizedText === '/help';\nconst completeMatch = normalizedText.match(/^\\/complete\\s+(.+)$/i);\nconst rawReference = completeMatch ? completeMatch[1].trim() : '';\nconst isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(rawReference);\nconst numericOrder = Number(rawReference);\nconst orderNumber = Number.isInteger(numericOrder) && numericOrder > 0 ? numericOrder : null;\nconst orderId = isUuid ? rawReference : null;\nconst isCompleteCommand = Boolean(completeMatch) && Boolean(orderId || orderNumber);\nconst isListCommand = /^\\/(orders|new|neworders)$/i.test(normalizedText);\nconst priceMatch = normalizedText.match(/^\\/price\\s+([a-z0-9][a-z0-9-_]*)\\s+(\\d+(?:[.,]\\d{1,2})?)$/i);\nconst priceCommandIntent = /^\\/price\\b/i.test(normalizedText);\nconst productId = priceMatch ? priceMatch[1].trim().toLowerCase() : '';\nconst overridePrice = priceMatch ? Number(priceMatch[2].replace(',', '.')) : null;\nconst isPriceCommand = Boolean(priceMatch) && Number.isFinite(overridePrice) && overridePrice >= 0;\nconst helpText = [\n  'Команди менеджера OCR:',\n  '',\n  '/orders',\n  '/new',\n  '/neworders',\n  '/complete 123',\n  '/complete uuid-замовлення',\n  '/price amerigo 450',\n  '',\n  'Приклади:',\n  '/orders',\n  '/complete 154',\n  '/price brooklyn 460'\n].join('\\n');\n\nlet replyText = helpText;\nif (!chatAllowed) {\n  replyText = 'Цей чат не має доступу до admin-команд.';\n} else if (isCompleteCommand) {\n  replyText = orderNumber\n    ? `Пробую завершити замовлення #${orderNumber}...`\n    : `Пробую завершити замовлення ${orderId}...`;\n} else if (isPriceCommand) {\n  replyText = `Оновлюю ціну ${productId} -> ${overridePrice} грн...`;\n} else if (priceCommandIntent) {\n  replyText = ['Невірний формат команди.', '', 'Використай:', '/price product_id 450', '', 'Приклад:', '/price amerigo 450'].join('\\n');\n} else if (isListCommand) {\n  replyText = 'Завантажую список відкритих замовлень...';\n} else if (!isHelp) {\n  replyText = 'Невідома команда. Використай /help';\n}\n\nreturn [{\n  json: {\n    update,\n    chatId,\n    senderId,\n    senderUsername,\n    text: normalizedText,\n    chatAllowed,\n    isHelp,\n    isCompleteCommand,\n    isListCommand,\n    isPriceCommand,\n    priceCommandIntent,\n    productId,\n    overridePrice,\n    orderId,\n    orderNumber,\n    replyText,\n    helpText\n  }\n}];"
       },
       "id": "2",
       "name": "Parse Telegram Command",
@@ -122,6 +122,78 @@
       "position": [
         1540,
         220
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{$json.isPriceCommand}}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "13",
+      "name": "Has Price Command?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1280,
+        380
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$('Workflow Config').first().json.SUPABASE_URL + '/rest/v1/product_price_overrides?on_conflict=product_id'}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{$('Workflow Config').first().json.SUPABASE_SECRET_KEY}}"
+            },
+            {
+              "name": "Authorization",
+              "value": "={{'Bearer ' + $('Workflow Config').first().json.SUPABASE_SECRET_KEY}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "resolution=merge-duplicates,return=representation"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify([{ product_id: $json.productId, override_price: $json.overridePrice, currency: 'UAH', is_active: true, source: 'telegram-admin', note: ((($json.senderUsername ? '@' + $json.senderUsername : 'user:' + ($json.senderId || '-')) + ' | ' + $json.text).slice(0, 240)) }]) }}",
+        "options": {}
+      },
+      "id": "14",
+      "name": "Upsert Price Override",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1540,
+        340
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const request = $('Parse Telegram Command').item.json;\nconst rows = Array.isArray($json) ? $json : [];\nconst row = rows[0] || null;\nconst productId = row?.product_id || request.productId || '-';\nconst overridePrice = Number(row?.override_price ?? request.overridePrice ?? 0);\nconst finalText = row\n  ? ['Ціну оновлено.', '', `Товар: ${productId}`, `Нова ціна: ${overridePrice} грн`].join('\\n')\n  : ['Помилка.', '', `Не вдалося оновити ціну для ${productId}.`].join('\\n');\n\nreturn [{\n  json: {\n    chatId: request.chatId,\n    finalText\n  }\n}];"
+      },
+      "id": "15",
+      "name": "Format Price Reply",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1800,
+        340
       ]
     },
     {
@@ -290,6 +362,24 @@
         ],
         [
           {
+            "node": "Has Price Command?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Price Command?": {
+      "main": [
+        [
+          {
+            "node": "Upsert Price Override",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
             "node": "Has List Command?",
             "type": "main",
             "index": 0
@@ -327,6 +417,28 @@
       ]
     },
     "Format Completion Reply": {
+      "main": [
+        [
+          {
+            "node": "Send Telegram Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upsert Price Override": {
+      "main": [
+        [
+          {
+            "node": "Format Price Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Price Reply": {
       "main": [
         [
           {
