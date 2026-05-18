@@ -1684,7 +1684,18 @@ const submitToWebhook = async (payload) => {
   });
 
   const contentType = response.headers.get('content-type') || '';
-  const result = contentType.includes('application/json') ? await response.json() : await response.text();
+  const rawResult = await response.text();
+  let result = rawResult;
+
+  if (contentType.includes('application/json') && rawResult.trim()) {
+    try {
+      result = JSON.parse(rawResult);
+    } catch {
+      result = rawResult;
+    }
+  } else if (contentType.includes('application/json')) {
+    result = {};
+  }
 
   if (!response.ok) {
     const message = typeof result === 'string' ? result : result.message;
