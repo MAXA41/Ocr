@@ -175,6 +175,12 @@ const setAuthMode = (mode) => {
   }
 };
 
+const getInitialAuthMode = () => {
+  const hash = String(window.location.hash || '').toLowerCase();
+  if (hash === '#register' || hash === '#signup') return 'register';
+  return 'login';
+};
+
 const renderProfile = (profile) => {
   if (!profileList) return;
   currentProfile = profile || null;
@@ -796,5 +802,5 @@ profileList?.addEventListener('submit', async (event) => {
   await saveProfile(form);
 });
 
-setAuthMode('login');
+setAuthMode(getInitialAuthMode());
 init();

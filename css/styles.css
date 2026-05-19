@@ -119,9 +119,21 @@ p {
 }
 
 .logo img {
-  height: 120px;
+  height: 44px;
   width: auto;
+  max-width: min(72vw, 360px);
+  object-fit: contain;
   display: block;
+}
+
+.site-header .logo img {
+  height: 38px;
+  max-width: min(34vw, 300px);
+}
+
+.site-footer .logo img {
+  height: 30px;
+  max-width: min(100%, 260px);
 }
 
 .logo small {
@@ -152,6 +164,10 @@ p {
 
 .main-nav.open {
   display: flex;
+}
+
+.nav-account-link {
+  display: none;
 }
 
 @media (min-width: 768px) {
@@ -205,7 +221,8 @@ p {
   }
 
   .logo img {
-    height: 88px;
+    height: 34px;
+    max-width: min(72vw, 240px);
   }
 
   .main-nav {
@@ -223,6 +240,17 @@ p {
   .nav-dropdown-toggle {
     font-size: 12px;
     letter-spacing: 0.14em;
+    width: 100%;
+  }
+
+  .nav-account-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(15, 15, 13, 0.12);
+    border-radius: 999px;
+    padding: 12px 14px;
+    background: rgba(255, 255, 255, 0.72);
   }
 
   .nav-dropdown-menu {
@@ -261,6 +289,26 @@ p {
     display: none;
   }
 
+  .account-auth-toggle {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .account-auth-mode {
+    width: 100%;
+    min-width: 0;
+    justify-content: center;
+    padding: 12px 10px;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+  }
+
+  .account-auth-form .btn,
+  .account-auth-secondary .btn {
+    width: 100%;
+  }
+
   .container {
     width: min(100% - 28px, 1200px);
     margin: 0 auto;
@@ -284,6 +332,10 @@ p {
   .brand-mark {
     width: 96px;
     height: 96px;
+  }
+
+  .hero-logo {
+    width: min(100%, 220px);
   }
 
   .hero h1 {
@@ -983,6 +1035,31 @@ p {
   height: 80%;
   object-fit: contain;
   display: block;
+}
+
+.hero-logo {
+  width: min(100%, 520px);
+}
+
+.hero-logo-button {
+  width: clamp(180px, 24vw, 260px);
+  aspect-ratio: 1;
+  display: block;
+  border-radius: 28px;
+  background: url('../images/logo11.jpg') center / cover no-repeat;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 20px 44px rgba(15, 15, 13, 0.18);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.hero-logo-button:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 26px 56px rgba(15, 15, 13, 0.22);
+}
+
+.hero-logo-button:focus-visible {
+  outline: 2px solid rgba(226, 68, 42, 0.9);
+  outline-offset: 6px;
 }
 
 
@@ -1932,6 +2009,11 @@ p {
     grid-template-columns: 1.1fr 0.9fr;
   }
 
+  .site-footer .footer-grid {
+    grid-template-columns: minmax(260px, 1.35fr) repeat(3, minmax(160px, 1fr));
+    align-items: start;
+  }
+
   .account-shell {
     grid-template-columns: minmax(0, 1.2fr) minmax(320px, 420px);
   }
@@ -2036,7 +2118,8 @@ p {
   }
 
   .logo img {
-    height: 78px;
+    height: 34px;
+    max-width: min(72vw, 240px);
   }
 
   .product-showcase-card {

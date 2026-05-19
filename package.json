@@ -1,5 +1,4 @@
 {
-  "name": "ocr-ui",
   "version": "1.0.0",
   "private": true,
   "type": "module",
@@ -9,7 +8,12 @@
     "preview": "vite preview",
     "lint": "eslint . --ext .js,.html",
     "format": "prettier --write .",
-    "check": "npm run lint && npm run test"
+    "check": "npm run lint && npm run test",
+    "n8n:start:local": "node scripts/start-local-n8n.mjs",
+    "telegram:tunnel:start": "node scripts/telegram-tunnel.mjs",
+    "telegram:webhook:info": "node scripts/telegram-webhook.mjs info",
+    "telegram:webhook:set": "node scripts/telegram-webhook.mjs set",
+    "telegram:webhook:delete": "node scripts/telegram-webhook.mjs delete"
   },
   "devDependencies": {
     "@supabase/supabase-js": "^2.49.8",
