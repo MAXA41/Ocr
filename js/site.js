@@ -334,7 +334,6 @@ const renderProductDetail = (product, allProducts) => {
                 <p class="product-code">Код товару: ${productCode}</p>
                 <div>
                   <p class="eyebrow">${copy.eyebrow}</p>
-                  <a class="hero-logo hero-logo-button" href="account.html#register" aria-label="Перейти до реєстрації"></a>
                   <h1>${product.name}</h1>
                 </div>
               </div>
@@ -580,6 +579,8 @@ if (bestsellerGrid || categoryGrid || productDetailRoot) {
 const cartKey = 'ocr_cart_items';
 const checkoutDraftKey = 'ocr_checkout_draft';
 const latestOrderKey = 'latest_order';
+const baristaPromoCode = 'barista';
+const baristaPromoDiscountRate = 0.1;
 const cartButton = document.querySelector('.cart-button');
 const cartCount = document.querySelector('#cart-count');
 const cartModal = document.querySelector('#cart-modal');
@@ -602,6 +603,25 @@ const normalizeCartItem = (item) => ({
   ...item,
   grindMethod: item.category === 'drips' ? 'drip-ready' : item.grindMethod || '',
 });
+
+const normalizePromoCode = (value = '') => String(value || '').trim().toLowerCase();
+
+const calculateCartPricing = (items, promoCode = '') => {
+  const subtotal = items.reduce((sum, item) => sum + item.price * item.qty, 0);
+  const normalizedPromoCode = normalizePromoCode(promoCode);
+  const isPromoApplied = subtotal > 0 && normalizedPromoCode === baristaPromoCode;
+  const discountAmount = isPromoApplied ? Math.round(subtotal * baristaPromoDiscountRate) : 0;
+  const total = Math.max(subtotal - discountAmount, 0);
+
+  return {
+    subtotal,
+    discountAmount,
+    total,
+    promoCode: isPromoApplied ? String(promoCode).trim() : '',
+    enteredPromoCode: String(promoCode || '').trim(),
+    isPromoApplied,
+  };
+};
 
 const getCart = () => JSON.parse(localStorage.getItem(cartKey) || '[]').map(normalizeCartItem);
 const setCart = (items) => localStorage.setItem(cartKey, JSON.stringify(items.map(normalizeCartItem)));
@@ -638,7 +658,8 @@ const renderCart = () => {
     cartItemsContainer.innerHTML = '<p>Кошик порожній</p>';
     cartTotal.textContent = 'Разом: 0 грн';
   } else {
-    const totalCost = items.reduce((sum, item) => sum + item.price * item.qty, 0);
+    const promoCode = getCheckoutField('promoCode')?.value || '';
+    const pricing = calculateCartPricing(items, promoCode);
     items.forEach((item) => {
       const row = document.createElement('div');
       row.className = 'cart-item';
@@ -665,7 +686,9 @@ const renderCart = () => {
       `;
       cartItemsContainer.append(row);
     });
-    cartTotal.textContent = `Разом: ${totalCost} грн`;
+    cartTotal.textContent = pricing.discountAmount > 0
+      ? `Разом зі знижкою: ${pricing.total} грн`
+      : `Разом: ${pricing.total} грн`;
   }
 };
 
@@ -787,6 +810,7 @@ const checkoutPersistedFields = [
   'deliveryLocation',
   'pickupLocation',
   'paymentMethod',
+  'promoCode',
   'comment',
 ];
 
@@ -1390,7 +1414,7 @@ const hydrateCheckoutForm = async () => {
   const savedData = getSavedCheckoutData();
   if (!savedData || Object.keys(savedData).length === 0) return;
 
-  ['name', 'phone', 'email', 'deliveryMethod', 'city', 'paymentMethod', 'comment'].forEach((fieldName) => {
+  ['name', 'phone', 'email', 'deliveryMethod', 'city', 'paymentMethod', 'promoCode', 'comment'].forEach((fieldName) => {
     const field = getCheckoutField(fieldName);
     const savedValue = savedData[fieldName];
     if (field && typeof savedValue === 'string' && savedValue) {
@@ -1579,13 +1603,23 @@ const renderCheckoutSummary = () => {
     return;
   }
 
-  const total = items.reduce((sum, item) => sum + item.price * item.qty, 0);
+  const promoCode = getCheckoutField('promoCode')?.value || '';
+  const pricing = calculateCartPricing(items, promoCode);
   const deliveryMethod = getCheckoutField('deliveryMethod')?.value || '';
   const paymentMethod = getCheckoutField('paymentMethod')?.value || '';
+  const promoStatusMarkup = pricing.enteredPromoCode
+    ? `<div class="checkout-summary-row"><span>Промокод</span><strong>${pricing.isPromoApplied ? `${pricing.promoCode} (-10%)` : `${pricing.enteredPromoCode} не застосовано`}</strong></div>`
+    : '';
+  const discountMarkup = pricing.discountAmount > 0
+    ? `<div class="checkout-summary-row"><span>Знижка</span><strong>-${pricing.discountAmount} грн</strong></div>`
+    : '';
 
   checkoutSummary.innerHTML = `
     <div class="checkout-summary-row"><span>Товарів</span><strong>${items.reduce((sum, item) => sum + item.qty, 0)}</strong></div>
-    <div class="checkout-summary-row"><span>Сума</span><strong>${total} грн</strong></div>
+    <div class="checkout-summary-row"><span>Сума</span><strong>${pricing.subtotal} грн</strong></div>
+    ${promoStatusMarkup}
+    ${discountMarkup}
+    <div class="checkout-summary-row"><span>До сплати</span><strong>${pricing.total} грн</strong></div>
     <div class="checkout-summary-row"><span>Доставка</span><strong>${getCheckoutLabel('deliveryMethod', deliveryMethod)}</strong></div>
     <div class="checkout-summary-row"><span>Оплата</span><strong>${getCheckoutLabel('paymentMethod', paymentMethod)}</strong></div>
     <small>Помол вказується окремо для кожного товару в кошику. Вартість доставки уточнюється менеджером після підтвердження.</small>
@@ -1700,6 +1734,9 @@ const buildOrderPayload = ({
   deliveryMethod,
   deliveryDetails,
   paymentMethod,
+  promoCode,
+  subtotal,
+  discountAmount,
   comment,
   cart,
   total,
@@ -1716,6 +1753,11 @@ const buildOrderPayload = ({
     deliveryDetails,
     paymentMethod,
     paymentMethodLabel: getCheckoutLabel('paymentMethod', paymentMethod),
+    promoCode: promoCode || null,
+    subtotal,
+    subtotalLabel: `${subtotal} грн`,
+    discountAmount,
+    discountLabel: `${discountAmount} грн`,
     comment,
     total,
     totalLabel: `${total} грн`,
@@ -1826,6 +1868,8 @@ const submitViaWeb3Forms = async ({
   deliveryMethod,
   deliveryDetails,
   paymentMethod,
+  promoCode,
+  discountAmount,
   comment,
   cart,
   total,
@@ -1848,6 +1892,8 @@ const submitViaWeb3Forms = async ({
     delivery_method: getCheckoutLabel('deliveryMethod', deliveryMethod),
     delivery_details: deliveryDetails,
     payment_method: getCheckoutLabel('paymentMethod', paymentMethod),
+    promo_code: promoCode || '',
+    discount_amount: discountAmount ? `${discountAmount} грн` : '',
     grind_preferences: cart.map((item) => `${item.title}: ${getGrindLabel(item)}`).join(', '),
     comment,
     total: `${total} грн`,
@@ -2148,6 +2194,7 @@ if (checkoutForm) {
     const city = formData.get('city')?.toString().trim() || '';
     const deliveryDetails = getCheckoutField('deliveryDetails')?.value.trim();
     const paymentMethod = formData.get('paymentMethod')?.toString().trim();
+    const promoCode = formData.get('promoCode')?.toString().trim() || '';
     const comment = formData.get('comment')?.toString().trim() || '';
 
     const cart = getCart();
@@ -2161,7 +2208,7 @@ if (checkoutForm) {
       return;
     }
 
-    const total = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
+    const pricing = calculateCartPricing(cart, promoCode);
     const submitButton = checkoutForm.querySelector('button[type="submit"]');
 
     try {
@@ -2176,9 +2223,12 @@ if (checkoutForm) {
         deliveryMethod,
         deliveryDetails,
         paymentMethod,
+        promoCode: pricing.promoCode,
+        subtotal: pricing.subtotal,
+        discountAmount: pricing.discountAmount,
         comment,
         cart,
-        total,
+        total: pricing.total,
       });
 
       localStorage.setItem(latestOrderKey, JSON.stringify({
@@ -2189,9 +2239,12 @@ if (checkoutForm) {
         deliveryMethod,
         deliveryDetails,
         paymentMethod,
+        promoCode,
         comment,
         cart,
-        total,
+        subtotal: pricing.subtotal,
+        discountAmount: pricing.discountAmount,
+        total: pricing.total,
         date: new Date().toISOString(),
       }));
       persistCheckoutForm();
