@@ -334,6 +334,7 @@ const renderProductDetail = (product, allProducts) => {
                 <p class="product-code">Код товару: ${productCode}</p>
                 <div>
                   <p class="eyebrow">${copy.eyebrow}</p>
+                  <a class="hero-logo hero-logo-button" href="account.html#register" aria-label="Перейти до реєстрації"></a>
                   <h1>${product.name}</h1>
                 </div>
               </div>
