@@ -1,10 +1,11 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2?bundle';
 
+const runtimeEnv = globalThis.__OCR_ENV__ || {};
 const runtimeConfig = globalThis.__OCR_CONFIG__ || {};
 const env = typeof import.meta !== 'undefined' && import.meta.env ? import.meta.env : {};
 
-const supabaseUrl = String(env.VITE_SUPABASE_URL || runtimeConfig.supabaseUrl || 'https://sxxlotfbcblnjgcvxaqe.supabase.co').trim();
-const supabasePublishableKey = String(env.VITE_SUPABASE_PUBLISHABLE_KEY || runtimeConfig.supabasePublishableKey || 'sb_publishable_6Sqqk08Zt_txQFQJeacUhg_OPTpNLxf').trim();
+const supabaseUrl = String(env.VITE_SUPABASE_URL || runtimeEnv.VITE_SUPABASE_URL || runtimeConfig.supabaseUrl || 'https://sxxlotfbcblnjgcvxaqe.supabase.co').trim();
+const supabasePublishableKey = String(env.VITE_SUPABASE_PUBLISHABLE_KEY || runtimeEnv.VITE_SUPABASE_PUBLISHABLE_KEY || runtimeConfig.supabasePublishableKey || 'sb_publishable_6Sqqk08Zt_txQFQJeacUhg_OPTpNLxf').trim();
 
 export const isSupabaseConfigured = Boolean(supabaseUrl && supabasePublishableKey);
 

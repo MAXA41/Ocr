@@ -81,11 +81,12 @@ const setCatalogAdminStatus = (message, tone = 'neutral') => {
   catalogAdminStatus.dataset.tone = tone;
 };
 
+const runtimeEnv = globalThis.__OCR_ENV__ || {};
 const runtimeConfig = globalThis.__OCR_CONFIG__ || {};
 const env = typeof import.meta !== 'undefined' && import.meta.env ? import.meta.env : {};
 
 const buildEmailRedirectUrl = () => {
-  const configuredUrl = String(env.VITE_AUTH_REDIRECT_URL || runtimeConfig.authRedirectUrl || '').trim();
+  const configuredUrl = String(env.VITE_AUTH_REDIRECT_URL || runtimeEnv.VITE_AUTH_REDIRECT_URL || runtimeConfig.authRedirectUrl || '').trim();
   if (configuredUrl) return configuredUrl;
   return new URL(window.location.pathname, window.location.origin).toString();
 };
