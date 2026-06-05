@@ -37,37 +37,61 @@ http://localhost:5678
 
 ## Expose Local n8n Publicly
 
-Preferred local fallback is now the automated tunnel bootstrap:
+Preferred stable mode is a named Cloudflare tunnel.
+
+Set these user-level environment variables first:
+
+```bash
+CLOUDFLARED_TUNNEL_TOKEN=your_named_tunnel_token
+N8N_PUBLIC_BASE_URL=https://n8n.your-domain.com
+```
+
+Then run:
 
 ```bash
 npm run telegram:tunnel:start
 ```
 
-What it does:
+What it does in stable mode:
 
-- opens `localhost.run`
-- watches emitted hostnames
-- probes candidates automatically
-- binds Telegram webhook to the first live hostname that reaches local n8n
+- starts `cloudflared tunnel run --token ...`
+- uses `N8N_PUBLIC_BASE_URL` as the canonical public hostname
+- probes both Telegram and order webhook paths automatically
+- binds Telegram webhook to the stable public hostname
+
+If `CLOUDFLARED_TUNNEL_TOKEN` is missing, the script falls back to `localtunnel`.
+
+Fallback mode:
+
+```bash
+npm run telegram:tunnel:start
+```
+
+What it does in fallback mode:
+
+- opens `localtunnel`
+- waits for the first public `https://...loca.lt` URL
+- probes both Telegram and order webhook paths automatically
+- binds Telegram webhook to the first live tunnel URL that reaches local n8n
 
 The process must remain running while Telegram webhook delivery is needed.
 
 Manual fallback still exists if needed:
 
 ```bash
-ssh -o StrictHostKeyChecking=no -o ServerAliveInterval=30 -R 80:127.0.0.1:5678 nokey@localhost.run
+npx --yes localtunnel --port 5678
 ```
 
 If you ever need to probe a hostname manually, the healthy pattern is:
 
-- `200` on `/`
-- `404` on `/webhook/ocr-telegram-admin` for `GET`
+- `404` or `405` on `/webhook/ocr-telegram-admin` for `GET`
+- `404` or `405` on `/webhook/ocr-orders-supabase` for `GET`
 
 Example probe:
 
 ```bash
-curl -I -s https://<host>.lhr.life/ | head -n 5
-curl -I -s https://<host>.lhr.life/webhook/ocr-telegram-admin | head -n 5
+curl -I -s https://<host>.loca.lt/webhook/ocr-telegram-admin -H "bypass-tunnel-reminder: true" | head -n 5
+curl -I -s https://<host>.loca.lt/webhook/ocr-orders-supabase -H "bypass-tunnel-reminder: true" | head -n 5
 ```
 
 ## Sync Telegram Webhook
@@ -89,13 +113,13 @@ npm run telegram:tunnel:start
 Bind Telegram to a public base URL:
 
 ```bash
-npm run telegram:webhook:set -- https://<host>.lhr.life
+npm run telegram:webhook:set -- https://<host>.loca.lt
 ```
 
 Or pass the full webhook URL:
 
 ```bash
-npm run telegram:webhook:set -- https://<host>.lhr.life/webhook/ocr-telegram-admin
+npm run telegram:webhook:set -- https://<host>.loca.lt/webhook/ocr-telegram-admin
 ```
 
 Delete webhook and drop pending updates:
@@ -118,7 +142,26 @@ Expected responses in the current working state:
 
 ## Important Notes
 
-- `localhost.run` hostnames are temporary and can expire without warning.
+- Stable production-like setup should use Cloudflare named tunnels, not quick tunnels.
+- `loca.lt` hostnames are temporary and can expire without warning.
+- Some manual probes require the `bypass-tunnel-reminder: true` header to skip the LocalTunnel interstitial.
 - Imported n8n `If` nodes were unreliable for Telegram command routing; the working admin workflow uses code-node pass-through routing instead.
 - The active Telegram bot is `OrcOrdersBot` with id `8637802328`.
 - If a Code node suddenly fails with `access to env vars denied`, verify `N8N_BLOCK_ENV_ACCESS_IN_NODE=false` is present in the n8n runtime environment.
+
+## GitHub Pages Runtime Config
+
+The Pages deploy workflow now generates `public/env.js` from repository variables before build.
+
+Set these GitHub repository variables for production:
+
+- `VITE_ORDER_PROVIDER`
+- `VITE_ORDER_FALLBACK_WEBHOOK_URL`
+- `VITE_ORDER_DUPLICATE_TO_WEBHOOK`
+- `VITE_ORDER_WEBHOOK_SHARED_SECRET`
+- `VITE_NOVA_POSHTA_API_KEY`
+- `VITE_SUPABASE_URL`
+- `VITE_SUPABASE_PUBLISHABLE_KEY`
+- `VITE_AUTH_REDIRECT_URL`
+
+This keeps the checked-in `public/env.js` free of temporary tunnel URLs.

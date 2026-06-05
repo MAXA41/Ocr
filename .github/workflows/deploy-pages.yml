@@ -31,6 +31,19 @@ jobs:
       - name: Install dependencies
         run: npm install
 
+      - name: Build public runtime config
+        env:
+          VITE_ORDER_PROVIDER: ${{ vars['VITE_ORDER_PROVIDER'] }}
+          VITE_WEB3FORMS_ACCESS_KEY: ${{ vars['VITE_WEB3FORMS_ACCESS_KEY'] }}
+          VITE_ORDER_FALLBACK_WEBHOOK_URL: ${{ vars['VITE_ORDER_FALLBACK_WEBHOOK_URL'] }}
+          VITE_ORDER_DUPLICATE_TO_WEBHOOK: ${{ vars['VITE_ORDER_DUPLICATE_TO_WEBHOOK'] }}
+          VITE_ORDER_WEBHOOK_SHARED_SECRET: ${{ vars['VITE_ORDER_WEBHOOK_SHARED_SECRET'] }}
+          VITE_NOVA_POSHTA_API_KEY: ${{ vars['VITE_NOVA_POSHTA_API_KEY'] }}
+          VITE_SUPABASE_URL: ${{ vars['VITE_SUPABASE_URL'] }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars['VITE_SUPABASE_PUBLISHABLE_KEY'] }}
+          VITE_AUTH_REDIRECT_URL: ${{ vars['VITE_AUTH_REDIRECT_URL'] }}
+        run: npm run public-env:build
+
       - name: Build site
         run: npm run build
 
