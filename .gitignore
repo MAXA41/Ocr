@@ -7,4 +7,6 @@ npm-debug.log
 .env.*
 !.env.example
 .local-n8n/
+.n8n-local/
+.tools/
 
