@@ -2004,6 +2004,17 @@ p {
   letter-spacing: 0.08em;
 }
 
+.footer-socials {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.footer-socials .btn {
+  min-width: 132px;
+}
+
 @media (min-width: 768px) {
   .hero-grid {
     grid-template-columns: 1.1fr 0.9fr;
