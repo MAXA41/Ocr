@@ -17,6 +17,7 @@
 7. поддержка Nova Poshta autocomplete
 8. отправка заказа через `Web3Forms` и резервный webhook
 9. подготовленные `n8n` workflow и Telegram admin flow
+10. Mono acquiring checkout через Supabase Edge Functions
 
 Локальный `.env.local` уже содержит рабочие значения для:
 
@@ -56,6 +57,7 @@
 4. `customer_discount_state`
 5. `catalog_admins`
 6. `product_catalog_state`
+7. `product_catalog_items`
 
 И что view `product_catalog_public` тоже доступен.
 
@@ -69,11 +71,25 @@
 4. в `Site URL` указан production domain
 5. в `Redirect URLs` добавлен `https://odesacoffeeroasters.info/account.html`
 
+### Supabase Edge Functions
+
+Нужно задеплоить две функции:
+
+1. `mono-create-invoice`
+2. `mono-payment-webhook`
+
+И задать секреты для них:
+
+1. `SUPABASE_URL`
+2. `SUPABASE_SERVICE_ROLE_KEY`
+3. `MONO_MERCHANT_TOKEN`
+4. `PUBLIC_SITE_URL`
+
 ### Catalog Admin Access
 
 После выполнения SQL нужно проверить таблицу `catalog_admins`.
 
-Сейчас схема вставляет туда `office@chaicoffski.com`.
+Сейчас схема вставляет туда `office@barista-box.com`.
 Если товаром должен управлять другой человек, добавь его email в эту таблицу.
 
 ### Order Delivery Channel
@@ -113,15 +129,17 @@
 
 ### Онлайн-оплата
 
-Сейчас сайт умеет принимать заказ и выбранный способ оплаты, но не содержит интеграции с эквайрингом уровня LiqPay / Fondy / WayForPay.
+Сейчас сайт умеет принимать заказ и выбранный способ оплаты, а card checkout уходит в Mono через hosted payment flow.
 
 Это не блокирует запуск, если схема работы такая:
 
 1. клиент оформляет заказ
-2. менеджер подтверждает заказ
-3. клиент оплачивает переводом или по реквизитам
+2. Mono создает invoice через Supabase Edge Function
+3. клиент оплачивает картой на стороне Mono
 
-Если нужен настоящий checkout с мгновенной оплатой на сайте, это еще отдельный этап интеграции.
+Если нужно временно отключить карточную оплату, можно оставить только ручные способы из checkout.
+
+Для ручных способов заказа оплата остается вне сайта, без ввода карты на фронтенде.
 
 ### SMTP / branded email
 
@@ -160,12 +178,15 @@
 2. проверить `Auth` и redirect URLs в Supabase
 3. проверить, что кабинет открывается и регистрация работает
 4. импортировать и настроить `n8n` workflow
-5. сделать один тестовый заказ с сайта
-6. проверить запись в `orders` и `order_items`
-7. проверить уведомление в Telegram
-8. закрыть тестовый заказ через completion flow
-9. проверить обновление `customer_discount_state`
-10. после этого только публиковать production build
+5. задеплоить `mono-create-invoice` и `mono-payment-webhook`
+6. сделать один тестовый Mono-заказ с сайта
+7. проверить запись в `orders` и `order_items`
+8. проверить redirect на hosted payment page Mono
+9. проверить webhook-обновление payment status
+10. проверить уведомление в Telegram
+11. закрыть тестовый заказ через completion flow
+12. проверить обновление `customer_discount_state`
+13. после этого только публиковать production build
 
 ---
 
@@ -207,7 +228,8 @@
 1. SQL schema применена
 2. Supabase auth настроен
 3. order flow через Web3Forms и/или n8n протестирован
-4. один admin email добавлен в `catalog_admins`
-5. выполнен полный тестовый заказ до статуса `completed`
+4. Mono checkout протестирован end-to-end
+5. один admin email добавлен в `catalog_admins`
+6. выполнен полный тестовый заказ до статуса `completed`
 
 После этого магазин уже можно запускать как рабочий.

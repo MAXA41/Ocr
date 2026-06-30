@@ -96,6 +96,15 @@ create table if not exists public.orders (
   customer_id uuid references public.profiles(id) on delete set null,
   source text not null default 'website',
   status text not null default 'new' check (status in ('draft', 'new', 'paid', 'processing', 'shipped', 'completed', 'canceled', 'refunded')),
+  payment_provider text,
+  payment_status text not null default 'unpaid' check (payment_status in ('unpaid', 'pending', 'paid', 'failed', 'expired', 'canceled', 'refunded')),
+  payment_reference text,
+  payment_payload jsonb not null default '{}'::jsonb,
+  payment_gateway text,
+  mono_invoice_id text,
+  mono_invoice_status text,
+  mono_invoice_payload jsonb not null default '{}'::jsonb,
+  paid_at timestamptz,
   customer_name text not null,
   customer_email text not null,
   customer_phone text not null,
@@ -120,9 +129,42 @@ create table if not exists public.orders (
   updated_at timestamptz not null default timezone('utc', now())
 );
 
+alter table public.orders
+  add column if not exists payment_provider text,
+  add column if not exists payment_status text default 'unpaid',
+  add column if not exists payment_reference text,
+  add column if not exists payment_payload jsonb default '{}'::jsonb,
+  add column if not exists payment_gateway text,
+  add column if not exists mono_invoice_id text,
+  add column if not exists mono_invoice_status text,
+  add column if not exists mono_invoice_payload jsonb default '{}'::jsonb,
+  add column if not exists paid_at timestamptz;
+
+update public.orders
+set payment_status = coalesce(payment_status, 'unpaid')
+where payment_status is null;
+
+update public.orders
+set payment_payload = coalesce(payment_payload, '{}'::jsonb)
+where payment_payload is null;
+
+update public.orders
+set mono_invoice_payload = coalesce(mono_invoice_payload, '{}'::jsonb)
+where mono_invoice_payload is null;
+
+alter table public.orders
+  alter column payment_status set default 'unpaid',
+  alter column payment_status set not null,
+  alter column payment_payload set default '{}'::jsonb,
+  alter column payment_payload set not null,
+  alter column mono_invoice_payload set default '{}'::jsonb,
+  alter column mono_invoice_payload set not null;
+
 create index if not exists orders_customer_id_idx on public.orders (customer_id);
 create index if not exists orders_customer_email_idx on public.orders (lower(customer_email));
 create index if not exists orders_status_idx on public.orders (status);
+create index if not exists orders_payment_status_idx on public.orders (payment_status);
+create index if not exists orders_payment_reference_idx on public.orders (payment_reference);
 create index if not exists orders_placed_at_idx on public.orders (placed_at desc);
 
 create table if not exists public.order_items (
@@ -297,7 +339,7 @@ create table if not exists public.catalog_admins (
 );
 
 insert into public.catalog_admins (email)
-values ('office@chaicoffski.com')
+values ('office@barista-box.com')
 on conflict (email) do nothing;
 
 create table if not exists public.product_catalog_state (
@@ -326,6 +368,40 @@ create index if not exists product_price_overrides_active_idx
   on public.product_price_overrides (is_active, updated_at desc);
 
 create index if not exists order_items_product_id_idx on public.order_items (product_id);
+
+create table if not exists public.product_catalog_items (
+  product_id text primary key,
+  name text not null,
+  description text,
+  image text not null,
+  alt text,
+  category text not null,
+  price numeric(10, 2) not null check (price >= 0),
+  weight text,
+  country text,
+  region text,
+  origin text,
+  processing text,
+  farm text,
+  variety text,
+  altitude text,
+  score numeric(5, 2),
+  featured boolean not null default false,
+  gift_image text,
+  gift_alt text,
+  raw_data jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default timezone('utc', now()),
+  updated_at timestamptz not null default timezone('utc', now())
+);
+
+create index if not exists product_catalog_items_category_idx on public.product_catalog_items (category);
+create index if not exists product_catalog_items_featured_idx on public.product_catalog_items (featured);
+
+drop trigger if exists product_catalog_items_set_updated_at on public.product_catalog_items;
+create trigger product_catalog_items_set_updated_at
+before update on public.product_catalog_items
+for each row
+execute function public.set_updated_at();
 
 create or replace function public.is_catalog_admin()
 returns boolean
@@ -452,21 +528,55 @@ after insert or update or delete on public.orders
 for each row
 execute function public.handle_product_catalog_order_change();
 
-create or replace view public.product_catalog_public as
+drop view if exists public.product_catalog_public;
+
+create view public.product_catalog_public as
 select
-  product_id,
-  is_available,
+  items.product_id,
+  items.name,
+  items.description,
+  items.image,
+  items.alt,
+  items.category,
+  coalesce(overrides.override_price, items.price) as price,
+  items.price as base_price,
+  items.weight,
+  items.country,
+  items.region,
+  items.origin,
+  items.processing,
+  items.farm,
+  items.variety,
+  items.altitude,
+  items.score,
+  items.featured,
+  items.gift_image,
+  items.gift_alt,
+  coalesce(state.is_available, true) as is_available,
   case
-    when stock_quantity is null then null
-    else greatest(stock_quantity - sold_quantity, 0)
+    when state.stock_quantity is null then null
+    else greatest(state.stock_quantity - state.sold_quantity, 0)
   end as available_quantity,
   case
-    when is_available = false then 'disabled'
-    when stock_quantity is not null and greatest(stock_quantity - sold_quantity, 0) <= 0 then 'out_of_stock'
+    when coalesce(state.is_available, true) = false then 'disabled'
+    when state.stock_quantity is not null and greatest(state.stock_quantity - state.sold_quantity, 0) <= 0 then 'out_of_stock'
     else 'available'
   end as availability_status,
-  updated_at
-from public.product_catalog_state;
+  greatest(
+    coalesce(items.updated_at, timezone('utc', now())),
+    coalesce(state.updated_at, timezone('utc', now())),
+    coalesce(overrides.updated_at, timezone('utc', now()))
+  ) as updated_at,
+  state.stock_quantity,
+  state.sold_quantity,
+  overrides.override_price,
+  overrides.currency,
+  overrides.is_active as has_active_override
+from public.product_catalog_items items
+left join public.product_catalog_state state on state.product_id = items.product_id
+left join public.product_price_overrides overrides
+  on overrides.product_id = items.product_id
+ and overrides.is_active = true;
 
 grant select on public.product_catalog_public to anon, authenticated;
 

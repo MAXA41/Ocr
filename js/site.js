@@ -1,4 +1,4 @@
-import { supabase, isSupabaseConfigured } from './supabase-client.js?v=2';
+import { supabase, isSupabaseConfigured, supabaseUrl } from './supabase-client.js?v=2';
 import {
   fetchCatalogStateMap,
   getAvailabilityPresentation,
@@ -23,6 +23,7 @@ const fallbackWebhookUrl = getEnv('VITE_ORDER_FALLBACK_WEBHOOK_URL', defaultOrde
 const duplicateToWebhook = getEnv('VITE_ORDER_DUPLICATE_TO_WEBHOOK', 'true') === 'true';
 const webhookSharedSecret = getEnv('VITE_ORDER_WEBHOOK_SHARED_SECRET', 'ocr_4f9b8d2c7a1e63f0c5b9a472de18f6c3a9e54b7d1c8f20ea6b3d91f472ac58e1');
 const novaPoshtaApiKey = getEnv('VITE_NOVA_POSHTA_API_KEY', '5d7e7680adca1bbc14e0f9e9ef86b750');
+const monoCreateInvoiceUrl = supabaseUrl ? `${supabaseUrl.replace(/\/$/, '')}/functions/v1/mono-create-invoice` : '';
 const novaPoshtaInitialPageSize = 100;
 const novaPoshtaSearchPageSize = 50;
 const deliveryAutocompleteLimit = 24;
@@ -600,9 +601,16 @@ const cartGrindOptions = [
   { value: 'turka', label: 'Помол під турку' },
 ];
 
+const cartVolumeOptions = [
+  { value: '', label: 'Оберіть об\'єм' },
+  { value: '1kg', label: '1 кг' },
+  { value: '250g', label: '0.250 кг' },
+];
+
 const normalizeCartItem = (item) => ({
   ...item,
   grindMethod: item.category === 'drips' ? 'drip-ready' : item.grindMethod || '',
+  volumeOption: item.category === 'drips' ? 'fixed-volume' : item.volumeOption || '',
 });
 
 const normalizePromoCode = (value = '') => String(value || '').trim().toLowerCase();
@@ -651,6 +659,24 @@ const getGrindOptionsMarkup = (item) => {
     .join('');
 };
 
+const getVolumeLabel = (item) => {
+  if (item.category === 'drips') {
+    return 'Фіксований об\'єм';
+  }
+
+  return cartVolumeOptions.find((option) => option.value === item.volumeOption)?.label || 'Оберіть об\'єм';
+};
+
+const getVolumeOptionsMarkup = (item) => {
+  const options = item.category === 'drips'
+    ? [{ value: 'fixed-volume', label: 'Фіксований об\'єм' }]
+    : cartVolumeOptions;
+
+  return options
+    .map((option) => `<option value="${option.value}"${option.value === item.volumeOption ? ' selected' : ''}>${option.label}</option>`)
+    .join('');
+};
+
 const renderCart = () => {
   const items = getCart();
   if (!cartItemsContainer || !cartTotal) return;
@@ -672,6 +698,12 @@ const renderCart = () => {
             <label for="grind-${item.id}">Помол для цієї позиції</label>
             <select class="item-grind${!item.grindMethod && item.category !== 'drips' ? ' is-invalid' : ''}" id="grind-${item.id}" data-id="${item.id}" aria-label="Помол для ${item.title}" ${item.category === 'drips' ? 'disabled' : ''}>
               ${getGrindOptionsMarkup(item)}
+            </select>
+          </div>
+          <div class="cart-item-volume">
+            <label for="volume-${item.id}">Об\'єм для цієї позиції</label>
+            <select class="item-volume${!item.volumeOption && item.category !== 'drips' ? ' is-invalid' : ''}" id="volume-${item.id}" data-id="${item.id}" aria-label="Об\'єм для ${item.title}" ${item.category === 'drips' ? 'disabled' : ''}>
+              ${getVolumeOptionsMarkup(item)}
             </select>
           </div>
         </div>
@@ -794,11 +826,50 @@ const ukraineCities = [
 ];
 
 const partnerPickupLocations = {
-  'Одеса': [
-    'Переяславська, вул. Переяславська, 8',
-    'Морський порт, Митна площа, 1',
-    'Фонтан, Французький бульвар, 20',
+  'Львів': [
+    {
+      name: 'Edem Resort',
+      label: 'Edem Resort',
+      url: 'https://edemresort.com/',
+    },
   ],
+  'Одеса': [
+    {
+      name: 'HolaLola Sady',
+      label: 'HolaLola Sady',
+      url: 'https://www.instagram.com/holalola_sady/',
+    },
+  ],
+  'Рівне': [
+    {
+      name: '17A Juice Bar',
+      label: '17A Juice Bar',
+      url: 'https://www.instagram.com/17a_juice_bar/',
+    },
+  ],
+};
+
+const normalizePickupLocation = (location) => {
+  if (typeof location === 'string') {
+    return {
+      name: location,
+      label: location,
+      value: location,
+      url: '',
+    };
+  }
+
+  const name = String(location?.name || '').trim();
+  const label = String(location?.label || name || '').trim();
+  const url = String(location?.url || '').trim();
+  const value = String(location?.value || label || name || '').trim();
+
+  return {
+    name,
+    label,
+    value,
+    url,
+  };
 };
 
 const checkoutPersistedFields = [
@@ -825,7 +896,7 @@ const checkoutLabels = {
   },
   paymentMethod: {
     '': 'Не обрано',
-    'card-transfer': 'Переказ на картку',
+    'mono-card': 'Оплата карткою Mono',
     'bank-details': 'Оплата за реквізитами',
     cod: 'Післяплата',
     'cash-pickup': 'Готівкою при самовивозі',
@@ -1036,10 +1107,28 @@ const renderPickupLocations = (city) => {
   const pickupSelect = getCheckoutField('pickupLocation');
   if (!pickupSelect) return;
 
-  const locations = partnerPickupLocations[city] || [];
+  const pickupHint = checkoutForm?.querySelector('[data-field-hint="pickup"]');
+  const locations = (partnerPickupLocations[city] || []).map(normalizePickupLocation);
+
   pickupSelect.innerHTML = ['<option value="">Оберіть кав\'ярню партнера</option>']
-    .concat(locations.map((location) => `<option value="${location}">${location}</option>`))
+    .concat(locations.map((location) => `<option value="${location.value}">${location.label}</option>`))
     .join('');
+
+  if (pickupHint) {
+    if (locations.length === 0) {
+      pickupHint.textContent = 'Оберіть кав\'ярню, де вам буде зручно забрати замовлення.';
+      return;
+    }
+
+    const linksMarkup = locations
+      .filter((location) => location.url)
+      .map((location) => `<a href="${location.url}" target="_blank" rel="noopener noreferrer">${location.label}</a>`)
+      .join(' · ');
+
+    pickupHint.innerHTML = linksMarkup
+      ? `Оберіть кав\'ярню для самовивозу. Посилання: ${linksMarkup}`
+      : 'Оберіть кав\'ярню, де вам буде зручно забрати замовлення.';
+  }
 };
 
 const renderDeliveryLocations = (locations, emptyLabel = 'Оберіть відділення або поштомат') => {
@@ -1536,7 +1625,9 @@ const syncDeliveryFields = () => {
     cityHint.textContent = Object.keys(partnerPickupLocations).length > 0
       ? `Доступні міста: ${Object.keys(partnerPickupLocations).join(', ')}`
       : '';
-    pickupHint.textContent = 'Оберіть кав\'ярню, де вам буде зручно забрати замовлення.';
+    if (!cityInput.value.trim()) {
+      pickupHint.textContent = 'Оберіть місто, щоб побачити кав\'ярні для самовивозу.';
+    }
     npHint.textContent = '';
     deliveryLocationSelect.hidden = true;
     deliveryLocationSelect.disabled = true;
@@ -1623,13 +1714,14 @@ const renderCheckoutSummary = () => {
     <div class="checkout-summary-row"><span>До сплати</span><strong>${pricing.total} грн</strong></div>
     <div class="checkout-summary-row"><span>Доставка</span><strong>${getCheckoutLabel('deliveryMethod', deliveryMethod)}</strong></div>
     <div class="checkout-summary-row"><span>Оплата</span><strong>${getCheckoutLabel('paymentMethod', paymentMethod)}</strong></div>
-    <small>Помол вказується окремо для кожного товару в кошику. Вартість доставки уточнюється менеджером після підтвердження.</small>
+    <small>Помол та об\'єм вказуються окремо для кожного товару в кошику. Вартість доставки уточнюється менеджером після підтвердження.</small>
     <div class="checkout-summary-items">
       ${items.map((item) => `
         <div class="checkout-summary-item">
           <div class="checkout-summary-item-copy">
             <span class="checkout-summary-item-title">${item.title} x${item.qty}</span>
             <span class="checkout-summary-item-grind">Помол: ${getGrindLabel(item)}</span>
+            <span class="checkout-summary-item-volume">Об\'єм: ${getVolumeLabel(item)}</span>
           </div>
           <strong>${item.price * item.qty} грн</strong>
         </div>
@@ -1723,7 +1815,7 @@ const syncDeliveryLocationValue = () => {
 
 const buildCartSummary = (cart) => {
   return cart
-    .map((item) => `${item.title} (${getGrindLabel(item)}) x${item.qty} - ${item.price * item.qty} грн`)
+    .map((item) => `${item.title} (${getGrindLabel(item)}, ${getVolumeLabel(item)}) x${item.qty} - ${item.price * item.qty} грн`)
     .join(', ');
 };
 
@@ -1765,16 +1857,42 @@ const buildOrderPayload = ({
     cart: cart.map((item) => ({
       ...item,
       grindLabel: getGrindLabel(item),
+      volumeLabel: getVolumeLabel(item),
     })),
     orderItems: buildCartSummary(cart),
     createdAt: new Date().toISOString(),
     source: 'website',
+    paymentProvider: paymentMethod === 'mono-card' ? 'mono' : 'manual',
     customerId: user?.id || null,
     customerEmail: user?.email || null,
     authProvider: user?.app_metadata?.provider || 'anonymous',
     brand: 'Odesa Coffee Roasters',
     sharedSecret: webhookSharedSecret,
+    returnUrl: `${window.location.origin}/account.html?payment=success`,
   };
+};
+
+const submitViaMonoAcquiring = async (payload) => {
+  if (!monoCreateInvoiceUrl) {
+    throw new Error('Не налаштовано Mono Edge Function.');
+  }
+
+  const response = await fetch(monoCreateInvoiceUrl, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+    },
+    body: JSON.stringify(payload),
+  });
+
+  const result = await response.json().catch(() => ({}));
+
+  if (!response.ok || !result.paymentUrl) {
+    throw new Error(result.message || result.error || 'Не вдалося створити платіж Mono.');
+  }
+
+  return result;
 };
 
 const submitToWebhook = async (payload) => {
@@ -1924,6 +2042,25 @@ const submitViaWeb3Forms = async ({
 const submitOrder = async (order) => {
   const payload = buildOrderPayload(order);
 
+  if (payload.paymentMethod === 'mono-card') {
+    const monoResult = await submitViaMonoAcquiring(payload);
+
+    if (fallbackWebhookUrl) {
+      submitToWebhook({
+        ...payload,
+        deliveryChannel: 'mono-supabase-webhook',
+        orderId: monoResult.orderId || null,
+        orderNumber: monoResult.orderNumber || null,
+        monoInvoiceId: monoResult.invoiceId || null,
+        monoPaymentUrl: monoResult.paymentUrl || null,
+      }).catch((error) => {
+        console.error('Mono backup webhook notification failed', error);
+      });
+    }
+
+    return { channel: 'mono', result: monoResult };
+  }
+
   if (isSupabaseConfigured && supabase) {
     try {
       const supabaseResult = await submitToSupabase({ ...payload, deliveryChannel: 'direct-supabase' });
@@ -1977,14 +2114,14 @@ const updateCartControls = () => {
 
   cartItems.addEventListener('mousedown', (event) => {
     const target = event.target;
-    if (target instanceof HTMLElement && target.closest('.item-grind')) {
+    if (target instanceof HTMLElement && (target.closest('.item-grind') || target.closest('.item-volume'))) {
       event.stopPropagation();
     }
   });
 
   cartItems.addEventListener('click', (event) => {
     const target = event.target;
-    if (target instanceof HTMLElement && target.closest('.item-grind')) {
+    if (target instanceof HTMLElement && (target.closest('.item-grind') || target.closest('.item-volume'))) {
       event.stopPropagation();
     }
   });
@@ -2046,7 +2183,7 @@ const updateCartControls = () => {
 
   cartItems.addEventListener('change', (event) => {
     const target = event.target;
-    if (!(target instanceof HTMLSelectElement) || !target.matches('.item-grind')) return;
+    if (!(target instanceof HTMLSelectElement) || (!target.matches('.item-grind') && !target.matches('.item-volume'))) return;
 
     const itemId = target.dataset.id;
     if (!itemId) return;
@@ -2055,7 +2192,14 @@ const updateCartControls = () => {
     const itemIndex = items.findIndex((item) => item.id === itemId);
     if (itemIndex < 0) return;
 
-    items[itemIndex].grindMethod = target.value;
+    if (target.matches('.item-grind')) {
+      items[itemIndex].grindMethod = target.value;
+    }
+
+    if (target.matches('.item-volume')) {
+      items[itemIndex].volumeOption = target.value;
+    }
+
     setCart(items);
     clearFieldValidation(target);
     renderCheckoutSummary();
@@ -2069,19 +2213,20 @@ const validateCartItems = () => {
   }
 
   const cart = getCart();
-  const invalidItem = cart.find((item) => item.category !== 'drips' && !item.grindMethod);
+  const invalidItem = cart.find((item) => item.category !== 'drips' && (!item.grindMethod || !item.volumeOption));
 
-  cartItemsContainer?.querySelectorAll('.item-grind').forEach((select) => clearFieldValidation(select));
+  cartItemsContainer?.querySelectorAll('.item-grind, .item-volume').forEach((select) => clearFieldValidation(select));
 
   if (!invalidItem) return true;
 
-  const invalidSelect = cartItemsContainer?.querySelector(`.item-grind[data-id="${invalidItem.id}"]`);
+  const invalidSelector = !invalidItem.grindMethod ? '.item-grind' : '.item-volume';
+  const invalidSelect = cartItemsContainer?.querySelector(`${invalidSelector}[data-id="${invalidItem.id}"]`);
   if (invalidSelect) {
     markFieldInvalid(invalidSelect);
     invalidSelect.focus();
   }
 
-  setCheckoutStatus('Оберіть спосіб помолу для кожного товару в кошику.', 'error');
+  setCheckoutStatus('Оберіть спосіб помолу та об\'єм для кожного товару в кошику.', 'error');
   return false;
 };
 
@@ -2242,6 +2387,7 @@ if (checkoutForm) {
         paymentMethod,
         promoCode,
         comment,
+        paymentProvider: paymentMethod === 'mono-card' ? 'mono' : 'manual',
         cart,
         subtotal: pricing.subtotal,
         discountAmount: pricing.discountAmount,
@@ -2249,6 +2395,14 @@ if (checkoutForm) {
         date: new Date().toISOString(),
       }));
       persistCheckoutForm();
+
+      if (submission.channel === 'mono') {
+        setCheckoutStatus('Переходимо до Mono для оплати карткою...', 'success');
+        showToast('Переходимо до Mono...', 'success');
+        window.location.assign(submission.result.paymentUrl);
+        return;
+      }
+
       setCart([]);
       renderCart();
       updateCartCounter();

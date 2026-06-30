@@ -2,14 +2,14 @@
   {
     "id": "amerigo",
     "name": "Amerigo 1 кг",
-    "description": "Сухофрукти, шоколад і легка цитрусова кислотність. Фірмовий бленд у фасовці 1 кг для щоденного еспресо.",
+    "description": "Сухофрукти, шоколад і легка цитрусова кислотність. 100% арабіка у фасовці 1 кг для щоденного еспресо.",
     "image": "images/ocr-amerigo-png-1-731x638.webp",
     "alt": "Пакування кави Amerigo 1 кг",
     "category": "espresso",
     "price": 1155,
     "weight": "1 кг",
-    "origin": "Blend",
-    "processing": "40% арабіка, 60% робуста",
+    "origin": "Arabica",
+    "processing": "100% арабіка",
     "featured": true
   },
   {
@@ -433,5 +433,17 @@
     "weight": "Подарунковий набір",
     "origin": "Gift set",
     "processing": "Ready to gift"
+  },
+  {
+    "id": "mono-test-1-uah",
+    "name": "Тестовий товар Mono 1 грн",
+    "description": "Технічна позиція для перевірки оформлення замовлення, оплати Mono та webhook-обробки.",
+    "image": "images/ocr-amerigo-png-1-731x638.webp",
+    "alt": "Тестовий товар для перевірки оплати Mono",
+    "category": "espresso",
+    "price": 1,
+    "weight": "1 тестова одиниця",
+    "origin": "Test SKU",
+    "processing": "Smoke test"
   }
 ]

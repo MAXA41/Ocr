@@ -8,6 +8,7 @@ const supabaseUrl = String(env.VITE_SUPABASE_URL || runtimeEnv.VITE_SUPABASE_URL
 const supabasePublishableKey = String(env.VITE_SUPABASE_PUBLISHABLE_KEY || runtimeEnv.VITE_SUPABASE_PUBLISHABLE_KEY || runtimeConfig.supabasePublishableKey || 'sb_publishable_6Sqqk08Zt_txQFQJeacUhg_OPTpNLxf').trim();
 
 export const isSupabaseConfigured = Boolean(supabaseUrl && supabasePublishableKey);
+export { supabaseUrl };
 
 export const supabase = isSupabaseConfigured
   ? createClient(supabaseUrl, supabasePublishableKey, {

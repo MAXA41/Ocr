@@ -13,7 +13,7 @@
   "deliveryMethod": "nova-branch",
   "deliveryMethodLabel": "Нова Пошта: відділення",
   "deliveryDetails": "Відділення №7",
-  "paymentMethod": "card-transfer",
+  "paymentMethod": "mono-card",
   "paymentMethodLabel": "Переказ на картку",
   "comment": "Подзвонити перед відправкою",
   "total": 1560,

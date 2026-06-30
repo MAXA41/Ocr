@@ -17,6 +17,12 @@
 - `VITE_SUPABASE_PUBLISHABLE_KEY`
 - `SUPABASE_SECRET_KEY`
 
+Для Mono checkout также понадобятся:
+
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `PUBLIC_SITE_URL`
+- `MONO_MERCHANT_TOKEN`
+
 ### 2. Настроить Authentication
 
 1. Перейди в `Authentication` -> `Providers`.
@@ -69,6 +75,7 @@ VITE_AUTH_REDIRECT_URL=http://localhost:5173/account.html
 Ожидаемый результат:
 
 - создаются таблицы `profiles`, `discount_tiers`, `orders`, `order_items`, `customer_discount_state`
+- создаются `catalog_admins`, `product_catalog_state`, `product_catalog_items`
 - создаются триггеры и функции
 - в `profiles` автоматически создаётся запись после регистрации
 - `full_name` из регистрации подтягивается в профиль
@@ -86,8 +93,30 @@ VITE_AUTH_REDIRECT_URL=http://localhost:5173/account.html
 - `orders`
 - `order_items`
 - `customer_discount_state`
+- `catalog_admins`
+- `product_catalog_state`
+- `product_catalog_items`
 
-### 6. Проверить уровни скидок
+И что view `product_catalog_public` тоже доступен.
+
+### 6. Синхронизировать каталог в Supabase
+
+После SQL нужно один раз залить `products.json` в таблицу `product_catalog_items`.
+
+Запуск из проекта:
+
+```bash
+npm run supabase:sync-products
+```
+
+Перед этим должны быть доступны:
+
+- `SUPABASE_URL`
+- `SUPABASE_SERVICE_ROLE_KEY`
+
+Если используешь старую переменную `SUPABASE_SECRET_KEY`, скрипт тоже её подхватит.
+
+### 7. Проверить уровни скидок
 
 Открой таблицу `discount_tiers`. Там должны быть уровни:
 
@@ -99,7 +128,7 @@ VITE_AUTH_REDIRECT_URL=http://localhost:5173/account.html
 
 Если хочешь поменять пороги, скажи мне, и я сразу скорректирую схему и логику.
 
-### 7. Настроить письма
+### 8. Настроить письма
 
 1. Перейди в `Authentication` -> `Emails`.
 2. Проверь, что включена отправка писем для:
@@ -109,7 +138,7 @@ VITE_AUTH_REDIRECT_URL=http://localhost:5173/account.html
 
 Пока SMTP не подключён, письма будет слать сам Supabase. Для запуска этого достаточно.
 
-### 8. Протестировать auth
+### 9. Протестировать auth
 
 После шагов выше:
 
@@ -129,13 +158,26 @@ VITE_AUTH_REDIRECT_URL=http://localhost:5173/account.html
 - если войти до подтверждения email, сайт должен показать сообщение, что email ещё не подтверждён
 - кнопка повторной отправки письма должна отправлять confirmation email ещё раз
 
-### 9. Что делать не нужно
+### 10. Mono Edge Functions
+
+Для карточной оплаты нужно задеплоить Edge Functions.
+
+Подробный порядок вынесен в [docs/mono-supabase-deploy.md](docs/mono-supabase-deploy.md).
+
+Минимум:
+
+1. задать secrets в Supabase
+2. задеплоить `mono-create-invoice`
+3. задеплоить `mono-payment-webhook`
+4. сделать один тестовый платёж
+
+### 11. Что делать не нужно
 
 - Не вставляй `secret key` во фронтенд-код.
 - Не отключай `RLS` на этих таблицах.
 - Не меняй policy вручную, если не уверен — лучше сначала показать мне.
 
-### 10. Что уже сделано в коде
+### 12. Что уже сделано в коде
 
 В проекте уже реализовано:
 
@@ -145,18 +187,17 @@ VITE_AUTH_REDIRECT_URL=http://localhost:5173/account.html
 - сообщение о неподтверждённом email
 - повторная отправка письма подтверждения
 - синхронизация `profiles` после подтверждённого входа
+- Mono checkout через Supabase Edge Functions
+- sync `products.json` -> `product_catalog_items`
 
-### 11. Что я делаю дальше
+### 13. Что уже готово для заказов и оплаты
 
-После того как ты:
+В проекте уже есть:
 
-1. выполнишь SQL,
-2. включишь email/password auth и confirm email,
-3. добавишь redirect URLs,
+1. запись заказов в `orders` и `order_items`
+2. публичный catalog overlay через `product_catalog_public`
+3. Mono invoice creation через Edge Function
+4. Mono payment webhook для обновления payment status
+5. скрипт для заливки каталога в Supabase
 
-я делаю следующую часть:
-
-- готовлю запись заказов в Supabase через `n8n`
-- готовлю структуру данных для `orders` и `order_items`
-- связываю историю заказов в кабинете с реальными заказами
-- подвожу накопительную скидку к рабочему циклу
+Дальше остаётся только применить SQL, задеплоить функции, настроить secrets и прогнать smoke test.

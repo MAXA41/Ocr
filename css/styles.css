@@ -338,6 +338,18 @@ p {
     width: min(100%, 220px);
   }
 
+  .hero-logo-button {
+    width: min(100%, 320px);
+    min-height: 240px;
+    padding: 18px 20px;
+  }
+
+  .hero-logo-caption {
+    max-width: 200px;
+    font-size: 10px;
+    letter-spacing: 0.14em;
+  }
+
   .hero h1 {
     font-size: clamp(30px, 12vw, 44px);
     line-height: 0.98;
@@ -695,7 +707,19 @@ p {
   gap: 6px;
 }
 
+.cart-item-volume {
+  display: grid;
+  gap: 6px;
+}
+
 .cart-item-grind label {
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--olive);
+}
+
+.cart-item-volume label {
   font-size: 12px;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -711,7 +735,21 @@ p {
   font: inherit;
 }
 
+.cart-item-volume select {
+  width: 100%;
+  border: 1px solid rgba(31, 27, 22, 0.2);
+  border-radius: 10px;
+  padding: 9px 10px;
+  background: #fff;
+  font: inherit;
+}
+
 .cart-item-grind select.is-invalid {
+  border-color: #b33122;
+  box-shadow: 0 0 0 3px rgba(179, 49, 34, 0.12);
+}
+
+.cart-item-volume select.is-invalid {
   border-color: #b33122;
   box-shadow: 0 0 0 3px rgba(179, 49, 34, 0.12);
 }
@@ -971,6 +1009,11 @@ p {
   color: var(--olive);
 }
 
+.checkout-summary-item-volume {
+  font-size: 12px;
+  color: var(--olive);
+}
+
 .checkout-summary-note {
   font-size: 13px;
   color: var(--olive);
@@ -1004,6 +1047,39 @@ p {
 
 .hero {
   padding: 120px 0 80px;
+}
+
+body[data-page-category="filter"] .hero {
+  position: relative;
+  overflow: hidden;
+  background: url('../images/filtr.jpg') center center / cover no-repeat;
+}
+
+body[data-page-category="filter"] .hero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(90deg, rgba(15, 15, 13, 0.72) 0%, rgba(15, 15, 13, 0.48) 42%, rgba(15, 15, 13, 0.22) 100%),
+    linear-gradient(180deg, rgba(15, 15, 13, 0.12) 0%, rgba(15, 15, 13, 0.38) 100%);
+}
+
+body[data-page-category="filter"] .hero-grid {
+  position: relative;
+  z-index: 1;
+}
+
+body[data-page-category="filter"] .hero .eyebrow,
+body[data-page-category="filter"] .hero h1,
+body[data-page-category="filter"] .hero .lead {
+  color: var(--cream);
+  text-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+}
+
+body[data-page-category="filter"] .hero .btn.ghost {
+  background: rgba(255, 249, 242, 0.16);
+  border-color: rgba(255, 249, 242, 0.42);
+  color: var(--cream);
 }
 
 
@@ -1042,14 +1118,27 @@ p {
 }
 
 .hero-logo-button {
-  width: clamp(180px, 24vw, 260px);
-  aspect-ratio: 1;
-  display: block;
+  width: clamp(240px, 34vw, 420px);
+  min-height: clamp(220px, 30vw, 320px);
+  display: flex;
+  align-items: flex-end;
   border-radius: 28px;
   background: url('../images/logo11.jpg') center / cover no-repeat;
   border: 1px solid rgba(255, 255, 255, 0.08);
   box-shadow: 0 20px 44px rgba(15, 15, 13, 0.18);
+  padding: 22px 24px;
   transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.hero-logo-caption {
+  max-width: 240px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.45;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.92);
+  text-wrap: balance;
 }
 
 .hero-logo-button:hover {
@@ -1935,6 +2024,33 @@ p {
 
 .bars {
   background: transparent;
+}
+
+.venue-card {
+  text-decoration: none;
+  color: var(--ink);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.venue-logo-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  min-height: 66px;
+}
+
+.venue-logo {
+  max-width: 180px;
+  max-height: 58px;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+}
+
+.venue-card:hover,
+.venue-card:focus-visible {
+  transform: translateY(-2px);
+  box-shadow: 0 18px 36px rgba(31, 27, 22, 0.14);
 }
 
 .subscription {

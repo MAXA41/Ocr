@@ -41,7 +41,6 @@
             <a href="#contact">Контакти</a>
           </div>
         </details>
-        <a href="#bars">Кав'ярні</a>
         <a href="#wholesale">Опт</a>
         <a href="#subscription">Підписка</a>
         <a class="nav-account-link" href="account.html">Кабінет</a>
@@ -60,14 +59,15 @@
     <section class="hero">
       <div class="container hero-grid">
         <div class="hero-copy">
-          <p class="eyebrow">Ми знаємо, як зробити добре — і нам досі цікаво робити ще краще.</p>
-          <a class="hero-logo hero-logo-button" href="account.html#register" aria-label="Перейти до реєстрації"></a>
-          <h1>Кава з морським акцентом та щільним тілом</h1>
-          <p class="lead">Odesa Coffee Roasters працює з лотами, що залишають післясмак. Ми обсмажуємо дрібними партіями, щоб зберігати профілі чистими, виразними та стабільними.</p>
+          <a class="hero-logo hero-logo-button" href="account.html#register" aria-label="Перейти до реєстрації">
+            <span class="hero-logo-caption">Ми знаємо, як зробити добре — і нам досі цікаво робити ще краще.</span>
+          </a>
+          <h1>Кава, до якої повертаються</h1>
+          <p class="lead">O.Roasters — це кава з характером: збалансована, виразна й стабільна. Ми обсмажуємо зерно так, щоб кожна чашка була саме
+          Твоєю. </p>
           <div class="hero-actions">
             <a class="btn primary" href="#catalog">Підібрати зерно</a>
             <a class="btn ghost" href="#products">Переглянути товари</a>
-            <a class="btn light" href="#bars">Знайти кав'ярню</a>
           </div>
           <div class="hero-list">
             <div>
@@ -123,7 +123,7 @@
       <div class="container">
         <div class="section-head">
           <div>
-            <p class="eyebrow">Каталог</p>
+            <p class="eyebrow"></p>
             <h2></h2>
           </div>
         </div>
@@ -169,6 +169,40 @@
       </div>
     </section>
 
+    <section class="section bars" id="bars">
+      <div class="container">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Кав'ярні</p>
+            <h2>Місця, де живе О Rosters</h2>
+          </div>
+        </div>
+        <div class="grid three">
+          <a class="coffee-card venue-card" href="https://edemresort.com/" target="_blank" rel="noopener noreferrer" aria-label="Відкрити Edem Resort">
+            <div class="venue-logo-wrap">
+              <img class="venue-logo" src="images/venue-edem-resort.jpg" alt="Логотип Edem Resort" loading="lazy" decoding="async" />
+            </div>
+            <h3>Edem Resort</h3>
+            <p>Львів</p>
+          </a>
+          <a class="coffee-card venue-card" href="https://www.instagram.com/holalola_sady/" target="_blank" rel="noopener noreferrer" aria-label="Відкрити HolaLola Sady">
+            <div class="venue-logo-wrap">
+              <img class="venue-logo" src="images/venue-holalola-sady.jpg" alt="Логотип HolaLola Sady" loading="lazy" decoding="async" />
+            </div>
+            <h3>HolaLola Sady</h3>
+            <p>Одеса</p>
+          </a>
+          <a class="coffee-card venue-card" href="https://www.instagram.com/17a_juice_bar/" target="_blank" rel="noopener noreferrer" aria-label="Відкрити 17A Juice Bar">
+            <div class="venue-logo-wrap">
+              <img class="venue-logo" src="images/venue-17a-juice-bar.jpg" alt="Логотип 17A Juice Bar" loading="lazy" decoding="async" />
+            </div>
+            <h3>17A Juice Bar</h3>
+            <p>Рівне</p>
+          </a>
+        </div>
+      </div>
+    </section>
+
     <section class="section story" id="story">
       <div class="container story-grid">
         <div>
@@ -196,38 +230,6 @@
             <span>2000+</span>
             <p>людей пʼють нашу каву вдома</p>
           </div>
-        </div>
-      </div>
-    </section>
-
-    <section class="section bars" id="bars">
-      <div class="container">
-        <div class="section-head">
-          <div>
-            <p class="eyebrow">Кав'ярні</p>
-            <h2>Місця, де живе Odesa Coffee Roasters</h2>
-          </div>
-          <p class="lead">V60, еспресо, зерно свіжої обсмажки та міський ритм у кожній локації.</p>
-        </div>
-        <div class="grid three">
-          <article class="location-card">
-            <h3>Переяславська</h3>
-            <p>вул. Переяславська, 8</p>
-            <p>08:00 - 21:00</p>
-            <button class="btn outline" type="button">Прокласти маршрут</button>
-          </article>
-          <article class="location-card">
-            <h3>Морський порт</h3>
-            <p>Митна площа, 1</p>
-            <p>07:30 - 20:00</p>
-            <button class="btn outline" type="button">Прокласти маршрут</button>
-          </article>
-          <article class="location-card">
-            <h3>Фонтан</h3>
-            <p>Французький бульвар, 20</p>
-            <p>09:00 - 19:30</p>
-            <button class="btn outline" type="button">Прокласти маршрут</button>
-          </article>
         </div>
       </div>
     </section>
@@ -332,7 +334,7 @@
             <label>Спосіб оплати<br>
               <select name="paymentMethod" required>
                 <option value="">Оберіть спосіб оплати</option>
-                <option value="card-transfer">Переказ на картку</option>
+                <option value="mono-card">Оплата карткою Mono</option>
                 <option value="bank-details">Оплата за реквізитами</option>
                 <option value="cod">Післяплата</option>
                 <option value="cash-pickup">Готівкою при самовивозі</option>
@@ -355,7 +357,7 @@
   </div>
 
   <script src="/env.js?v=1"></script>
-  <script type="module" src="js/site.js?v=5"></script>
+  <script type="module" src="js/site.js?v=6"></script>
 </body>
 </html>
 
