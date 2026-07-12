@@ -712,6 +712,18 @@ p {
   gap: 6px;
 }
 
+.cart-item-field-label {
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--olive);
+}
+
+.cart-item-field-value {
+  font-size: 14px;
+  font-weight: 600;
+}
+
 .cart-item-grind label {
   font-size: 12px;
   letter-spacing: 0.12em;
@@ -1529,13 +1541,28 @@ body[data-page-category="filter"] .hero .btn.ghost {
 }
 
 .catalog-admin-field input,
-.catalog-admin-field select {
+.catalog-admin-field select,
+.catalog-admin-field textarea {
   width: 100%;
   border-radius: 14px;
   border: 1px solid rgba(31, 27, 22, 0.14);
   padding: 12px 14px;
   font: inherit;
   background: rgba(255, 255, 255, 0.86);
+}
+
+.catalog-admin-field textarea {
+  resize: vertical;
+}
+
+.catalog-admin-text-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.catalog-admin-field-wide {
+  grid-column: 1 / -1;
 }
 
 .catalog-admin-toggle {
@@ -1737,6 +1764,41 @@ body[data-page-category="filter"] .hero .btn.ghost {
   flex-wrap: wrap;
   align-items: center;
   gap: 10px;
+}
+
+.product-volume-field {
+  width: 100%;
+  display: grid;
+  gap: 6px;
+}
+
+.product-volume-field span,
+.product-volume-inline span {
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--olive);
+}
+
+.product-volume-select {
+  width: 100%;
+  border: 1px solid rgba(31, 27, 22, 0.2);
+  border-radius: 10px;
+  background: #fff;
+  padding: 8px 10px;
+  font: inherit;
+}
+
+.product-volume-inline {
+  width: 100%;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.product-volume-inline strong {
+  font-size: 14px;
 }
 
 .product-price {
@@ -2026,9 +2088,36 @@ body[data-page-category="filter"] .hero .btn.ghost {
   background: transparent;
 }
 
+.bars-layout {
+  display: grid;
+  gap: 24px;
+}
+
+.bars-intro {
+  display: grid;
+  gap: 14px;
+}
+
+.bars-intro h2 {
+  max-width: 12ch;
+  line-height: 1.06;
+}
+
+.bars-intro .lead {
+  max-width: 44ch;
+  color: var(--olive);
+}
+
+.bars-grid {
+  display: grid;
+  gap: 20px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
 .venue-card {
   text-decoration: none;
   color: var(--ink);
+  min-height: 220px;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
@@ -2051,6 +2140,18 @@ body[data-page-category="filter"] .hero .btn.ghost {
 .venue-card:focus-visible {
   transform: translateY(-2px);
   box-shadow: 0 18px 36px rgba(31, 27, 22, 0.14);
+}
+
+@media (min-width: 900px) {
+  .bars-layout {
+    grid-template-columns: minmax(220px, 330px) 1fr;
+    gap: 28px;
+    align-items: start;
+  }
+
+  .bars-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
 }
 
 .subscription {

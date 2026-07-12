@@ -339,7 +339,9 @@ create table if not exists public.catalog_admins (
 );
 
 insert into public.catalog_admins (email)
-values ('office@barista-box.com')
+values
+  ('office@barista-box.com'),
+  ('zdrastvyite11@gmail.com')
 on conflict (email) do nothing;
 
 create table if not exists public.product_catalog_state (
@@ -364,8 +366,27 @@ create table if not exists public.product_price_overrides (
   updated_at timestamptz not null default timezone('utc', now())
 );
 
+create table if not exists public.product_text_overrides (
+  product_id text primary key,
+  name_override text,
+  description_override text,
+  origin_override text,
+  processing_override text,
+  alt_override text,
+  weight_override text,
+  is_active boolean not null default true,
+  source text not null default 'admin-panel',
+  note text,
+  updated_by uuid references public.profiles(id) on delete set null,
+  created_at timestamptz not null default timezone('utc', now()),
+  updated_at timestamptz not null default timezone('utc', now())
+);
+
 create index if not exists product_price_overrides_active_idx
   on public.product_price_overrides (is_active, updated_at desc);
+
+create index if not exists product_text_overrides_active_idx
+  on public.product_text_overrides (is_active, updated_at desc);
 
 create index if not exists order_items_product_id_idx on public.order_items (product_id);
 
@@ -704,6 +725,12 @@ before update on public.product_price_overrides
 for each row
 execute function public.set_updated_at();
 
+drop trigger if exists product_text_overrides_set_updated_at on public.product_text_overrides;
+create trigger product_text_overrides_set_updated_at
+before update on public.product_text_overrides
+for each row
+execute function public.set_updated_at();
+
 alter table public.profiles enable row level security;
 alter table public.discount_tiers enable row level security;
 alter table public.orders enable row level security;
@@ -712,6 +739,7 @@ alter table public.customer_discount_state enable row level security;
 alter table public.catalog_admins enable row level security;
 alter table public.product_catalog_state enable row level security;
 alter table public.product_price_overrides enable row level security;
+alter table public.product_text_overrides enable row level security;
 
 drop policy if exists "profiles_select_own" on public.profiles;
 create policy "profiles_select_own"
@@ -810,5 +838,30 @@ with check (public.is_catalog_admin());
 drop policy if exists "product_price_overrides_admin_delete" on public.product_price_overrides;
 create policy "product_price_overrides_admin_delete"
 on public.product_price_overrides
+for delete
+using (public.is_catalog_admin());
+
+drop policy if exists "product_text_overrides_select_active" on public.product_text_overrides;
+create policy "product_text_overrides_select_active"
+on public.product_text_overrides
+for select
+using (is_active or public.is_catalog_admin());
+
+drop policy if exists "product_text_overrides_admin_insert" on public.product_text_overrides;
+create policy "product_text_overrides_admin_insert"
+on public.product_text_overrides
+for insert
+with check (public.is_catalog_admin());
+
+drop policy if exists "product_text_overrides_admin_update" on public.product_text_overrides;
+create policy "product_text_overrides_admin_update"
+on public.product_text_overrides
+for update
+using (public.is_catalog_admin())
+with check (public.is_catalog_admin());
+
+drop policy if exists "product_text_overrides_admin_delete" on public.product_text_overrides;
+create policy "product_text_overrides_admin_delete"
+on public.product_text_overrides
 for delete
 using (public.is_catalog_admin());

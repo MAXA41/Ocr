@@ -89,6 +89,16 @@ const categoryLabels = {
   drips: 'Дріпи',
 };
 
+const productTextOverrideStorageKey = 'ocr_product_text_overrides_v1';
+const editableProductTextFields = [
+  'name',
+  'description',
+  'origin',
+  'processing',
+  'alt',
+  'weight',
+];
+
 const brewGuides = {
   espresso: {
     title: 'Рекомендація для еспресо',
@@ -121,6 +131,150 @@ const buildMetaItems = (product, showCategory = false) => {
   return items;
 };
 
+const normalizeWeight = (value = '') => String(value || '').toLowerCase().replace(/\s+/g, '');
+
+const isOneKgWeight = (value = '') => {
+  const normalized = normalizeWeight(value);
+  return normalized.includes('1кг');
+};
+
+const isQuarterKgWeight = (value = '') => {
+  const normalized = normalizeWeight(value);
+  return normalized.includes('250г') || normalized.includes('0.250кг');
+};
+
+const getVolumeSelectionConfig = (product) => {
+  const basePrice = Number(product.price || 0);
+  const explicit250 = Number(product?.volumePrices?.['250g']);
+  const explicit1kg = Number(product?.volumePrices?.['1kg']);
+
+  if (Number.isFinite(explicit250) && explicit250 > 0 && Number.isFinite(explicit1kg) && explicit1kg > 0) {
+    if (isOneKgWeight(product.weight)) {
+      return [
+        {
+          value: '1kg',
+          label: '1 кг',
+          weightLabel: '1 кг',
+          price: explicit1kg,
+          isSelectable: true,
+        },
+        {
+          value: '250g',
+          label: '0.250 кг',
+          weightLabel: '250 г',
+          price: explicit250,
+          isSelectable: true,
+        },
+      ];
+    }
+
+    return [
+      {
+        value: '250g',
+        label: '0.250 кг',
+        weightLabel: '250 г',
+        price: explicit250,
+        isSelectable: true,
+      },
+      {
+        value: '1kg',
+        label: '1 кг',
+        weightLabel: '1 кг',
+        price: explicit1kg,
+        isSelectable: true,
+      },
+    ];
+  }
+
+  if (Number.isFinite(explicit250) && explicit250 > 0) {
+    return [{
+      value: '250g',
+      label: '0.250 кг',
+      weightLabel: '250 г',
+      price: explicit250,
+      isSelectable: false,
+    }];
+  }
+
+  if (Number.isFinite(explicit1kg) && explicit1kg > 0) {
+    return [{
+      value: '1kg',
+      label: '1 кг',
+      weightLabel: '1 кг',
+      price: explicit1kg,
+      isSelectable: false,
+    }];
+  }
+
+  if (product.category === 'drips') {
+    return [{
+      value: 'fixed-volume',
+      label: product.weight || 'Фіксований об\'єм',
+      weightLabel: product.weight || 'Фіксований об\'єм',
+      price: basePrice,
+      isSelectable: false,
+    }];
+  }
+
+  if (isOneKgWeight(product.weight)) {
+    return [
+      {
+        value: '1kg',
+        label: '1 кг',
+        weightLabel: '1 кг',
+        price: basePrice,
+        isSelectable: true,
+      },
+      {
+        value: '250g',
+        label: '0.250 кг',
+        weightLabel: '250 г',
+        price: Math.round(basePrice * 0.25),
+        isSelectable: true,
+      },
+    ];
+  }
+
+  if (isQuarterKgWeight(product.weight)) {
+    return [{
+      value: '250g',
+      label: '0.250 кг',
+      weightLabel: '250 г',
+      price: basePrice,
+      isSelectable: false,
+    }];
+  }
+
+  return [{
+    value: 'fixed-volume',
+    label: product.weight || 'Фіксований об\'єм',
+    weightLabel: product.weight || '',
+    price: basePrice,
+    isSelectable: false,
+  }];
+};
+
+const getProductVolumeMarkup = (product) => {
+  const volumeConfig = getVolumeSelectionConfig(product);
+  const selectedOption = volumeConfig[0];
+
+  if (volumeConfig.length <= 1) {
+    return `
+      <div class="product-volume-inline" data-product-id="${product.id}">
+        <span>Об'єм:</span>
+        <strong>${selectedOption.label}</strong>
+      </div>`;
+  }
+
+  return `
+    <label class="product-volume-field" for="volume-select-${product.id}">
+      <span>Об'єм</span>
+      <select class="product-volume-select" id="volume-select-${product.id}" data-product-id="${product.id}" aria-label="Об'єм для ${product.name}">
+        ${volumeConfig.map((option, index) => `<option value="${option.value}"${index === 0 ? ' selected' : ''}>${option.label} — ${option.price} грн</option>`).join('')}
+      </select>
+    </label>`;
+};
+
 const renderProductCard = (product, showCategory = false) => {
   const availability = getAvailabilityPresentation(product);
   const canBuy = isProductAvailableForPurchase(product);
@@ -138,9 +292,10 @@ const renderProductCard = (product, showCategory = false) => {
         <div class="product-meta">${buildMetaItems(product, showCategory)}</div>
         <div class="product-availability product-availability-${availability.tone}">${availability.label}</div>
         <div class="product-card-actions">
+          ${getProductVolumeMarkup(product)}
           <span class="product-price">${product.price} грн</span>
           <a class="btn outline" href="product.html?id=${product.id}">Детальніше</a>
-          <button class="btn primary product-buy" data-id="${product.id}" data-name="${product.name}" data-category="${product.category}" data-price="${product.price}" data-available="${String(canBuy)}" type="button" ${canBuy ? '' : 'disabled'}>${availability.buttonLabel}</button>
+          <button class="btn primary product-buy" data-id="${product.id}" data-name="${product.name}" data-category="${product.category}" data-price="${product.price}" data-weight="${product.weight || ''}" data-available="${String(canBuy)}" type="button" ${canBuy ? '' : 'disabled'}>${availability.buttonLabel}</button>
         </div>
       </div>
     </article>`;
@@ -192,6 +347,28 @@ const formatProductCode = (product) => {
     .toUpperCase();
 };
 
+const fetchActiveProductTextOverrides = async () => {
+  if (!isSupabaseConfigured || !supabase) {
+    return new Map();
+  }
+
+  const { data, error } = await supabase
+    .from('product_text_overrides')
+    .select('product_id, name_override, description_override, origin_override, processing_override, alt_override, weight_override, is_active, updated_at')
+    .eq('is_active', true);
+
+  if (error) {
+    const isMissingRelation = error.code === 'PGRST205' || String(error.message || '').includes('product_text_overrides');
+    if (!isMissingRelation) {
+      console.error('Failed to load product text overrides', error);
+    }
+    return new Map();
+  }
+
+  const rows = (data || []).filter((row) => row?.product_id);
+  return new Map(rows.map((row) => [row.product_id, row]));
+};
+
 const fetchActivePriceOverrides = async () => {
   if (!isSupabaseConfigured || !supabase) {
     return new Map();
@@ -237,6 +414,60 @@ const applyPriceOverrides = (products, priceOverrideMap) => {
       priceSource: 'override',
       priceCurrency: override.currency || 'UAH',
       priceUpdatedAt: override.updated_at || null,
+    };
+  });
+};
+
+const loadProductTextOverrides = () => {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(productTextOverrideStorageKey) || '{}');
+    if (!parsed || typeof parsed !== 'object') {
+      return {};
+    }
+
+    return parsed;
+  } catch (error) {
+    console.warn('Failed to parse product text overrides from storage', error);
+    return {};
+  }
+};
+
+const applyProductTextOverrides = (products, textOverrides) => {
+  if (!textOverrides || (typeof textOverrides !== 'object' && !(textOverrides instanceof Map))) {
+    return products;
+  }
+
+  const getProductOverride = (productId) => {
+    if (textOverrides instanceof Map) {
+      return textOverrides.get(productId);
+    }
+
+    return textOverrides[productId];
+  };
+
+  return products.map((product) => {
+    const productOverride = getProductOverride(product.id);
+    if (!productOverride || typeof productOverride !== 'object') {
+      return product;
+    }
+
+    const overridePatch = {};
+    editableProductTextFields.forEach((field) => {
+      const directKey = field;
+      const mappedKey = `${field}_override`;
+      const hasDirectKey = Object.prototype.hasOwnProperty.call(productOverride, directKey);
+      const hasMappedKey = Object.prototype.hasOwnProperty.call(productOverride, mappedKey);
+
+      if (hasDirectKey || hasMappedKey) {
+        const value = hasDirectKey ? productOverride[directKey] : productOverride[mappedKey];
+        overridePatch[field] = String(value ?? '');
+      }
+    });
+
+    return {
+      ...product,
+      ...overridePatch,
+      textSource: 'override',
     };
   });
 };
@@ -350,8 +581,9 @@ const renderProductDetail = (product, allProducts) => {
                 </div>
               </div>
               <div class="product-detail-price-row product-showcase-actions">
+                ${getProductVolumeMarkup(product)}
                 <span class="product-detail-price">${product.price} грн</span>
-                <button class="btn primary product-buy" data-id="${product.id}" data-name="${product.name}" data-category="${product.category}" data-price="${product.price}" data-available="${String(canBuy)}" type="button" ${canBuy ? '' : 'disabled'}>${canBuy ? 'Додати до кошика' : availability.buttonLabel}</button>
+                <button class="btn primary product-buy" data-id="${product.id}" data-name="${product.name}" data-category="${product.category}" data-price="${product.price}" data-weight="${product.weight || ''}" data-available="${String(canBuy)}" type="button" ${canBuy ? '' : 'disabled'}>${canBuy ? 'Додати до кошика' : availability.buttonLabel}</button>
               </div>
             </div>
           </div>
@@ -434,8 +666,9 @@ const getProductPayload = (button) => {
   const category = button.dataset.category || card?.dataset.category || 'default';
   const price = Number(button.dataset.price || card?.dataset.price || '0');
   const id = button.dataset.id || title.toLowerCase().replace(/\s+/g, '-');
+  const weight = button.dataset.weight || '';
 
-  return { id, title, category, price };
+  return { id, title, category, price, weight };
 };
 
 const syncCatalogProducts = (products) => {
@@ -468,10 +701,12 @@ const reconcileCartWithCatalogState = (notify = false) => {
 
     let nextItem = item;
 
-    if (Number(item.price) !== Number(catalogProduct.price)) {
+    const expectedPrice = getPriceForVolumeOption(catalogProduct, item.volumeOption);
+
+    if (Number(item.price) !== Number(expectedPrice)) {
       changed = true;
       priceChanged = true;
-      nextItem = { ...item, price: Number(catalogProduct.price) };
+      nextItem = { ...item, price: Number(expectedPrice) };
     }
 
     const state = getProductCatalogState(catalogProduct);
@@ -525,7 +760,21 @@ const attachBuyHandlers = () => {
 
       const product = getProductPayload(btn);
       if (!product) return;
-      if (!addToCart(product)) return;
+
+      const context = btn.closest('.product-card, .product-detail-copy');
+      const volumeSelect = context?.querySelector(`.product-volume-select[data-product-id="${product.id}"]`);
+      const catalogProduct = getCatalogProductById(product.id) || product;
+      const volumeOptions = getVolumeSelectionConfig(catalogProduct);
+      const selectedVolume = volumeOptions.find((option) => option.value === volumeSelect?.value) || volumeOptions[0];
+
+      if (!addToCart({
+        ...product,
+        price: selectedVolume.price,
+        volumeOption: selectedVolume.value,
+        volumeLabel: selectedVolume.label,
+        weight: selectedVolume.weightLabel || product.weight,
+      })) return;
+
       showToast(`${product.title} додано до кошика.`, 'success');
       if (cartModal) {
         cartModal.classList.add('open');
@@ -539,8 +788,15 @@ if (bestsellerGrid || categoryGrid || productDetailRoot) {
   fetch('products.json')
     .then((res) => res.json())
     .then(async (products) => {
-      const priceOverrideMap = await fetchActivePriceOverrides();
-      const pricedProducts = applyPriceOverrides(products, priceOverrideMap);
+      const [remoteTextOverrides, priceOverrideMap] = await Promise.all([
+        fetchActiveProductTextOverrides(),
+        fetchActivePriceOverrides(),
+      ]);
+
+      const localTextOverrides = loadProductTextOverrides();
+      const remotelyAdjustedProducts = applyProductTextOverrides(products, remoteTextOverrides);
+      const textAdjustedProducts = applyProductTextOverrides(remotelyAdjustedProducts, localTextOverrides);
+      const pricedProducts = applyPriceOverrides(textAdjustedProducts, priceOverrideMap);
       const stateMap = await fetchCatalogStateMap(products.map((product) => product.id));
       const enrichedProducts = mergeProductsWithCatalogState(pricedProducts, stateMap);
       syncCatalogProducts(enrichedProducts);
@@ -607,10 +863,43 @@ const cartVolumeOptions = [
   { value: '250g', label: '0.250 кг' },
 ];
 
+const createCartLineId = () => {
+  if (globalThis.crypto?.randomUUID) {
+    return globalThis.crypto.randomUUID();
+  }
+
+  return `line-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
+};
+
+const inferVolumeOptionFromItem = (item) => {
+  const source = `${item.weight || ''} ${item.title || ''}`;
+
+  if (item.category === 'drips') {
+    return 'fixed-volume';
+  }
+
+  if (isOneKgWeight(source)) {
+    return '1kg';
+  }
+
+  if (isQuarterKgWeight(source)) {
+    return '250g';
+  }
+
+  return 'fixed-volume';
+};
+
+const getPriceForVolumeOption = (product, volumeOption) => {
+  const options = getVolumeSelectionConfig(product);
+  const selected = options.find((option) => option.value === volumeOption) || options[0];
+  return Number(selected?.price || product.price || 0);
+};
+
 const normalizeCartItem = (item) => ({
   ...item,
+  cartLineId: item.cartLineId || createCartLineId(),
   grindMethod: item.category === 'drips' ? 'drip-ready' : item.grindMethod || '',
-  volumeOption: item.category === 'drips' ? 'fixed-volume' : item.volumeOption || '',
+  volumeOption: item.category === 'drips' ? 'fixed-volume' : item.volumeOption || inferVolumeOptionFromItem(item),
 });
 
 const normalizePromoCode = (value = '') => String(value || '').trim().toLowerCase();
@@ -667,16 +956,6 @@ const getVolumeLabel = (item) => {
   return cartVolumeOptions.find((option) => option.value === item.volumeOption)?.label || 'Оберіть об\'єм';
 };
 
-const getVolumeOptionsMarkup = (item) => {
-  const options = item.category === 'drips'
-    ? [{ value: 'fixed-volume', label: 'Фіксований об\'єм' }]
-    : cartVolumeOptions;
-
-  return options
-    .map((option) => `<option value="${option.value}"${option.value === item.volumeOption ? ' selected' : ''}>${option.label}</option>`)
-    .join('');
-};
-
 const renderCart = () => {
   const items = getCart();
   if (!cartItemsContainer || !cartTotal) return;
@@ -690,21 +969,19 @@ const renderCart = () => {
     items.forEach((item) => {
       const row = document.createElement('div');
       row.className = 'cart-item';
-      row.dataset.id = item.id;
+      row.dataset.lineId = item.cartLineId;
       row.innerHTML = `
         <div class="cart-item-main">
           <span class="cart-item-title">${item.title}</span>
           <div class="cart-item-grind">
-            <label for="grind-${item.id}">Помол для цієї позиції</label>
-            <select class="item-grind${!item.grindMethod && item.category !== 'drips' ? ' is-invalid' : ''}" id="grind-${item.id}" data-id="${item.id}" aria-label="Помол для ${item.title}" ${item.category === 'drips' ? 'disabled' : ''}>
+            <label for="grind-${item.cartLineId}">Помол для цієї позиції</label>
+            <select class="item-grind${!item.grindMethod && item.category !== 'drips' ? ' is-invalid' : ''}" id="grind-${item.cartLineId}" data-line-id="${item.cartLineId}" aria-label="Помол для ${item.title}" ${item.category === 'drips' ? 'disabled' : ''}>
               ${getGrindOptionsMarkup(item)}
             </select>
           </div>
           <div class="cart-item-volume">
-            <label for="volume-${item.id}">Об\'єм для цієї позиції</label>
-            <select class="item-volume${!item.volumeOption && item.category !== 'drips' ? ' is-invalid' : ''}" id="volume-${item.id}" data-id="${item.id}" aria-label="Об\'єм для ${item.title}" ${item.category === 'drips' ? 'disabled' : ''}>
-              ${getVolumeOptionsMarkup(item)}
-            </select>
+            <span class="cart-item-field-label">Об\'єм</span>
+            <span class="cart-item-field-value">${getVolumeLabel(item)}</span>
           </div>
         </div>
         <div class="cart-item-controls">
@@ -735,7 +1012,8 @@ const addToCart = (product) => {
     return false;
   }
 
-  const existing = items.find((i) => i.id === product.id);
+  const targetVolumeOption = product.volumeOption || inferVolumeOptionFromItem(product);
+  const existing = items.find((i) => i.id === product.id && i.volumeOption === targetVolumeOption);
   const nextQty = (existing?.qty || 0) + 1;
 
   if (catalogState?.availableQuantity !== null && nextQty > catalogState.availableQuantity) {
@@ -746,7 +1024,7 @@ const addToCart = (product) => {
   if (existing) {
     existing.qty += 1;
   } else {
-    items.push(normalizeCartItem({ ...product, qty: 1 }));
+    items.push(normalizeCartItem({ ...product, volumeOption: targetVolumeOption, qty: 1 }));
   }
   setCart(items);
   updateCartCounter();
@@ -2114,14 +2392,14 @@ const updateCartControls = () => {
 
   cartItems.addEventListener('mousedown', (event) => {
     const target = event.target;
-    if (target instanceof HTMLElement && (target.closest('.item-grind') || target.closest('.item-volume'))) {
+    if (target instanceof HTMLElement && target.closest('.item-grind')) {
       event.stopPropagation();
     }
   });
 
   cartItems.addEventListener('click', (event) => {
     const target = event.target;
-    if (target instanceof HTMLElement && (target.closest('.item-grind') || target.closest('.item-volume'))) {
+    if (target instanceof HTMLElement && target.closest('.item-grind')) {
       event.stopPropagation();
     }
   });
@@ -2135,10 +2413,10 @@ const updateCartControls = () => {
 
     const itemRow = target.closest('.cart-item');
     if (!itemRow) return;
-    const itemId = itemRow.dataset.id;
-    if (!itemId) return;
+    const lineId = itemRow.dataset.lineId;
+    if (!lineId) return;
     const items = getCart();
-    const itemIndex = items.findIndex((n) => n.id === itemId);
+    const itemIndex = items.findIndex((n) => n.cartLineId === lineId);
     if (itemIndex < 0) return;
 
     if (actionButton.matches('.item-decrease')) {
@@ -2150,7 +2428,7 @@ const updateCartControls = () => {
     }
 
     if (actionButton.matches('.item-increase')) {
-      const catalogProduct = getCatalogProductById(itemId);
+      const catalogProduct = getCatalogProductById(items[itemIndex].id);
       const state = catalogProduct ? getProductCatalogState(catalogProduct) : null;
 
       if (state && state.availabilityStatus !== 'available') {
@@ -2183,22 +2461,17 @@ const updateCartControls = () => {
 
   cartItems.addEventListener('change', (event) => {
     const target = event.target;
-    if (!(target instanceof HTMLSelectElement) || (!target.matches('.item-grind') && !target.matches('.item-volume'))) return;
+    if (!(target instanceof HTMLSelectElement) || !target.matches('.item-grind')) return;
 
-    const itemId = target.dataset.id;
-    if (!itemId) return;
+    const row = target.closest('.cart-item');
+    const lineId = row?.dataset.lineId;
+    if (!lineId) return;
 
     const items = getCart();
-    const itemIndex = items.findIndex((item) => item.id === itemId);
+    const itemIndex = items.findIndex((item) => item.cartLineId === lineId);
     if (itemIndex < 0) return;
 
-    if (target.matches('.item-grind')) {
-      items[itemIndex].grindMethod = target.value;
-    }
-
-    if (target.matches('.item-volume')) {
-      items[itemIndex].volumeOption = target.value;
-    }
+    items[itemIndex].grindMethod = target.value;
 
     setCart(items);
     clearFieldValidation(target);
@@ -2213,20 +2486,19 @@ const validateCartItems = () => {
   }
 
   const cart = getCart();
-  const invalidItem = cart.find((item) => item.category !== 'drips' && (!item.grindMethod || !item.volumeOption));
+  const invalidItem = cart.find((item) => item.category !== 'drips' && !item.grindMethod);
 
-  cartItemsContainer?.querySelectorAll('.item-grind, .item-volume').forEach((select) => clearFieldValidation(select));
+  cartItemsContainer?.querySelectorAll('.item-grind').forEach((select) => clearFieldValidation(select));
 
   if (!invalidItem) return true;
 
-  const invalidSelector = !invalidItem.grindMethod ? '.item-grind' : '.item-volume';
-  const invalidSelect = cartItemsContainer?.querySelector(`${invalidSelector}[data-id="${invalidItem.id}"]`);
+  const invalidSelect = cartItemsContainer?.querySelector(`.item-grind[data-line-id="${invalidItem.cartLineId}"]`);
   if (invalidSelect) {
     markFieldInvalid(invalidSelect);
     invalidSelect.focus();
   }
 
-  setCheckoutStatus('Оберіть спосіб помолу та об\'єм для кожного товару в кошику.', 'error');
+  setCheckoutStatus('Оберіть спосіб помолу для кожного товару в кошику.', 'error');
   return false;
 };
 

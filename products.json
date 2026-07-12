@@ -119,8 +119,12 @@
     "image": "images/RwandaNyamasasa_E.webp",
     "alt": "Пакування кави Rwanda Nyamasasa Red Bourbon 250 г",
     "category": "espresso",
-    "price": 341,
+    "price": 360,
     "weight": "250 г",
+    "volumePrices": {
+      "250g": 360,
+      "1kg": 1290
+    },
     "country": "Rwanda",
     "region": "South Kivu Province",
     "origin": "South Kivu Province",
@@ -134,8 +138,12 @@
     "image": "images/Colombia-Manos_Juntas_E.webp",
     "alt": "Пакування кави Colombia Manos Juntas 250 г",
     "category": "espresso",
-    "price": 460,
+    "price": 500,
     "weight": "250 г",
+    "volumePrices": {
+      "250g": 500,
+      "1kg": 1820
+    },
     "country": "Colombia",
     "region": "Cauca Popayan",
     "origin": "Cauca Popayan",
@@ -162,28 +170,16 @@
     "image": "images/Rwanda-Tropic-Coffee_E.webp",
     "alt": "Пакування кави Rwanda Tropic Coffee 250 г",
     "category": "espresso",
-    "price": 290,
+    "price": 320,
     "weight": "250 г",
+    "volumePrices": {
+      "250g": 320,
+      "1kg": 1130
+    },
     "country": "Rwanda",
     "region": "Southern Province",
     "origin": "Southern Province",
     "processing": "Натуральна"
-  },
-  {
-    "id": "ethiopia-guji-uraga",
-    "name": "Ethiopia Guji Uraga 250 г",
-    "description": "Квіти, сухофрукти, мед, лікер і апельсин. Ароматний фільтр з довгим aftertaste у фасовці 250 г.",
-    "image": "images/ethiopia-guji-uraga-png-2-731x638.webp",
-    "alt": "Пакування кави Ethiopia Guji Uraga 250 г",
-    "giftImage": "images/ПОДАРУНОК.webp",
-    "giftAlt": "Подарункове пакування кави Odesa Coffee Roasters",
-    "category": "filter",
-    "price": 462,
-    "weight": "250 г",
-    "country": "Ethiopia",
-    "region": "Guji Uraga",
-    "origin": "Guji Uraga",
-    "processing": "72 год. ферментації"
   },
   {
     "id": "kenya-ab-muthunzuuni",
@@ -192,8 +188,12 @@
     "image": "images/Kenya-AB-Muthunzuuni_F.webp",
     "alt": "Пакування кави Kenya AB Muthunzuuni 250 г",
     "category": "filter",
-    "price": 400,
+    "price": 440,
     "weight": "250 г",
+    "volumePrices": {
+      "250g": 440,
+      "1kg": 1590
+    },
     "country": "Kenya",
     "region": "Machakos County",
     "origin": "Machakos County",
@@ -220,8 +220,12 @@
     "image": "images/Ethiopia-Guji_Hambella_F.webp",
     "alt": "Пакування кави Ethiopia Guji Hambella 250 г",
     "category": "filter",
-    "price": 410,
+    "price": 440,
     "weight": "250 г",
+    "volumePrices": {
+      "250g": 440,
+      "1kg": 1600
+    },
     "country": "Ethiopia",
     "region": "Oromia Hambella",
     "origin": "Oromia Hambella",
@@ -234,8 +238,12 @@
     "image": "images/RwandaNyamasasa_F.webp",
     "alt": "Пакування кави Rwanda Nyamasasa Red Bourbon 250 г",
     "category": "filter",
-    "price": 341,
+    "price": 360,
     "weight": "250 г",
+    "volumePrices": {
+      "250g": 360,
+      "1kg": 1290
+    },
     "country": "Rwanda",
     "region": "South Kivu Province",
     "origin": "South Kivu Province",
@@ -263,8 +271,12 @@
     "image": "images/Rwanda-Tropic-Coffee_F.webp",
     "alt": "Пакування кави Rwanda Tropic Coffee 250 г",
     "category": "filter",
-    "price": 290,
+    "price": 320,
     "weight": "250 г",
+    "volumePrices": {
+      "250g": 320,
+      "1kg": 1130
+    },
     "country": "Rwanda",
     "region": "Southern Province",
     "origin": "Southern Province",
@@ -277,8 +289,12 @@
     "image": "images/Colombia_OMBLIGON_F.webp",
     "alt": "Пакування кави Colombia Ombligon 250 г",
     "category": "filter",
-    "price": 880,
+    "price": 770,
     "weight": "250 г",
+    "volumePrices": {
+      "250g": 770,
+      "1kg": 3000
+    },
     "country": "Colombia",
     "region": "Huila",
     "origin": "Huila",
@@ -305,8 +321,12 @@
     "image": "images/Colombia-Manos_Juntas_F.webp",
     "alt": "Пакування кави Colombia Manos Juntas 250 г",
     "category": "filter",
-    "price": 460,
+    "price": 500,
     "weight": "250 г",
+    "volumePrices": {
+      "250g": 500,
+      "1kg": 1820
+    },
     "country": "Colombia",
     "region": "Cauca Popayan",
     "origin": "Cauca Popayan",
@@ -374,8 +394,12 @@
     "image": "images/Colombia-Risalda_decaf_F.webp",
     "alt": "Пакування кави Colombia Risalda Cafezam Decaf 250 г",
     "category": "decaf",
-    "price": 530,
+    "price": 550,
     "weight": "250 г",
+    "volumePrices": {
+      "250g": 550,
+      "1kg": 2090
+    },
     "country": "Colombia",
     "region": "Risalda",
     "farm": "Cafezam",

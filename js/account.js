@@ -39,6 +39,15 @@ let pendingConfirmationEmail = '';
 let currentSession = null;
 let currentProfile = null;
 let catalogAdminRows = [];
+const editableCatalogTextFields = ['name', 'description', 'origin', 'processing', 'alt', 'weight'];
+const catalogTextFieldColumnMap = {
+  name: 'name_override',
+  description: 'description_override',
+  origin: 'origin_override',
+  processing: 'processing_override',
+  alt: 'alt_override',
+  weight: 'weight_override',
+};
 
 const AUTH_MODE_CONFIG = {
   login: {
@@ -79,6 +88,18 @@ const setCatalogAdminStatus = (message, tone = 'neutral') => {
   if (!catalogAdminStatus) return;
   catalogAdminStatus.textContent = message;
   catalogAdminStatus.dataset.tone = tone;
+};
+
+const escapeHtml = (value = '') => String(value)
+  .replace(/&/g, '&amp;')
+  .replace(/</g, '&lt;')
+  .replace(/>/g, '&gt;')
+  .replace(/"/g, '&quot;')
+  .replace(/'/g, '&#39;');
+
+const isMissingRelationError = (error, relationName) => {
+  if (!error) return false;
+  return error.code === 'PGRST205' || String(error.message || '').includes(relationName);
 };
 
 const runtimeEnv = globalThis.__OCR_ENV__ || {};
@@ -350,15 +371,40 @@ const getCatalogRowLabel = (row) => {
 
 const buildCatalogAdminRows = (products, stateRows) => {
   const stateById = new Map((stateRows || []).map((row) => [row.product_id, normalizeCatalogState(row)]));
+  const textOverridesById = new Map((stateRows?.textOverrides || []).map((row) => [row.product_id, row]));
 
   return products.map((product) => {
     const state = stateById.get(product.id) || normalizeCatalogState({ product_id: product.id });
     const availableNow = state.stockQuantity === null ? null : Math.max(state.stockQuantity - state.soldQuantity, 0);
 
-    return {
+    const textOverrideRow = textOverridesById.get(product.id);
+    const baseText = editableCatalogTextFields.reduce((acc, field) => {
+      acc[field] = String(product[field] ?? '');
+      return acc;
+    }, {});
+
+    const textOverrides = editableCatalogTextFields.reduce((acc, field) => {
+      const column = catalogTextFieldColumnMap[field];
+      if (!textOverrideRow || !column) return acc;
+
+      if (Object.prototype.hasOwnProperty.call(textOverrideRow, column) && textOverrideRow[column] !== null) {
+        acc[field] = String(textOverrideRow[column]);
+      }
+
+      return acc;
+    }, {});
+
+    const textAdjustedProduct = {
       ...product,
+      ...textOverrides,
+    };
+
+    return {
+      ...textAdjustedProduct,
       state,
       availableNow,
+      baseText,
+      textOverrides,
     };
   });
 };
@@ -447,6 +493,32 @@ const renderCatalogAdminList = () => {
             <span>Заведено на склад, шт.</span>
             <input type="number" min="0" step="1" value="${stockValue}" data-catalog-stock placeholder="Порожньо = без ліміту">
           </label>
+          <div class="catalog-admin-text-grid">
+            <label class="catalog-admin-field">
+              <span>Назва картки</span>
+              <input type="text" data-catalog-text-field="name" value="${escapeHtml(row.name)}">
+            </label>
+            <label class="catalog-admin-field catalog-admin-field-wide">
+              <span>Опис картки</span>
+              <textarea rows="3" data-catalog-text-field="description">${escapeHtml(row.description || '')}</textarea>
+            </label>
+            <label class="catalog-admin-field">
+              <span>Походження</span>
+              <input type="text" data-catalog-text-field="origin" value="${escapeHtml(row.origin || '')}">
+            </label>
+            <label class="catalog-admin-field">
+              <span>Обробка</span>
+              <input type="text" data-catalog-text-field="processing" value="${escapeHtml(row.processing || '')}">
+            </label>
+            <label class="catalog-admin-field">
+              <span>Вага</span>
+              <input type="text" data-catalog-text-field="weight" value="${escapeHtml(row.weight || '')}">
+            </label>
+            <label class="catalog-admin-field catalog-admin-field-wide">
+              <span>Alt для фото</span>
+              <textarea rows="2" data-catalog-text-field="alt">${escapeHtml(row.alt || '')}</textarea>
+            </label>
+          </div>
           <button class="btn light" type="button" data-catalog-save>Зберегти</button>
         </div>
         <p class="form-status" data-catalog-row-status></p>
@@ -478,17 +550,21 @@ const loadCatalogAdmin = async (session) => {
 
   if (catalogAdminPanel) catalogAdminPanel.hidden = false;
   if (catalogAdminLead) {
-    catalogAdminLead.textContent = `Ви увійшли як оператор каталогу (${session.user.email}). Тут можна вмикати продаж, виставляти залишок і бачити вже продані або зарезервовані позиції.`;
+    catalogAdminLead.textContent = `Ви увійшли як оператор каталогу (${session.user.email}). Тут можна вмикати продаж, виставляти залишок і редагувати тексти карток товарів.`;
   }
 
   setCatalogAdminStatus('Оновлюємо стан каталогу...', 'neutral');
 
-  const [products, stateResponse] = await Promise.all([
+  const [products, stateResponse, textOverrideResponse] = await Promise.all([
     fetch('products.json').then((response) => response.json()),
     supabase
       .from('product_catalog_state')
       .select('product_id, is_available, stock_quantity, sold_quantity, updated_at')
       .order('product_id', { ascending: true }),
+    supabase
+      .from('product_text_overrides')
+      .select('product_id, name_override, description_override, origin_override, processing_override, alt_override, weight_override, is_active, updated_at')
+      .eq('is_active', true),
   ]);
 
   if (stateResponse.error) {
@@ -497,9 +573,25 @@ const loadCatalogAdmin = async (session) => {
     return;
   }
 
-  catalogAdminRows = buildCatalogAdminRows(products, stateResponse.data || []);
+  let textOverrideRows = textOverrideResponse.data || [];
+  if (textOverrideResponse.error) {
+    if (isMissingRelationError(textOverrideResponse.error, 'product_text_overrides')) {
+      setCatalogAdminStatus('Таблиця product_text_overrides ще не створена. Редагування текстів тимчасово недоступне.', 'error');
+      textOverrideRows = [];
+    } else {
+      console.error('Failed to load product text overrides', textOverrideResponse.error);
+      setCatalogAdminStatus('Не вдалося завантажити оверрайди текстів карток.', 'error');
+      return;
+    }
+  }
+
+  const stateWithTextRows = stateResponse.data || [];
+  stateWithTextRows.textOverrides = textOverrideRows;
+  catalogAdminRows = buildCatalogAdminRows(products, stateWithTextRows);
   renderCatalogAdminList();
-  setCatalogAdminStatus('Каталог готовий до редагування.', 'success');
+  if (!textOverrideResponse.error) {
+    setCatalogAdminStatus('Каталог готовий до редагування.', 'success');
+  }
 };
 
 const saveCatalogRow = async (card) => {
@@ -540,7 +632,42 @@ const saveCatalogRow = async (card) => {
     rowStatus.dataset.tone = 'neutral';
   }
 
-  const { data, error } = await supabase
+  const textInputs = card.querySelectorAll('[data-catalog-text-field]');
+  const textPatch = {};
+
+  textInputs.forEach((input) => {
+    if (!(input instanceof HTMLInputElement) && !(input instanceof HTMLTextAreaElement)) return;
+    const field = input.dataset.catalogTextField;
+    if (!field || !editableCatalogTextFields.includes(field)) return;
+
+    const nextValue = String(input.value ?? '').trim();
+    const baseValue = String(row.baseText?.[field] ?? '').trim();
+
+    if (nextValue !== baseValue) {
+      textPatch[field] = nextValue;
+    }
+  });
+
+  const textOverridePayload = {
+    product_id: productId,
+    is_active: Object.keys(textPatch).length > 0,
+    updated_by: currentSession.user.id,
+    name_override: null,
+    description_override: null,
+    origin_override: null,
+    processing_override: null,
+    alt_override: null,
+    weight_override: null,
+  };
+
+  Object.entries(textPatch).forEach(([field, value]) => {
+    const column = catalogTextFieldColumnMap[field];
+    if (!column) return;
+    textOverridePayload[column] = value;
+  });
+
+  const [{ data, error }, textSaveResult] = await Promise.all([
+    supabase
     .from('product_catalog_state')
     .upsert({
       product_id: productId,
@@ -549,7 +676,11 @@ const saveCatalogRow = async (card) => {
       updated_by: currentSession.user.id,
     }, { onConflict: 'product_id' })
     .select('product_id, is_available, stock_quantity, sold_quantity, updated_at')
-    .single();
+    .single(),
+    supabase
+      .from('product_text_overrides')
+      .upsert(textOverridePayload, { onConflict: 'product_id' }),
+  ]);
 
   if (saveButton instanceof HTMLButtonElement) {
     saveButton.disabled = false;
@@ -564,12 +695,24 @@ const saveCatalogRow = async (card) => {
     return;
   }
 
+  if (textSaveResult.error) {
+    console.error('Failed to save product text overrides', textSaveResult.error);
+    if (rowStatus) {
+      rowStatus.textContent = textSaveResult.error.message || 'Не вдалося зберегти текст картки.';
+      rowStatus.dataset.tone = 'error';
+    }
+    return;
+  }
+
   const nextState = normalizeCatalogState(data || { product_id: productId, is_available: availabilityField.checked, stock_quantity: stockQuantity, sold_quantity: row.state.soldQuantity });
   catalogAdminRows = catalogAdminRows.map((item) => item.id === productId
     ? {
       ...item,
+      ...item.baseText,
+      ...textPatch,
       state: nextState,
       availableNow: nextState.stockQuantity === null ? null : Math.max(nextState.stockQuantity - nextState.soldQuantity, 0),
+      textOverrides: { ...textPatch },
     }
     : item);
 
