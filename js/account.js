@@ -16,8 +16,10 @@ const authToggle = document.querySelector('.account-auth-toggle');
 const authSecondary = document.querySelector('#account-auth-secondary');
 const confirmationHint = document.querySelector('#account-confirmation-hint');
 const resendConfirmationButton = document.querySelector('#account-resend-confirmation');
+const forgotPasswordButton = document.querySelector('#account-forgot-password');
 const authNameField = document.querySelector('[data-auth-name-field]');
 const authPasswordField = document.querySelector('[data-auth-password-field]');
+const authRecoveryPasswordField = document.querySelector('[data-auth-recovery-password-field]');
 const passwordRules = document.querySelector('#account-password-rules');
 const passwordRuleItems = document.querySelectorAll('[data-password-rule]');
 const userEmail = document.querySelector('#account-user-email');
@@ -35,6 +37,8 @@ const catalogAdminStatus = document.querySelector('#catalog-admin-status');
 const catalogAdminList = document.querySelector('#catalog-admin-list');
 const fullNameInput = authForm?.querySelector('input[name="fullName"]') || null;
 const passwordInput = authForm?.querySelector('input[name="password"]') || null;
+const recoveryPasswordInput = authForm?.querySelector('input[name="recoveryPassword"]') || null;
+const emailInput = authForm?.querySelector('input[name="email"]') || null;
 let pendingConfirmationEmail = '';
 let currentSession = null;
 let currentProfile = null;
@@ -61,6 +65,12 @@ const AUTH_MODE_CONFIG = {
     title: 'Створити акаунт',
     help: 'Створіть пароль і підтвердьте email, щоб увімкнути особистий кабінет.',
     submit: 'Зареєструватися',
+  },
+  recovery: {
+    eyebrow: 'Відновлення',
+    title: 'Створити новий пароль',
+    help: 'Вкажіть новий пароль для акаунта. Після збереження увійдіть з ним.',
+    submit: 'Зберегти пароль',
   },
 };
 
@@ -168,6 +178,7 @@ const setAuthMode = (mode) => {
   const config = AUTH_MODE_CONFIG[mode] || AUTH_MODE_CONFIG.login;
   const isLoginMode = mode === 'login';
   const isRegisterMode = mode === 'register';
+  const isRecoveryMode = mode === 'recovery';
 
   if (authForm) {
     authForm.dataset.authMode = mode;
@@ -183,16 +194,22 @@ const setAuthMode = (mode) => {
   if (authTitle) authTitle.textContent = config.title;
   if (authHelp) authHelp.textContent = config.help;
   if (authSubmit) authSubmit.textContent = config.submit;
+  if (authToggle) authToggle.hidden = isRecoveryMode;
   if (authNameField) authNameField.hidden = !isRegisterMode;
   if (authPasswordField) authPasswordField.hidden = !(isLoginMode || isRegisterMode);
-  if (passwordRules) passwordRules.hidden = !isRegisterMode;
+  if (authRecoveryPasswordField) authRecoveryPasswordField.hidden = !isRecoveryMode;
+  if (passwordRules) passwordRules.hidden = !(isRegisterMode || isRecoveryMode);
+  if (forgotPasswordButton) forgotPasswordButton.hidden = !isLoginMode;
   if (passwordInput) {
     passwordInput.required = isLoginMode || isRegisterMode;
     passwordInput.autocomplete = isRegisterMode ? 'new-password' : 'current-password';
   }
+  if (recoveryPasswordInput) {
+    recoveryPasswordInput.required = isRecoveryMode;
+  }
   hideSecondaryAuthActions();
 
-  if (!isRegisterMode) {
+  if (!isRegisterMode && !isRecoveryMode) {
     renderPasswordChecks('');
   }
 };
@@ -200,6 +217,7 @@ const setAuthMode = (mode) => {
 const getInitialAuthMode = () => {
   const hash = String(window.location.hash || '').toLowerCase();
   if (hash === '#register' || hash === '#signup') return 'register';
+  if (hash.includes('type=recovery') || hash.includes('#reset-password')) return 'recovery';
   return 'login';
 };
 
@@ -775,7 +793,13 @@ const init = async () => {
     await loadCatalogAdmin(data.session);
   }
 
-  supabase.auth.onAuthStateChange(async (_event, session) => {
+  supabase.auth.onAuthStateChange(async (event, session) => {
+    if (event === 'PASSWORD_RECOVERY') {
+      setAuthMode('recovery');
+      setAuthStatus('Створіть новий пароль для завершення відновлення.', 'neutral');
+      return;
+    }
+
     setSignedInState(session);
     if (session) {
       hideSecondaryAuthActions();
@@ -796,6 +820,33 @@ authModeTriggers.forEach((trigger) => {
 
 passwordInput?.addEventListener('input', () => {
   renderPasswordChecks(passwordInput.value);
+});
+
+recoveryPasswordInput?.addEventListener('input', () => {
+  renderPasswordChecks(recoveryPasswordInput.value);
+});
+
+forgotPasswordButton?.addEventListener('click', async () => {
+  if (!supabase) return;
+
+  const email = String(emailInput?.value || '').trim();
+  if (!email) {
+    setAuthStatus('Вкажіть email у формі, і ми надішлемо лист для відновлення пароля.', 'error');
+    return;
+  }
+
+  setAuthStatus('Надсилаємо лист для відновлення пароля...', 'neutral');
+
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: `${buildEmailRedirectUrl()}#reset-password`,
+  });
+
+  if (error) {
+    setAuthStatus(error.message || 'Не вдалося надіслати лист для відновлення пароля.', 'error');
+    return;
+  }
+
+  setAuthStatus('Лист для відновлення пароля надіслано. Перейдіть за посиланням у пошті.', 'success');
 });
 
 resendConfirmationButton?.addEventListener('click', async () => {
@@ -827,7 +878,8 @@ authForm?.addEventListener('submit', async (event) => {
   const authMode = authForm.dataset.authMode || 'login';
   const email = String(formData.get('email') || '').trim();
   const password = String(formData.get('password') || '');
-  if (!email) {
+  const recoveryPassword = String(formData.get('recoveryPassword') || '');
+  if (!email && authMode !== 'recovery') {
     setAuthStatus('Вкажіть email для входу.', 'error');
     return;
   }
@@ -903,6 +955,35 @@ authForm?.addEventListener('submit', async (event) => {
 
     showConfirmationResend(email);
     setAuthStatus('Акаунт створено. Підтвердьте email, а потім увійдіть у кабінет.', 'success');
+    return;
+  }
+
+  if (authMode === 'recovery') {
+    const checks = renderPasswordChecks(recoveryPassword);
+
+    if (!isPasswordValid(checks)) {
+      setAuthStatus('Новий пароль не відповідає вимогам безпеки.', 'error');
+      return;
+    }
+
+    setAuthStatus('Оновлюємо пароль...', 'neutral');
+
+    const { error } = await supabase.auth.updateUser({
+      password: recoveryPassword,
+    });
+
+    if (error) {
+      setAuthStatus(error.message || 'Не вдалося змінити пароль. Спробуйте ще раз за посиланням з листа.', 'error');
+      return;
+    }
+
+    authForm.reset();
+    renderPasswordChecks('');
+    setAuthMode('login');
+    if (window.location.hash) {
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+    setAuthStatus('Пароль змінено. Тепер увійдіть з новим паролем.', 'success');
     return;
   }
 });

@@ -1260,6 +1260,31 @@ body[data-page-category="filter"] .hero .btn.ghost {
   color: var(--olive);
 }
 
+.account-auth-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.account-link-button {
+  border: none;
+  background: transparent;
+  color: var(--accent);
+  padding: 0;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.account-link-button:hover,
+.account-link-button:focus-visible {
+  color: var(--charcoal);
+}
+
 .account-auth-secondary {
   display: grid;
   gap: 10px;

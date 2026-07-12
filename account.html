@@ -86,6 +86,7 @@
             <label data-auth-name-field hidden>Ім'я<br><input type="text" name="fullName" autocomplete="name"></label>
             <label>Email<br><input type="email" name="email" autocomplete="email" required></label>
             <label data-auth-password-field>Пароль<br><input type="password" name="password" autocomplete="current-password" required></label>
+            <label data-auth-recovery-password-field hidden>Новий пароль<br><input type="password" name="recoveryPassword" autocomplete="new-password"></label>
             <div class="account-password-rules" id="account-password-rules" hidden>
               <p>Пароль має містити:</p>
               <ul>
@@ -95,7 +96,10 @@
                 <li data-password-rule="digit">хоча б одну цифру</li>
               </ul>
             </div>
-            <button class="btn primary" type="submit" id="account-auth-submit">Увійти</button>
+            <div class="account-auth-actions">
+              <button class="btn primary" type="submit" id="account-auth-submit">Увійти</button>
+              <button class="account-link-button" type="button" id="account-forgot-password">Забули пароль?</button>
+            </div>
             <p class="form-status" id="account-auth-status" aria-live="polite"></p>
             <div class="account-auth-secondary" id="account-auth-secondary" hidden>
               <p id="account-confirmation-hint">Підтвердіть email і запитайте новий лист, якщо попередній не дійшов.</p>
@@ -199,6 +203,6 @@
   </footer>
 
   <script src="/env.js?v=1"></script>
-  <script type="module" src="js/account.js?v=6"></script>
+  <script type="module" src="js/account.js?v=7"></script>
 </body>
 </html>
