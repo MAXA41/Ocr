@@ -223,8 +223,20 @@ const getInitialAuthMode = () => {
   return 'login';
 };
 
+const getHashAuthParams = () => {
+  const rawHash = String(window.location.hash || '').replace(/^#/, '');
+  if (!rawHash) return new URLSearchParams();
+
+  // Some email templates add a marker before tokens: #reset-password#access_token=...
+  // Convert extra hash separators to query separators to keep tokens parseable.
+  const normalizedHash = rawHash.replace(/#/g, '&');
+  const tokenStartIndex = normalizedHash.indexOf('access_token=');
+  const queryLikeHash = tokenStartIndex >= 0 ? normalizedHash.slice(tokenStartIndex) : normalizedHash;
+  return new URLSearchParams(queryLikeHash);
+};
+
 const hasRecoveryStateInUrl = () => {
-  const hashParams = new URLSearchParams(String(window.location.hash || '').replace(/^#/, ''));
+  const hashParams = getHashAuthParams();
   const searchParams = new URLSearchParams(window.location.search || '');
   return hashParams.get('type') === 'recovery' || searchParams.get('type') === 'recovery';
 };
@@ -793,7 +805,7 @@ const init = async () => {
     return;
   }
 
-  const hashParams = new URLSearchParams(String(window.location.hash || '').replace(/^#/, ''));
+  const hashParams = getHashAuthParams();
   const searchParams = new URLSearchParams(window.location.search || '');
   const accessToken = hashParams.get('access_token');
   const refreshToken = hashParams.get('refresh_token');
