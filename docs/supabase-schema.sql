@@ -341,7 +341,8 @@ create table if not exists public.catalog_admins (
 insert into public.catalog_admins (email)
 values
   ('office@barista-box.com'),
-  ('zdrastvyite11@gmail.com')
+  ('zdrastvyite11@gmail.com'),
+  ('borrrovushka@gmail.com')
 on conflict (email) do nothing;
 
 create table if not exists public.product_catalog_state (
