@@ -204,6 +204,9 @@ const setAuthMode = (mode) => {
     passwordInput.required = isLoginMode || isRegisterMode;
     passwordInput.autocomplete = isRegisterMode ? 'new-password' : 'current-password';
   }
+  if (emailInput) {
+    emailInput.required = !isRecoveryMode;
+  }
   if (recoveryPasswordInput) {
     recoveryPasswordInput.required = isRecoveryMode;
   }
@@ -217,8 +220,13 @@ const setAuthMode = (mode) => {
 const getInitialAuthMode = () => {
   const hash = String(window.location.hash || '').toLowerCase();
   if (hash === '#register' || hash === '#signup') return 'register';
-  if (hash.includes('type=recovery') || hash.includes('#reset-password')) return 'recovery';
   return 'login';
+};
+
+const hasRecoveryStateInUrl = () => {
+  const hashParams = new URLSearchParams(String(window.location.hash || '').replace(/^#/, ''));
+  const searchParams = new URLSearchParams(window.location.search || '');
+  return hashParams.get('type') === 'recovery' || searchParams.get('type') === 'recovery';
 };
 
 const renderProfile = (profile) => {
@@ -785,8 +793,31 @@ const init = async () => {
     return;
   }
 
+  const hashParams = new URLSearchParams(String(window.location.hash || '').replace(/^#/, ''));
+  const searchParams = new URLSearchParams(window.location.search || '');
+  const accessToken = hashParams.get('access_token');
+  const refreshToken = hashParams.get('refresh_token');
+  const authCode = searchParams.get('code');
+
+  if (authCode) {
+    const { error } = await supabase.auth.exchangeCodeForSession(authCode);
+    if (error) {
+      console.error('Failed to exchange recovery code for session', error);
+    }
+  } else if (accessToken && refreshToken) {
+    const { error } = await supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
+    if (error) {
+      console.error('Failed to restore recovery session from URL hash', error);
+    }
+  }
+
   const { data } = await supabase.auth.getSession();
   setSignedInState(data.session);
+  if (data.session && hasRecoveryStateInUrl()) {
+    setAuthMode('recovery');
+    setAuthStatus('Створіть новий пароль для завершення відновлення.', 'neutral');
+    return;
+  }
   if (data.session) {
     await syncProfile(data.session);
     await loadDashboard(data.session);
@@ -838,7 +869,7 @@ forgotPasswordButton?.addEventListener('click', async () => {
   setAuthStatus('Надсилаємо лист для відновлення пароля...', 'neutral');
 
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${buildEmailRedirectUrl()}#reset-password`,
+    redirectTo: buildEmailRedirectUrl(),
   });
 
   if (error) {
@@ -959,6 +990,11 @@ authForm?.addEventListener('submit', async (event) => {
   }
 
   if (authMode === 'recovery') {
+    if (!currentSession?.user) {
+      setAuthStatus('Сесія відновлення не знайдена. Відкрийте посилання з листа ще раз.', 'error');
+      return;
+    }
+
     const checks = renderPasswordChecks(recoveryPassword);
 
     if (!isPasswordValid(checks)) {
