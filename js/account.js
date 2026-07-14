@@ -65,6 +65,32 @@ const catalogCategoryLabels = {
 };
 
 const catalogCategoryOrder = ['espresso', 'filter', 'drips', 'decaf'];
+const catalogTextTemplates = {
+  espresso: {
+    taste: 'Шоколад, горіх, карамель і щільний солодкий aftertaste.',
+    cup_profile: 'Щільне тіло, низько-середня кислотність і стабільна солодкість у чашці.',
+    brew_guide: 'Еспресо: почніть з 18 г in / 36 г out, 25-30 секунд, помел під щільну, солодку екстракцію.',
+    audience: 'Підійде для еспресо, капучино, латте та щоденного домашнього використання.',
+  },
+  filter: {
+    taste: 'Ягоди, цитрус, квіти та прозорий солодкий aftertaste.',
+    cup_profile: 'Чиста, яскрава чашка з виразною кислотністю й легкою текстурою.',
+    brew_guide: 'Фільтр: 15 г на 250 мл, 92-94°C, заливання у 3-4 підходи, 2:30-3:30 хв.',
+    audience: 'Підійде для V60, Kalita, AeroPress і тих, хто любить яскраву ароматику.',
+  },
+  drips: {
+    taste: 'Солодка, чиста чашка з нотами карамелі, ягід або сухофруктів.',
+    cup_profile: 'М’яке тіло, акуратний aftertaste і зрозумілий смак без складних налаштувань.',
+    brew_guide: 'Дріп: 1 пакетик, 180-200 мл води, 3-4 проливи, 92-94°C.',
+    audience: 'Підійде для офісу, подорожей, подарунків і швидкого приготування без кавомолки.',
+  },
+  decaf: {
+    taste: 'Шоколад, горіх і м’яка солодкість без кофеїнового ефекту.',
+    cup_profile: 'Спокійна, збалансована чашка з м’яким тілом і чистим післясмаком.',
+    brew_guide: 'Декаф: використовуйте трохи дрібніший помел і м’якший рецепт для стабільної солодкості.',
+    audience: 'Підійде для вечора, чутливих до кофеїну гостей і тих, хто хоче каву без стимуляції.',
+  },
+};
 
 const AUTH_MODE_CONFIG = {
   login: {
@@ -420,6 +446,57 @@ const getCatalogRowLabel = (row) => {
   return 'У продажу';
 };
 
+const getCatalogTemplateForRow = (row) => catalogTextTemplates[row.category] || catalogTextTemplates.espresso;
+
+const applyCatalogCardTemplate = (card, templateKey) => {
+  if (!(card instanceof HTMLElement) || !templateKey) return;
+
+  const row = catalogAdminRows.find((item) => item.id === card.dataset.productId);
+  const template = row ? getCatalogTemplateForRow(row) : null;
+  if (!template) return;
+
+  const fields = card.querySelectorAll('[data-catalog-text-field]');
+  fields.forEach((field) => {
+    if (!(field instanceof HTMLInputElement) && !(field instanceof HTMLTextAreaElement)) return;
+    const fieldName = field.dataset.catalogTextField;
+    if (!fieldName || !Object.prototype.hasOwnProperty.call(template, fieldName)) return;
+    field.value = String(template[fieldName] || '');
+    const wrapper = field.closest('[data-catalog-field-wrapper]');
+    if (wrapper instanceof HTMLElement) {
+      wrapper.dataset.catalogFieldValue = field.value;
+    }
+  });
+
+  filterCatalogCardFields(card, card.querySelector('[data-catalog-field-search]')?.value || '');
+};
+
+const filterCatalogCardFields = (card, query) => {
+  if (!(card instanceof HTMLElement)) return;
+
+  const normalizedQuery = String(query || '').trim().toLowerCase();
+  const wrappers = card.querySelectorAll('[data-catalog-field-wrapper]');
+  let visibleCount = 0;
+
+  wrappers.forEach((wrapper) => {
+    if (!(wrapper instanceof HTMLElement)) return;
+    if (!normalizedQuery) {
+      wrapper.hidden = false;
+      visibleCount += 1;
+      return;
+    }
+
+    const haystack = `${wrapper.dataset.catalogFieldLabel || ''} ${wrapper.dataset.catalogFieldValue || ''}`.toLowerCase();
+    const isMatch = haystack.includes(normalizedQuery);
+    wrapper.hidden = !isMatch;
+    if (isMatch) visibleCount += 1;
+  });
+
+  const emptyState = card.querySelector('[data-catalog-field-search-empty]');
+  if (emptyState instanceof HTMLElement) {
+    emptyState.hidden = visibleCount !== 0;
+  }
+};
+
 const buildCatalogAdminRows = (products, stateRows) => {
   const stateById = new Map((stateRows || []).map((row) => [row.product_id, normalizeCatalogState(row)]));
   const textOverridesById = new Map((stateRows?.textOverrides || []).map((row) => [row.product_id, row]));
@@ -584,6 +661,22 @@ const renderCatalogAdminList = () => {
                     </div>
                   </div>
                   <div class="catalog-admin-controls">
+                    <div class="catalog-admin-tools">
+                      <label class="catalog-admin-field catalog-admin-field-wide">
+                        <span>Пошук у картці</span>
+                        <input type="search" data-catalog-field-search placeholder="Наприклад: кислотність, солодкість, молоко">
+                      </label>
+                      <p class="catalog-admin-field-search-empty" data-catalog-field-search-empty hidden>Нічого не знайдено в полях цієї картки.</p>
+                      <div class="catalog-admin-template-bar">
+                        <span>Швидкі шаблони:</span>
+                        <div class="catalog-admin-template-actions">
+                          <button class="btn ghost" type="button" data-catalog-template="espresso">Еспресо</button>
+                          <button class="btn ghost" type="button" data-catalog-template="filter">Фільтр</button>
+                          <button class="btn ghost" type="button" data-catalog-template="drips">Дріпи</button>
+                          <button class="btn ghost" type="button" data-catalog-template="decaf">Декаф</button>
+                        </div>
+                      </div>
+                    </div>
                     <label class="catalog-admin-toggle">
                       <input type="checkbox" data-catalog-availability ${row.state.isAvailable ? 'checked' : ''}>
                       <span>Показувати в продажу</span>
@@ -593,43 +686,43 @@ const renderCatalogAdminList = () => {
                       <input type="number" min="0" step="1" value="${stockValue}" data-catalog-stock placeholder="Порожньо = без ліміту">
                     </label>
                     <div class="catalog-admin-text-grid">
-                      <label class="catalog-admin-field">
+                      <label class="catalog-admin-field" data-catalog-field-wrapper data-catalog-field-label="Назва картки" data-catalog-field-value="${escapeHtml(row.name || '')}">
                         <span>Назва картки</span>
                         <input type="text" data-catalog-text-field="name" value="${escapeHtml(row.name)}">
                       </label>
-                      <label class="catalog-admin-field catalog-admin-field-wide">
+                      <label class="catalog-admin-field catalog-admin-field-wide" data-catalog-field-wrapper data-catalog-field-label="Опис картки" data-catalog-field-value="${escapeHtml(row.description || '')}">
                         <span>Опис картки</span>
                         <textarea rows="3" data-catalog-text-field="description">${escapeHtml(row.description || '')}</textarea>
                       </label>
-                      <label class="catalog-admin-field catalog-admin-field-wide">
+                      <label class="catalog-admin-field catalog-admin-field-wide" data-catalog-field-wrapper data-catalog-field-label="Смак" data-catalog-field-value="${escapeHtml(flavorHint)}">
                         <span>Смак</span>
                         <textarea rows="2" data-catalog-text-field="taste" placeholder="Що відчувається в ароматиці та післясмаку">${escapeHtml(flavorHint)}</textarea>
                       </label>
-                      <label class="catalog-admin-field catalog-admin-field-wide">
+                      <label class="catalog-admin-field catalog-admin-field-wide" data-catalog-field-wrapper data-catalog-field-label="Що в чашці" data-catalog-field-value="${escapeHtml(cupHint)}">
                         <span>Що в чашці</span>
                         <textarea rows="2" data-catalog-text-field="cup_profile" placeholder="Щільність, кислотність, солодкість, тіло">${escapeHtml(cupHint)}</textarea>
                       </label>
-                      <label class="catalog-admin-field catalog-admin-field-wide">
+                      <label class="catalog-admin-field catalog-admin-field-wide" data-catalog-field-wrapper data-catalog-field-label="Як заварювати" data-catalog-field-value="${escapeHtml(brewHint)}">
                         <span>Як заварювати</span>
                         <textarea rows="3" data-catalog-text-field="brew_guide" placeholder="Рецепт, температура, помел, пропорції">${escapeHtml(brewHint)}</textarea>
                       </label>
-                      <label class="catalog-admin-field catalog-admin-field-wide">
+                      <label class="catalog-admin-field catalog-admin-field-wide" data-catalog-field-wrapper data-catalog-field-label="Кому підійде" data-catalog-field-value="${escapeHtml(audienceHint)}">
                         <span>Кому підійде</span>
                         <textarea rows="2" data-catalog-text-field="audience" placeholder="Для кого цей лот">${escapeHtml(audienceHint)}</textarea>
                       </label>
-                      <label class="catalog-admin-field">
+                      <label class="catalog-admin-field" data-catalog-field-wrapper data-catalog-field-label="Походження" data-catalog-field-value="${escapeHtml(row.origin || '')}">
                         <span>Походження</span>
                         <input type="text" data-catalog-text-field="origin" value="${escapeHtml(row.origin || '')}">
                       </label>
-                      <label class="catalog-admin-field">
+                      <label class="catalog-admin-field" data-catalog-field-wrapper data-catalog-field-label="Обробка" data-catalog-field-value="${escapeHtml(row.processing || '')}">
                         <span>Обробка</span>
                         <input type="text" data-catalog-text-field="processing" value="${escapeHtml(row.processing || '')}">
                       </label>
-                      <label class="catalog-admin-field">
+                      <label class="catalog-admin-field" data-catalog-field-wrapper data-catalog-field-label="Вага" data-catalog-field-value="${escapeHtml(row.weight || '')}">
                         <span>Вага</span>
                         <input type="text" data-catalog-text-field="weight" value="${escapeHtml(row.weight || '')}">
                       </label>
-                      <label class="catalog-admin-field catalog-admin-field-wide">
+                      <label class="catalog-admin-field catalog-admin-field-wide" data-catalog-field-wrapper data-catalog-field-label="Alt для фото" data-catalog-field-value="${escapeHtml(row.alt || '')}">
                         <span>Alt для фото</span>
                         <textarea rows="2" data-catalog-text-field="alt">${escapeHtml(row.alt || '')}</textarea>
                       </label>
@@ -643,6 +736,12 @@ const renderCatalogAdminList = () => {
         </div>
       </details>`;
   }).join('');
+
+  catalogAdminList.querySelectorAll('[data-catalog-field-search]').forEach((input) => {
+    if (!(input instanceof HTMLInputElement)) return;
+    const card = input.closest('.catalog-admin-card');
+    filterCatalogCardFields(card, input.value);
+  });
 };
 
 const loadCatalogAdmin = async (session) => {
@@ -1147,6 +1246,13 @@ catalogAdminList?.addEventListener('click', async (event) => {
   const target = event.target;
   if (!(target instanceof HTMLElement)) return;
 
+  const templateButton = target.closest('[data-catalog-template]');
+  if (templateButton instanceof HTMLButtonElement) {
+    const card = templateButton.closest('.catalog-admin-card');
+    applyCatalogCardTemplate(card, templateButton.dataset.catalogTemplate || '');
+    return;
+  }
+
   const saveButton = target.closest('[data-catalog-save]');
   if (!(saveButton instanceof HTMLButtonElement)) return;
 
@@ -1154,6 +1260,31 @@ catalogAdminList?.addEventListener('click', async (event) => {
   if (!(card instanceof HTMLElement)) return;
 
   await saveCatalogRow(card);
+});
+
+catalogAdminList?.addEventListener('input', (event) => {
+  const target = event.target;
+  if (!(target instanceof HTMLInputElement)) return;
+
+  const card = target.closest('.catalog-admin-card');
+  if (!card) return;
+
+  if (target.matches('[data-catalog-field-search]')) {
+    filterCatalogCardFields(card, target.value);
+    return;
+  }
+
+  if (target.matches('[data-catalog-text-field]')) {
+    const wrapper = target.closest('[data-catalog-field-wrapper]');
+    if (wrapper instanceof HTMLElement) {
+      wrapper.dataset.catalogFieldValue = target.value;
+    }
+
+    const searchInput = card.querySelector('[data-catalog-field-search]');
+    if (searchInput instanceof HTMLInputElement) {
+      filterCatalogCardFields(card, searchInput.value);
+    }
+  }
 });
 
 profileList?.addEventListener('submit', async (event) => {

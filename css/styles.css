@@ -1538,6 +1538,42 @@ body[data-page-category="filter"] .hero .btn.ghost {
   display: grid;
   gap: 14px;
 }
+
+.catalog-admin-tools {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border-radius: 18px;
+  background: rgba(247, 242, 234, 0.72);
+  border: 1px solid rgba(31, 27, 22, 0.08);
+}
+
+.catalog-admin-template-bar {
+  display: grid;
+  gap: 10px;
+}
+
+.catalog-admin-template-bar > span {
+  font-size: 12px;
+  color: var(--olive);
+}
+
+.catalog-admin-template-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.catalog-admin-template-actions .btn {
+  padding: 8px 12px;
+  min-height: 38px;
+}
+
+.catalog-admin-field-search-empty {
+  margin: 0;
+  font-size: 12px;
+  color: var(--olive);
+}
 .catalog-admin-summary-side {
   display: grid;
   gap: 12px;
