@@ -1446,6 +1446,55 @@ body[data-page-category="filter"] .hero .btn.ghost {
   display: grid;
   gap: 16px;
 }
+.catalog-admin-group {
+  display: grid;
+  gap: 14px;
+  border: 1px solid rgba(31, 27, 22, 0.12);
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.58);
+  padding: 12px;
+}
+.catalog-admin-group > summary {
+  list-style: none;
+}
+.catalog-admin-group > summary::-webkit-details-marker,
+.catalog-admin-card > summary::-webkit-details-marker {
+  display: none;
+}
+.catalog-admin-group-summary,
+.catalog-admin-card-summary {
+  cursor: pointer;
+}
+.catalog-admin-group-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 6px 6px 10px;
+}
+.catalog-admin-group-summary h3 {
+  margin-top: 4px;
+  font-family: var(--font-body);
+  font-size: 18px;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.catalog-admin-group-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 40px;
+  height: 40px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: rgba(31, 27, 22, 0.08);
+  color: var(--charcoal);
+  font-weight: 700;
+}
+.catalog-admin-group-body {
+  display: grid;
+  gap: 14px;
+}
 
 .catalog-admin-card {
   border: 1px solid rgba(31, 27, 22, 0.12);
@@ -1454,6 +1503,20 @@ body[data-page-category="filter"] .hero .btn.ghost {
   padding: 18px;
   display: grid;
   gap: 16px;
+}
+.catalog-admin-card > summary {
+  list-style: none;
+}
+.catalog-admin-card-summary {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+}
+.catalog-admin-card-body {
+  display: grid;
+  gap: 16px;
+  padding-top: 2px;
 }
 
 .catalog-admin-card[data-tone="out"] {
@@ -1474,6 +1537,15 @@ body[data-page-category="filter"] .hero .btn.ghost {
 .catalog-admin-controls {
   display: grid;
   gap: 14px;
+}
+.catalog-admin-summary-side {
+  display: grid;
+  gap: 12px;
+  justify-items: end;
+}
+.catalog-admin-card-hint {
+  font-size: 12px;
+  color: var(--olive);
 }
 
 .catalog-admin-media {
@@ -1536,6 +1608,9 @@ body[data-page-category="filter"] .hero .btn.ghost {
   display: grid;
   gap: 12px;
   grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+}
+.catalog-admin-metrics.compact {
+  grid-template-columns: repeat(2, minmax(110px, 1fr));
 }
 
 .catalog-admin-metric {
@@ -2360,6 +2435,14 @@ body[data-page-category="filter"] .hero .btn.ghost {
   .site-toast {
     right: 16px;
     left: 16px;
+.catalog-admin-group-summary,
+  .catalog-admin-card-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .catalog-admin-summary-side {
+    justify-items: start;
+  }
     bottom: 16px;
     max-width: none;
   }

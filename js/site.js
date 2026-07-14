@@ -97,6 +97,10 @@ const editableProductTextFields = [
   'processing',
   'alt',
   'weight',
+  'taste',
+  'cup_profile',
+  'brew_guide',
+  'audience',
 ];
 
 const brewGuides = {
@@ -329,6 +333,18 @@ const getProductPageCopy = (product) => {
     categoryLabel: categoryLabels[product.category] || product.category,
     guideTitle: brewGuide.title,
     guideText: brewGuide.text,
+    cupProfile: product.cup_profile || getPrimaryTasteNotes(product.description),
+    tasteNotes: product.taste || getPrimaryTasteNotes(product.description),
+    brewGuideText: product.brew_guide || brewGuide.text,
+    audienceText: product.audience || (
+      product.category === 'espresso'
+        ? 'Підійде для щільної чашки, молочних напоїв і стабільного щоденного рецепту.'
+        : product.category === 'filter'
+          ? 'Підійде для ручного заварювання, якщо хочеться чистої ароматики та прозорого aftertaste.'
+          : product.category === 'drips'
+            ? 'Підійде для швидкого приготування в дорозі, в офісі або як подарунковий формат.'
+            : 'Підійде для тих, хто хоче м’який смаковий профіль без кофеїну.'
+    ),
     whyItFits:
       product.category === 'espresso'
         ? 'Підійде для щільної чашки, молочних напоїв і стабільного щоденного рецепту.'
@@ -354,7 +370,7 @@ const fetchActiveProductTextOverrides = async () => {
 
   const { data, error } = await supabase
     .from('product_text_overrides')
-    .select('product_id, name_override, description_override, origin_override, processing_override, alt_override, weight_override, is_active, updated_at')
+    .select('product_id, name_override, description_override, origin_override, processing_override, alt_override, weight_override, taste_override, cup_profile_override, brew_guide_override, audience_override, is_active, updated_at')
     .eq('is_active', true);
 
   if (error) {
@@ -530,7 +546,7 @@ const renderProductDetail = (product, allProducts) => {
   const availability = getAvailabilityPresentation(product);
   const canBuy = isProductAvailableForPurchase(product);
   const productCode = formatProductCode(product);
-  const tasteNotes = getPrimaryTasteNotes(product.description);
+  const tasteNotes = copy.tasteNotes;
   const specs = buildProductSpecs(product, copy);
   document.title = `${product.name} | Odesa Coffee Roasters`;
 
@@ -608,7 +624,7 @@ const renderProductDetail = (product, allProducts) => {
         <article class="coffee-card product-info-card">
           <p class="eyebrow">Що в чашці</p>
           <h2>Смаковий профіль</h2>
-          <p>${product.description}</p>
+          <p>${copy.cupProfile}</p>
         </article>
         <article class="coffee-card product-info-card">
           <p class="eyebrow">Походження</p>
@@ -618,12 +634,12 @@ const renderProductDetail = (product, allProducts) => {
         <article class="coffee-card product-info-card">
           <p class="eyebrow">Як заварювати</p>
           <h2>${copy.guideTitle}</h2>
-          <p>${copy.guideText}</p>
+          <p>${copy.brewGuideText}</p>
         </article>
         <article class="coffee-card product-info-card">
           <p class="eyebrow">Кому підійде</p>
           <h2>Для щоденного меню</h2>
-          <p>${copy.whyItFits}</p>
+          <p>${copy.audienceText}</p>
         </article>
       </div>
     </section>`;

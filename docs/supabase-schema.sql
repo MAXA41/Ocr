@@ -342,7 +342,7 @@ insert into public.catalog_admins (email)
 values
   ('office@barista-box.com'),
   ('zdrastvyite11@gmail.com'),
-  ('borrrovushka@gmail.com')
+  ('tapaxtejlka@ua.fm')
 on conflict (email) do nothing;
 
 create table if not exists public.product_catalog_state (
@@ -375,6 +375,10 @@ create table if not exists public.product_text_overrides (
   processing_override text,
   alt_override text,
   weight_override text,
+  taste_override text,
+  cup_profile_override text,
+  brew_guide_override text,
+  audience_override text,
   is_active boolean not null default true,
   source text not null default 'admin-panel',
   note text,
@@ -382,6 +386,12 @@ create table if not exists public.product_text_overrides (
   created_at timestamptz not null default timezone('utc', now()),
   updated_at timestamptz not null default timezone('utc', now())
 );
+
+alter table public.product_text_overrides
+  add column if not exists taste_override text,
+  add column if not exists cup_profile_override text,
+  add column if not exists brew_guide_override text,
+  add column if not exists audience_override text;
 
 create index if not exists product_price_overrides_active_idx
   on public.product_price_overrides (is_active, updated_at desc);

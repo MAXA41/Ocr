@@ -43,7 +43,7 @@ let pendingConfirmationEmail = '';
 let currentSession = null;
 let currentProfile = null;
 let catalogAdminRows = [];
-const editableCatalogTextFields = ['name', 'description', 'origin', 'processing', 'alt', 'weight'];
+const editableCatalogTextFields = ['name', 'description', 'origin', 'processing', 'alt', 'weight', 'taste', 'cup_profile', 'brew_guide', 'audience'];
 const catalogTextFieldColumnMap = {
   name: 'name_override',
   description: 'description_override',
@@ -51,7 +51,20 @@ const catalogTextFieldColumnMap = {
   processing: 'processing_override',
   alt: 'alt_override',
   weight: 'weight_override',
+  taste: 'taste_override',
+  cup_profile: 'cup_profile_override',
+  brew_guide: 'brew_guide_override',
+  audience: 'audience_override',
 };
+
+const catalogCategoryLabels = {
+  espresso: 'Еспресо',
+  filter: 'Фільтр',
+  drips: 'Дріпи',
+  decaf: 'Декаф',
+};
+
+const catalogCategoryOrder = ['espresso', 'filter', 'drips', 'decaf'];
 
 const AUTH_MODE_CONFIG = {
   login: {
@@ -481,86 +494,154 @@ const renderCatalogAdminList = () => {
     return;
   }
 
-  catalogAdminList.innerHTML = filteredRows.map((row) => {
-    const tone = getCatalogRowTone(row);
-    const stateLabel = getCatalogRowLabel(row);
-    const stockValue = row.state.stockQuantity ?? '';
-    const soldLabel = row.state.soldQuantity;
-    const availableLabel = row.availableNow === null ? 'Без ліміту' : `${row.availableNow} шт.`;
-    const stockLabel = row.state.stockQuantity === null ? 'Без ліміту' : `${row.state.stockQuantity} шт.`;
+  const groupedRows = filteredRows.reduce((accumulator, row) => {
+    const categoryKey = row.category || 'other';
+    if (!accumulator[categoryKey]) accumulator[categoryKey] = [];
+    accumulator[categoryKey].push(row);
+    return accumulator;
+  }, {});
+
+  const sortedCategories = [...Object.keys(groupedRows)].sort((left, right) => {
+    const leftIndex = catalogCategoryOrder.indexOf(left);
+    const rightIndex = catalogCategoryOrder.indexOf(right);
+    if (leftIndex === -1 && rightIndex === -1) return left.localeCompare(right, 'uk');
+    if (leftIndex === -1) return 1;
+    if (rightIndex === -1) return -1;
+    return leftIndex - rightIndex;
+  });
+
+  catalogAdminList.innerHTML = sortedCategories.map((categoryKey) => {
+    const rows = groupedRows[categoryKey];
+    const categoryLabel = catalogCategoryLabels[categoryKey] || categoryKey;
 
     return `
-      <article class="catalog-admin-card" data-product-id="${row.id}" data-tone="${tone}">
-        <div class="catalog-admin-card-head">
-          <div class="catalog-admin-summary">
-            <div class="catalog-admin-media">
-              <img src="${row.image}" alt="${row.alt}">
-            </div>
-            <div class="catalog-admin-copy">
-              <p class="eyebrow">${row.category || 'Каталог'}</p>
-              <h3>${row.name}</h3>
-              <p>${row.description}</p>
-              <div class="product-meta">
-                ${row.origin ? `<span>${row.origin}</span>` : ''}
-                ${row.processing ? `<span>${row.processing}</span>` : ''}
-              </div>
-            </div>
+      <details class="catalog-admin-group" open>
+        <summary class="catalog-admin-group-summary">
+          <div>
+            <p class="eyebrow">${categoryLabel}</p>
+            <h3>${rows.length} товар(и)</h3>
           </div>
-          <span class="catalog-admin-pill catalog-admin-pill-${tone}">${stateLabel}</span>
+          <span class="catalog-admin-group-count">${rows.length}</span>
+        </summary>
+        <div class="catalog-admin-group-body">
+          ${rows.map((row) => {
+            const tone = getCatalogRowTone(row);
+            const stateLabel = getCatalogRowLabel(row);
+            const stockValue = row.state.stockQuantity ?? '';
+            const soldLabel = row.state.soldQuantity;
+            const availableLabel = row.availableNow === null ? 'Без ліміту' : `${row.availableNow} шт.`;
+            const stockLabel = row.state.stockQuantity === null ? 'Без ліміту' : `${row.state.stockQuantity} шт.`;
+            const flavorHint = row.taste || row.description || '';
+            const cupHint = row.cup_profile || row.description || '';
+            const brewHint = row.brew_guide || '';
+            const audienceHint = row.audience || '';
+
+            return `
+              <details class="catalog-admin-card" data-product-id="${row.id}" data-tone="${tone}">
+                <summary class="catalog-admin-card-summary">
+                  <div class="catalog-admin-summary">
+                    <div class="catalog-admin-media">
+                      <img src="${row.image}" alt="${row.alt}">
+                    </div>
+                    <div class="catalog-admin-copy">
+                      <p class="eyebrow">${row.category || 'Каталог'}</p>
+                      <h3>${row.name}</h3>
+                      <p>${row.description}</p>
+                      <div class="product-meta">
+                        ${row.origin ? `<span>${row.origin}</span>` : ''}
+                        ${row.processing ? `<span>${row.processing}</span>` : ''}
+                      </div>
+                      <p class="catalog-admin-card-hint">Натисніть, щоб розкрити редагування.</p>
+                    </div>
+                  </div>
+                  <div class="catalog-admin-summary-side">
+                    <span class="catalog-admin-pill catalog-admin-pill-${tone}">${stateLabel}</span>
+                    <div class="catalog-admin-metrics compact">
+                      <div class="catalog-admin-metric">
+                        <span>Заведено</span>
+                        <strong>${stockLabel}</strong>
+                      </div>
+                      <div class="catalog-admin-metric">
+                        <span>Доступно</span>
+                        <strong>${availableLabel}</strong>
+                      </div>
+                    </div>
+                  </div>
+                </summary>
+                <div class="catalog-admin-card-body">
+                  <div class="catalog-admin-metrics">
+                    <div class="catalog-admin-metric">
+                      <span>Продано / в обробці</span>
+                      <strong>${soldLabel} шт.</strong>
+                    </div>
+                    <div class="catalog-admin-metric">
+                      <span>Доступно зараз</span>
+                      <strong>${availableLabel}</strong>
+                    </div>
+                    <div class="catalog-admin-metric">
+                      <span>Формат</span>
+                      <strong>${escapeHtml(row.weight || 'Без ваги')}</strong>
+                    </div>
+                  </div>
+                  <div class="catalog-admin-controls">
+                    <label class="catalog-admin-toggle">
+                      <input type="checkbox" data-catalog-availability ${row.state.isAvailable ? 'checked' : ''}>
+                      <span>Показувати в продажу</span>
+                    </label>
+                    <label class="catalog-admin-field">
+                      <span>Заведено на склад, шт.</span>
+                      <input type="number" min="0" step="1" value="${stockValue}" data-catalog-stock placeholder="Порожньо = без ліміту">
+                    </label>
+                    <div class="catalog-admin-text-grid">
+                      <label class="catalog-admin-field">
+                        <span>Назва картки</span>
+                        <input type="text" data-catalog-text-field="name" value="${escapeHtml(row.name)}">
+                      </label>
+                      <label class="catalog-admin-field catalog-admin-field-wide">
+                        <span>Опис картки</span>
+                        <textarea rows="3" data-catalog-text-field="description">${escapeHtml(row.description || '')}</textarea>
+                      </label>
+                      <label class="catalog-admin-field catalog-admin-field-wide">
+                        <span>Смак</span>
+                        <textarea rows="2" data-catalog-text-field="taste" placeholder="Що відчувається в ароматиці та післясмаку">${escapeHtml(flavorHint)}</textarea>
+                      </label>
+                      <label class="catalog-admin-field catalog-admin-field-wide">
+                        <span>Що в чашці</span>
+                        <textarea rows="2" data-catalog-text-field="cup_profile" placeholder="Щільність, кислотність, солодкість, тіло">${escapeHtml(cupHint)}</textarea>
+                      </label>
+                      <label class="catalog-admin-field catalog-admin-field-wide">
+                        <span>Як заварювати</span>
+                        <textarea rows="3" data-catalog-text-field="brew_guide" placeholder="Рецепт, температура, помел, пропорції">${escapeHtml(brewHint)}</textarea>
+                      </label>
+                      <label class="catalog-admin-field catalog-admin-field-wide">
+                        <span>Кому підійде</span>
+                        <textarea rows="2" data-catalog-text-field="audience" placeholder="Для кого цей лот">${escapeHtml(audienceHint)}</textarea>
+                      </label>
+                      <label class="catalog-admin-field">
+                        <span>Походження</span>
+                        <input type="text" data-catalog-text-field="origin" value="${escapeHtml(row.origin || '')}">
+                      </label>
+                      <label class="catalog-admin-field">
+                        <span>Обробка</span>
+                        <input type="text" data-catalog-text-field="processing" value="${escapeHtml(row.processing || '')}">
+                      </label>
+                      <label class="catalog-admin-field">
+                        <span>Вага</span>
+                        <input type="text" data-catalog-text-field="weight" value="${escapeHtml(row.weight || '')}">
+                      </label>
+                      <label class="catalog-admin-field catalog-admin-field-wide">
+                        <span>Alt для фото</span>
+                        <textarea rows="2" data-catalog-text-field="alt">${escapeHtml(row.alt || '')}</textarea>
+                      </label>
+                    </div>
+                    <button class="btn light" type="button" data-catalog-save>Зберегти</button>
+                  </div>
+                  <p class="form-status" data-catalog-row-status></p>
+                </div>
+              </details>`;
+          }).join('')}
         </div>
-        <div class="catalog-admin-metrics">
-          <div class="catalog-admin-metric">
-            <span>Заведено на склад</span>
-            <strong>${stockLabel}</strong>
-          </div>
-          <div class="catalog-admin-metric">
-            <span>Продано / в обробці</span>
-            <strong>${soldLabel} шт.</strong>
-          </div>
-          <div class="catalog-admin-metric">
-            <span>Доступно зараз</span>
-            <strong>${availableLabel}</strong>
-          </div>
-        </div>
-        <div class="catalog-admin-controls">
-          <label class="catalog-admin-toggle">
-            <input type="checkbox" data-catalog-availability ${row.state.isAvailable ? 'checked' : ''}>
-            <span>Показувати в продажу</span>
-          </label>
-          <label class="catalog-admin-field">
-            <span>Заведено на склад, шт.</span>
-            <input type="number" min="0" step="1" value="${stockValue}" data-catalog-stock placeholder="Порожньо = без ліміту">
-          </label>
-          <div class="catalog-admin-text-grid">
-            <label class="catalog-admin-field">
-              <span>Назва картки</span>
-              <input type="text" data-catalog-text-field="name" value="${escapeHtml(row.name)}">
-            </label>
-            <label class="catalog-admin-field catalog-admin-field-wide">
-              <span>Опис картки</span>
-              <textarea rows="3" data-catalog-text-field="description">${escapeHtml(row.description || '')}</textarea>
-            </label>
-            <label class="catalog-admin-field">
-              <span>Походження</span>
-              <input type="text" data-catalog-text-field="origin" value="${escapeHtml(row.origin || '')}">
-            </label>
-            <label class="catalog-admin-field">
-              <span>Обробка</span>
-              <input type="text" data-catalog-text-field="processing" value="${escapeHtml(row.processing || '')}">
-            </label>
-            <label class="catalog-admin-field">
-              <span>Вага</span>
-              <input type="text" data-catalog-text-field="weight" value="${escapeHtml(row.weight || '')}">
-            </label>
-            <label class="catalog-admin-field catalog-admin-field-wide">
-              <span>Alt для фото</span>
-              <textarea rows="2" data-catalog-text-field="alt">${escapeHtml(row.alt || '')}</textarea>
-            </label>
-          </div>
-          <button class="btn light" type="button" data-catalog-save>Зберегти</button>
-        </div>
-        <p class="form-status" data-catalog-row-status></p>
-      </article>`;
+      </details>`;
   }).join('');
 };
 
@@ -588,7 +669,7 @@ const loadCatalogAdmin = async (session) => {
 
   if (catalogAdminPanel) catalogAdminPanel.hidden = false;
   if (catalogAdminLead) {
-    catalogAdminLead.textContent = `Ви увійшли як оператор каталогу (${session.user.email}). Тут можна вмикати продаж, виставляти залишок і редагувати тексти карток товарів.`;
+    catalogAdminLead.textContent = `Ви увійшли як оператор каталогу (${session.user.email}). Товари згруповані за категоріями, а кожна картка розкривається по кліку для швидкого редагування.`;
   }
 
   setCatalogAdminStatus('Оновлюємо стан каталогу...', 'neutral');
@@ -601,7 +682,7 @@ const loadCatalogAdmin = async (session) => {
       .order('product_id', { ascending: true }),
     supabase
       .from('product_text_overrides')
-      .select('product_id, name_override, description_override, origin_override, processing_override, alt_override, weight_override, is_active, updated_at')
+      .select('product_id, name_override, description_override, origin_override, processing_override, alt_override, weight_override, taste_override, cup_profile_override, brew_guide_override, audience_override, is_active, updated_at')
       .eq('is_active', true),
   ]);
 
@@ -680,9 +761,12 @@ const saveCatalogRow = async (card) => {
 
     const nextValue = String(input.value ?? '').trim();
     const baseValue = String(row.baseText?.[field] ?? '').trim();
+    const currentOverrideValue = String(row.textOverrides?.[field] ?? '').trim();
 
     if (nextValue !== baseValue) {
       textPatch[field] = nextValue;
+    } else if (currentOverrideValue) {
+      textPatch[field] = null;
     }
   });
 
@@ -696,6 +780,10 @@ const saveCatalogRow = async (card) => {
     processing_override: null,
     alt_override: null,
     weight_override: null,
+    taste_override: null,
+    cup_profile_override: null,
+    brew_guide_override: null,
+    audience_override: null,
   };
 
   Object.entries(textPatch).forEach(([field, value]) => {
