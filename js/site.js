@@ -241,13 +241,22 @@ const getVolumeSelectionConfig = (product) => {
   }
 
   if (isQuarterKgWeight(product.weight)) {
-    return [{
-      value: '250g',
-      label: '0.250 кг',
-      weightLabel: '250 г',
-      price: basePrice,
-      isSelectable: false,
-    }];
+    return [
+      {
+        value: '250g',
+        label: '0.250 кг',
+        weightLabel: '250 г',
+        price: basePrice,
+        isSelectable: true,
+      },
+      {
+        value: '1kg',
+        label: '1 кг',
+        weightLabel: '1 кг',
+        price: Math.round(basePrice * 4),
+        isSelectable: true,
+      },
+    ];
   }
 
   return [{
@@ -283,6 +292,7 @@ const getProductVolumeMarkup = (product) => {
 const renderProductCard = (product, showCategory = false) => {
   const availability = getAvailabilityPresentation(product);
   const canBuy = isProductAvailableForPurchase(product);
+  const defaultVolumeOption = getVolumeSelectionConfig(product)[0] || { price: product.price, weightLabel: product.weight || '' };
 
   return `
     <article class="product-card" data-category="${product.category}" data-price="${product.price}">
@@ -298,9 +308,9 @@ const renderProductCard = (product, showCategory = false) => {
         <div class="product-availability product-availability-${availability.tone}">${availability.label}</div>
         <div class="product-card-actions">
           ${getProductVolumeMarkup(product)}
-          <span class="product-price">${product.price} грн</span>
+          <span class="product-price" data-product-price>${defaultVolumeOption.price} грн</span>
           <a class="btn outline" href="product.html?id=${product.id}">Детальніше</a>
-          <button class="btn primary product-buy" data-id="${product.id}" data-name="${product.name}" data-category="${product.category}" data-price="${product.price}" data-weight="${product.weight || ''}" data-available="${String(canBuy)}" type="button" ${canBuy ? '' : 'disabled'}>${availability.buttonLabel}</button>
+          <button class="btn primary product-buy" data-id="${product.id}" data-name="${product.name}" data-category="${product.category}" data-price="${defaultVolumeOption.price}" data-weight="${defaultVolumeOption.weightLabel || product.weight || ''}" data-available="${String(canBuy)}" type="button" ${canBuy ? '' : 'disabled'}>${availability.buttonLabel}</button>
         </div>
       </div>
     </article>`;
@@ -393,7 +403,7 @@ const fetchActivePriceOverrides = async () => {
 
   const { data, error } = await supabase
     .from('product_price_overrides')
-    .select('product_id, override_price, currency, is_active, updated_at')
+    .select('product_id, override_price, override_price_250g, override_price_1kg, currency, is_active, updated_at')
     .eq('is_active', true);
 
   if (error) {
@@ -420,14 +430,50 @@ const applyPriceOverrides = (products, priceOverrideMap) => {
     }
 
     const overridePrice = Number(override.override_price);
-    if (!Number.isFinite(overridePrice) || overridePrice < 0) {
+    const overridePrice250 = Number(override.override_price_250g);
+    const overridePrice1kg = Number(override.override_price_1kg);
+
+    const hasVolumeOverride250 = Number.isFinite(overridePrice250) && overridePrice250 >= 0;
+    const hasVolumeOverride1kg = Number.isFinite(overridePrice1kg) && overridePrice1kg >= 0;
+    const hasLegacyOverride = Number.isFinite(overridePrice) && overridePrice >= 0;
+
+    if (!hasVolumeOverride250 && !hasVolumeOverride1kg && !hasLegacyOverride) {
       return product;
     }
 
-    return {
+    const nextVolumePrices = {
+      ...(product.volumePrices || {}),
+    };
+
+    if (hasVolumeOverride250) {
+      nextVolumePrices['250g'] = overridePrice250;
+    }
+
+    if (hasVolumeOverride1kg) {
+      nextVolumePrices['1kg'] = overridePrice1kg;
+    }
+
+    if (hasLegacyOverride && !hasVolumeOverride250 && !hasVolumeOverride1kg) {
+      if (isOneKgWeight(product.weight)) {
+        nextVolumePrices['1kg'] = overridePrice;
+        nextVolumePrices['250g'] = Math.round(overridePrice * 0.25);
+      } else if (isQuarterKgWeight(product.weight)) {
+        nextVolumePrices['250g'] = overridePrice;
+        nextVolumePrices['1kg'] = Math.round(overridePrice * 4);
+      }
+    }
+
+    const pricedProduct = {
       ...product,
+      volumePrices: nextVolumePrices,
+    };
+    const defaultVolumeOption = getVolumeSelectionConfig(pricedProduct)[0] || { price: product.price };
+    const resolvedPrice = Number(defaultVolumeOption.price || product.price || 0);
+
+    return {
+      ...pricedProduct,
       basePrice: Number(product.basePrice ?? product.price ?? 0),
-      price: overridePrice,
+      price: resolvedPrice,
       priceSource: 'override',
       priceCurrency: override.currency || 'UAH',
       priceUpdatedAt: override.updated_at || null,
@@ -599,8 +645,8 @@ const renderProductDetail = (product, allProducts) => {
               </div>
               <div class="product-detail-price-row product-showcase-actions">
                 ${getProductVolumeMarkup(product)}
-                <span class="product-detail-price">${product.price} грн</span>
-                <button class="btn primary product-buy" data-id="${product.id}" data-name="${product.name}" data-category="${product.category}" data-price="${product.price}" data-weight="${product.weight || ''}" data-available="${String(canBuy)}" type="button" ${canBuy ? '' : 'disabled'}>${canBuy ? 'Додати до кошика' : availability.buttonLabel}</button>
+                <span class="product-detail-price" data-product-price>${(getVolumeSelectionConfig(product)[0] || { price: product.price }).price} грн</span>
+                <button class="btn primary product-buy" data-id="${product.id}" data-name="${product.name}" data-category="${product.category}" data-price="${(getVolumeSelectionConfig(product)[0] || { price: product.price }).price}" data-weight="${(getVolumeSelectionConfig(product)[0] || { weightLabel: product.weight || '' }).weightLabel || product.weight || ''}" data-available="${String(canBuy)}" type="button" ${canBuy ? '' : 'disabled'}>${canBuy ? 'Додати до кошика' : availability.buttonLabel}</button>
               </div>
             </div>
           </div>
@@ -766,6 +812,42 @@ const reconcileCartWithCatalogState = (notify = false) => {
 };
 
 const attachBuyHandlers = () => {
+  const syncProductContextPrice = (context, productId, requestedVolumeOption) => {
+    if (!(context instanceof HTMLElement) || !productId) return;
+
+    const catalogProduct = getCatalogProductById(productId);
+    if (!catalogProduct) return;
+
+    const volumeOptions = getVolumeSelectionConfig(catalogProduct);
+    const selectedVolume = volumeOptions.find((option) => option.value === requestedVolumeOption) || volumeOptions[0];
+    if (!selectedVolume) return;
+
+    const priceLabel = context.querySelector('[data-product-price]');
+    if (priceLabel instanceof HTMLElement) {
+      priceLabel.textContent = `${selectedVolume.price} грн`;
+    }
+
+    const buyButton = context.querySelector(`.product-buy[data-id="${productId}"]`);
+    if (buyButton instanceof HTMLButtonElement) {
+      buyButton.dataset.price = String(selectedVolume.price);
+      buyButton.dataset.weight = selectedVolume.weightLabel || buyButton.dataset.weight || '';
+    }
+  };
+
+  const volumeSelectors = document.querySelectorAll('.product-volume-select');
+  volumeSelectors.forEach((select) => {
+    if (!(select instanceof HTMLSelectElement)) return;
+    if (select.dataset.volumeBound === 'true') return;
+    select.dataset.volumeBound = 'true';
+
+    const context = select.closest('.product-card, .product-detail-copy');
+    syncProductContextPrice(context, select.dataset.productId, select.value);
+
+    select.addEventListener('change', () => {
+      syncProductContextPrice(context, select.dataset.productId, select.value);
+    });
+  });
+
   const productBuyButtons = document.querySelectorAll('.product-buy');
   productBuyButtons.forEach((btn) => {
     if (btn.dataset.buyBound === 'true') return;

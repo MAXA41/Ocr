@@ -43,6 +43,7 @@ let pendingConfirmationEmail = '';
 let currentSession = null;
 let currentProfile = null;
 let catalogAdminRows = [];
+const catalogVolumeOptions = ['250g', '1kg'];
 const editableCatalogTextFields = ['category', 'name', 'description', 'origin', 'processing', 'alt', 'weight', 'taste', 'cup_profile', 'brew_guide', 'audience'];
 const catalogTextFieldColumnMap = {
   category: 'category_override',
@@ -150,6 +151,79 @@ const escapeHtml = (value = '') => String(value)
 const isMissingRelationError = (error, relationName) => {
   if (!error) return false;
   return error.code === 'PGRST205' || String(error.message || '').includes(relationName);
+};
+
+const isMissingColumnError = (error, columnName) => {
+  if (!error || !columnName) return false;
+  const normalizedMessage = String(error.message || '').toLowerCase();
+  return error.code === 'PGRST204' || normalizedMessage.includes(String(columnName).toLowerCase());
+};
+
+const parseNonNegativePriceInput = (value) => {
+  const rawValue = String(value ?? '').trim();
+  if (!rawValue) return null;
+
+  const parsedValue = Number(rawValue.replace(',', '.'));
+  if (!Number.isFinite(parsedValue) || parsedValue < 0) {
+    return Number.NaN;
+  }
+
+  return Math.round(parsedValue * 100) / 100;
+};
+
+const isOneKgWeight = (weight) => /1\s*кг|1\s*kg/i.test(String(weight || ''));
+const isQuarterKgWeight = (weight) => /250\s*г|0[.,]?25\s*кг|250\s*g/i.test(String(weight || ''));
+
+const getBaseVolumePrices = (product) => {
+  const basePrice = Number(product?.price || 0);
+  const explicit250 = Number(product?.volumePrices?.['250g']);
+  const explicit1kg = Number(product?.volumePrices?.['1kg']);
+
+  if (Number.isFinite(explicit250) && explicit250 > 0 && Number.isFinite(explicit1kg) && explicit1kg > 0) {
+    return {
+      '250g': explicit250,
+      '1kg': explicit1kg,
+      defaultVolume: isOneKgWeight(product?.weight) ? '1kg' : '250g',
+    };
+  }
+
+  if (isOneKgWeight(product?.weight) && Number.isFinite(basePrice) && basePrice > 0) {
+    return {
+      '250g': Math.round(basePrice * 0.25),
+      '1kg': basePrice,
+      defaultVolume: '1kg',
+    };
+  }
+
+  if (isQuarterKgWeight(product?.weight) && Number.isFinite(basePrice) && basePrice > 0) {
+    return {
+      '250g': basePrice,
+      '1kg': Math.round(basePrice * 4),
+      defaultVolume: '250g',
+    };
+  }
+
+  if (Number.isFinite(explicit250) && explicit250 > 0) {
+    return {
+      '250g': explicit250,
+      '1kg': null,
+      defaultVolume: '250g',
+    };
+  }
+
+  if (Number.isFinite(explicit1kg) && explicit1kg > 0) {
+    return {
+      '250g': null,
+      '1kg': explicit1kg,
+      defaultVolume: '1kg',
+    };
+  }
+
+  return {
+    '250g': null,
+    '1kg': Number.isFinite(basePrice) && basePrice > 0 ? basePrice : null,
+    defaultVolume: '1kg',
+  };
 };
 
 const runtimeEnv = globalThis.__OCR_ENV__ || {};
@@ -501,6 +575,7 @@ const filterCatalogCardFields = (card, query) => {
 const buildCatalogAdminRows = (products, stateRows) => {
   const stateById = new Map((stateRows || []).map((row) => [row.product_id, normalizeCatalogState(row)]));
   const textOverridesById = new Map((stateRows?.textOverrides || []).map((row) => [row.product_id, row]));
+  const priceOverridesById = new Map((stateRows?.priceOverrides || []).map((row) => [row.product_id, row]));
 
   return products.map((product) => {
     const state = stateById.get(product.id) || normalizeCatalogState({ product_id: product.id });
@@ -528,12 +603,47 @@ const buildCatalogAdminRows = (products, stateRows) => {
       ...textOverrides,
     };
 
+    const baseVolumePrices = getBaseVolumePrices(product);
+    const priceOverrideRow = priceOverridesById.get(product.id);
+    const legacyOverridePrice = Number(priceOverrideRow?.override_price);
+    const overridePrice250 = Number(priceOverrideRow?.override_price_250g);
+    const overridePrice1kg = Number(priceOverrideRow?.override_price_1kg);
+
+    const activePriceOverrides = {};
+
+    if (Number.isFinite(overridePrice250) && overridePrice250 >= 0) {
+      activePriceOverrides['250g'] = overridePrice250;
+    }
+
+    if (Number.isFinite(overridePrice1kg) && overridePrice1kg >= 0) {
+      activePriceOverrides['1kg'] = overridePrice1kg;
+    }
+
+    if (Number.isFinite(legacyOverridePrice) && legacyOverridePrice >= 0) {
+      const legacyVolume = baseVolumePrices.defaultVolume || '1kg';
+      if (!Object.prototype.hasOwnProperty.call(activePriceOverrides, legacyVolume)) {
+        activePriceOverrides[legacyVolume] = legacyOverridePrice;
+      }
+    }
+
+    const resolvedPrice250 = Object.prototype.hasOwnProperty.call(activePriceOverrides, '250g')
+      ? activePriceOverrides['250g']
+      : baseVolumePrices['250g'];
+
+    const resolvedPrice1kg = Object.prototype.hasOwnProperty.call(activePriceOverrides, '1kg')
+      ? activePriceOverrides['1kg']
+      : baseVolumePrices['1kg'];
+
     return {
       ...textAdjustedProduct,
       state,
       availableNow,
       baseText,
       textOverrides,
+      baseVolumePrices,
+      priceOverrides: activePriceOverrides,
+      price250: resolvedPrice250,
+      price1kg: resolvedPrice1kg,
     };
   });
 };
@@ -613,6 +723,8 @@ const renderCatalogAdminList = () => {
             const cupHint = row.cup_profile || row.description || '';
             const brewHint = row.brew_guide || '';
             const audienceHint = row.audience || '';
+            const price250Value = row.price250 === null || row.price250 === undefined ? '' : row.price250;
+            const price1kgValue = row.price1kg === null || row.price1kg === undefined ? '' : row.price1kg;
 
             return `
               <details class="catalog-admin-card" data-product-id="${row.id}" data-tone="${tone}">
@@ -686,6 +798,16 @@ const renderCatalogAdminList = () => {
                       <span>Заведено на склад, шт.</span>
                       <input type="number" min="0" step="1" value="${stockValue}" data-catalog-stock placeholder="Порожньо = без ліміту">
                     </label>
+                    <div class="catalog-admin-text-grid">
+                      <label class="catalog-admin-field" data-catalog-field-wrapper data-catalog-field-label="Ціна 250 г" data-catalog-field-value="${escapeHtml(String(price250Value))}">
+                        <span>Ціна 0.250 кг, грн</span>
+                        <input type="number" min="0" step="0.01" data-catalog-price-field="250g" value="${escapeHtml(String(price250Value))}" placeholder="Наприклад: 320">
+                      </label>
+                      <label class="catalog-admin-field" data-catalog-field-wrapper data-catalog-field-label="Ціна 1 кг" data-catalog-field-value="${escapeHtml(String(price1kgValue))}">
+                        <span>Ціна 1 кг, грн</span>
+                        <input type="number" min="0" step="0.01" data-catalog-price-field="1kg" value="${escapeHtml(String(price1kgValue))}" placeholder="Наприклад: 1130">
+                      </label>
+                    </div>
                     <div class="catalog-admin-text-grid">
                       <label class="catalog-admin-field" data-catalog-field-wrapper data-catalog-field-label="Категорія" data-catalog-field-value="${escapeHtml(row.category || '')}">
                         <span>Категорія</span>
@@ -780,7 +902,7 @@ const loadCatalogAdmin = async (session) => {
 
   setCatalogAdminStatus('Оновлюємо стан каталогу...', 'neutral');
 
-  const [products, stateResponse, textOverrideResponse] = await Promise.all([
+  const [products, stateResponse, textOverrideResponse, initialPriceOverrideResponse] = await Promise.all([
     fetch('products.json').then((response) => response.json()),
     supabase
       .from('product_catalog_state')
@@ -789,6 +911,10 @@ const loadCatalogAdmin = async (session) => {
     supabase
       .from('product_text_overrides')
       .select('product_id, category_override, name_override, description_override, origin_override, processing_override, alt_override, weight_override, taste_override, cup_profile_override, brew_guide_override, audience_override, is_active, updated_at')
+      .eq('is_active', true),
+    supabase
+      .from('product_price_overrides')
+      .select('product_id, override_price, override_price_250g, override_price_1kg, currency, is_active, updated_at')
       .eq('is_active', true),
   ]);
 
@@ -810,11 +936,32 @@ const loadCatalogAdmin = async (session) => {
     }
   }
 
+  let priceOverrideResponse = initialPriceOverrideResponse;
+  if (priceOverrideResponse.error && (isMissingColumnError(priceOverrideResponse.error, 'override_price_250g') || isMissingColumnError(priceOverrideResponse.error, 'override_price_1kg'))) {
+    priceOverrideResponse = await supabase
+      .from('product_price_overrides')
+      .select('product_id, override_price, currency, is_active, updated_at')
+      .eq('is_active', true);
+  }
+
+  let priceOverrideRows = priceOverrideResponse.data || [];
+  if (priceOverrideResponse.error) {
+    if (isMissingRelationError(priceOverrideResponse.error, 'product_price_overrides')) {
+      setCatalogAdminStatus('Таблиця product_price_overrides ще не створена. Редагування цін тимчасово недоступне.', 'error');
+      priceOverrideRows = [];
+    } else {
+      console.error('Failed to load product price overrides', priceOverrideResponse.error);
+      setCatalogAdminStatus('Не вдалося завантажити оверрайди цін.', 'error');
+      return;
+    }
+  }
+
   const stateWithTextRows = stateResponse.data || [];
   stateWithTextRows.textOverrides = textOverrideRows;
+  stateWithTextRows.priceOverrides = priceOverrideRows;
   catalogAdminRows = buildCatalogAdminRows(products, stateWithTextRows);
   renderCatalogAdminList();
-  if (!textOverrideResponse.error) {
+  if (!textOverrideResponse.error && !priceOverrideResponse.error) {
     setCatalogAdminStatus('Каталог готовий до редагування.', 'success');
   }
 };
@@ -858,7 +1005,9 @@ const saveCatalogRow = async (card) => {
   }
 
   const textInputs = card.querySelectorAll('[data-catalog-text-field]');
+  const priceInputs = card.querySelectorAll('[data-catalog-price-field]');
   const textPatch = {};
+  const pricePatch = {};
 
   textInputs.forEach((input) => {
     if (!(input instanceof HTMLInputElement) && !(input instanceof HTMLTextAreaElement) && !(input instanceof HTMLSelectElement)) return;
@@ -875,6 +1024,42 @@ const saveCatalogRow = async (card) => {
       textPatch[field] = null;
     }
   });
+
+  for (const input of priceInputs) {
+    if (!(input instanceof HTMLInputElement)) continue;
+    const volumeOption = input.dataset.catalogPriceField;
+    if (!volumeOption || !catalogVolumeOptions.includes(volumeOption)) continue;
+
+    const parsedValue = parseNonNegativePriceInput(input.value);
+    if (Number.isNaN(parsedValue)) {
+      if (rowStatus) {
+        rowStatus.textContent = 'Ціна повинна бути числом 0 або більше.';
+        rowStatus.dataset.tone = 'error';
+      }
+      if (saveButton instanceof HTMLButtonElement) {
+        saveButton.disabled = false;
+      }
+      return;
+    }
+
+    const nextValue = parsedValue;
+    const baseValue = Number(row.baseVolumePrices?.[volumeOption]);
+    const currentOverrideValue = Number(row.priceOverrides?.[volumeOption]);
+
+    if (nextValue === null) {
+      if (Number.isFinite(currentOverrideValue)) {
+        pricePatch[volumeOption] = null;
+      }
+      continue;
+    }
+
+    const shouldOverride = !Number.isFinite(baseValue) || Number(nextValue) !== Number(baseValue);
+    if (shouldOverride) {
+      pricePatch[volumeOption] = nextValue;
+    } else if (Number.isFinite(currentOverrideValue)) {
+      pricePatch[volumeOption] = null;
+    }
+  }
 
   const textOverridePayload = {
     product_id: productId,
@@ -893,13 +1078,28 @@ const saveCatalogRow = async (card) => {
     audience_override: null,
   };
 
+  const defaultVolume = row.baseVolumePrices?.defaultVolume || '1kg';
+  const hasAnyPricePatch = Object.keys(pricePatch).length > 0;
+  const defaultVolumePricePatch = Object.prototype.hasOwnProperty.call(pricePatch, defaultVolume)
+    ? pricePatch[defaultVolume]
+    : null;
+  const priceOverridePayload = {
+    product_id: productId,
+    is_active: hasAnyPricePatch,
+    updated_by: currentSession.user.id,
+    currency: 'UAH',
+    override_price: defaultVolumePricePatch,
+    override_price_250g: Object.prototype.hasOwnProperty.call(pricePatch, '250g') ? pricePatch['250g'] : null,
+    override_price_1kg: Object.prototype.hasOwnProperty.call(pricePatch, '1kg') ? pricePatch['1kg'] : null,
+  };
+
   Object.entries(textPatch).forEach(([field, value]) => {
     const column = catalogTextFieldColumnMap[field];
     if (!column) return;
     textOverridePayload[column] = value;
   });
 
-  const [{ data, error }, textSaveResult] = await Promise.all([
+  const [{ data, error }, textSaveResult, priceSaveResult] = await Promise.all([
     supabase
     .from('product_catalog_state')
     .upsert({
@@ -913,6 +1113,9 @@ const saveCatalogRow = async (card) => {
     supabase
       .from('product_text_overrides')
       .upsert(textOverridePayload, { onConflict: 'product_id' }),
+    supabase
+      .from('product_price_overrides')
+      .upsert(priceOverridePayload, { onConflict: 'product_id' }),
   ]);
 
   if (saveButton instanceof HTMLButtonElement) {
@@ -937,6 +1140,24 @@ const saveCatalogRow = async (card) => {
     return;
   }
 
+  if (priceSaveResult.error) {
+    console.error('Failed to save product price overrides', priceSaveResult.error);
+    if (rowStatus) {
+      rowStatus.textContent = priceSaveResult.error.message || 'Не вдалося зберегти ціни картки.';
+      rowStatus.dataset.tone = 'error';
+    }
+    return;
+  }
+
+  const nextPriceOverrides = { ...(row.priceOverrides || {}) };
+  Object.entries(pricePatch).forEach(([volumeOption, value]) => {
+    if (value === null || value === undefined) {
+      delete nextPriceOverrides[volumeOption];
+      return;
+    }
+    nextPriceOverrides[volumeOption] = Number(value);
+  });
+
   const nextState = normalizeCatalogState(data || { product_id: productId, is_available: availabilityField.checked, stock_quantity: stockQuantity, sold_quantity: row.state.soldQuantity });
   catalogAdminRows = catalogAdminRows.map((item) => item.id === productId
     ? {
@@ -946,6 +1167,9 @@ const saveCatalogRow = async (card) => {
       state: nextState,
       availableNow: nextState.stockQuantity === null ? null : Math.max(nextState.stockQuantity - nextState.soldQuantity, 0),
       textOverrides: { ...textPatch },
+      priceOverrides: nextPriceOverrides,
+      price250: Object.prototype.hasOwnProperty.call(nextPriceOverrides, '250g') ? nextPriceOverrides['250g'] : item.baseVolumePrices?.['250g'],
+      price1kg: Object.prototype.hasOwnProperty.call(nextPriceOverrides, '1kg') ? nextPriceOverrides['1kg'] : item.baseVolumePrices?.['1kg'],
     }
     : item);
 
@@ -1282,7 +1506,7 @@ catalogAdminList?.addEventListener('input', (event) => {
     return;
   }
 
-  if (target.matches('[data-catalog-text-field]')) {
+  if (target.matches('[data-catalog-text-field]') || target.matches('[data-catalog-price-field]')) {
     const wrapper = target.closest('[data-catalog-field-wrapper]');
     if (wrapper instanceof HTMLElement) {
       wrapper.dataset.catalogFieldValue = target.value;

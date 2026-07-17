@@ -357,7 +357,9 @@ create table if not exists public.product_catalog_state (
 
 create table if not exists public.product_price_overrides (
   product_id text primary key,
-  override_price numeric(10, 2) not null check (override_price >= 0),
+  override_price numeric(10, 2) check (override_price is null or override_price >= 0),
+  override_price_250g numeric(10, 2) check (override_price_250g is null or override_price_250g >= 0),
+  override_price_1kg numeric(10, 2) check (override_price_1kg is null or override_price_1kg >= 0),
   currency text not null default 'UAH',
   is_active boolean not null default true,
   source text not null default 'telegram',
@@ -394,6 +396,13 @@ alter table public.product_text_overrides
   add column if not exists cup_profile_override text,
   add column if not exists brew_guide_override text,
   add column if not exists audience_override text;
+
+alter table public.product_price_overrides
+  alter column override_price drop not null;
+
+alter table public.product_price_overrides
+  add column if not exists override_price_250g numeric(10, 2) check (override_price_250g is null or override_price_250g >= 0),
+  add column if not exists override_price_1kg numeric(10, 2) check (override_price_1kg is null or override_price_1kg >= 0);
 
 create index if not exists product_price_overrides_active_idx
   on public.product_price_overrides (is_active, updated_at desc);
@@ -604,6 +613,8 @@ select
   state.stock_quantity,
   state.sold_quantity,
   overrides.override_price,
+  overrides.override_price_250g,
+  overrides.override_price_1kg,
   overrides.currency,
   overrides.is_active as has_active_override
 from public.product_catalog_items items
