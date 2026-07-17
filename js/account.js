@@ -1016,11 +1016,11 @@ const saveCatalogRow = async (card) => {
 
     const nextValue = String(input.value ?? '').trim();
     const baseValue = String(row.baseText?.[field] ?? '').trim();
-    const currentOverrideValue = String(row.textOverrides?.[field] ?? '').trim();
+    const hasCurrentOverride = Object.prototype.hasOwnProperty.call(row.textOverrides || {}, field);
 
     if (nextValue !== baseValue) {
       textPatch[field] = nextValue;
-    } else if (currentOverrideValue) {
+    } else if (hasCurrentOverride) {
       textPatch[field] = null;
     }
   });

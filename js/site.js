@@ -524,6 +524,9 @@ const applyProductTextOverrides = (products, textOverrides) => {
       if (hasDirectKey) {
         const directValue = productOverride[directKey];
         if (directValue !== null && directValue !== undefined) {
+          if (field === 'category' && String(directValue).trim() === '') {
+            return;
+          }
           overridePatch[field] = String(directValue);
         }
         return;
@@ -533,6 +536,9 @@ const applyProductTextOverrides = (products, textOverrides) => {
         const mappedValue = productOverride[mappedKey];
         // Null in Supabase mapped columns means "no override", so keep base field.
         if (mappedValue !== null && mappedValue !== undefined) {
+          if (field === 'category' && String(mappedValue).trim() === '') {
+            return;
+          }
           overridePatch[field] = String(mappedValue);
         }
       }
