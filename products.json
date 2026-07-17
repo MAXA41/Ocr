@@ -9,8 +9,7 @@
     "price": 1155,
     "weight": "1 кг",
     "origin": "Arabica",
-    "processing": "100% арабіка",
-    "featured": true
+    "processing": "100% арабіка"
   },
   {
     "id": "brooklyn",
@@ -58,7 +57,8 @@
     "price": 1140,
     "weight": "1 кг",
     "origin": "Blend",
-    "processing": "50% арабіка, 50% робуста"
+    "processing": "50% арабіка, 50% робуста",
+    "featured": true
   },
   {
     "id": "richmond",
@@ -129,7 +129,8 @@
     "region": "South Kivu Province",
     "origin": "South Kivu Province",
     "processing": "Натуральна",
-    "variety": "Red Bourbon"
+    "variety": "Red Bourbon",
+    "featured": true
   },
   {
     "id": "colombia-manos-juntas-espresso",
@@ -197,7 +198,8 @@
     "country": "Kenya",
     "region": "Machakos County",
     "origin": "Machakos County",
-    "processing": "Мита"
+    "processing": "Мита",
+    "featured": true
   },
   {
     "id": "kenya-ab-muthunzuuni-can",
@@ -431,8 +433,7 @@
     "price": 500,
     "weight": "10 шт / готові дріпи",
     "origin": "10 шт / по 12 г",
-    "processing": "Drip box",
-    "featured": true
+    "processing": "Drip box"
   },
   {
     "id": "svarog-drip-box",
