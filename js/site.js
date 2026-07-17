@@ -521,9 +521,20 @@ const applyProductTextOverrides = (products, textOverrides) => {
       const hasDirectKey = Object.prototype.hasOwnProperty.call(productOverride, directKey);
       const hasMappedKey = Object.prototype.hasOwnProperty.call(productOverride, mappedKey);
 
-      if (hasDirectKey || hasMappedKey) {
-        const value = hasDirectKey ? productOverride[directKey] : productOverride[mappedKey];
-        overridePatch[field] = String(value ?? '');
+      if (hasDirectKey) {
+        const directValue = productOverride[directKey];
+        if (directValue !== null && directValue !== undefined) {
+          overridePatch[field] = String(directValue);
+        }
+        return;
+      }
+
+      if (hasMappedKey) {
+        const mappedValue = productOverride[mappedKey];
+        // Null in Supabase mapped columns means "no override", so keep base field.
+        if (mappedValue !== null && mappedValue !== undefined) {
+          overridePatch[field] = String(mappedValue);
+        }
       }
     });
 
