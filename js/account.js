@@ -1061,9 +1061,27 @@ const saveCatalogRow = async (card) => {
     }
   }
 
+  const nextTextOverrides = { ...(row.textOverrides || {}) };
+  Object.entries(textPatch).forEach(([field, value]) => {
+    if (value === null || value === undefined) {
+      delete nextTextOverrides[field];
+      return;
+    }
+    nextTextOverrides[field] = String(value);
+  });
+
+  const nextPriceOverrides = { ...(row.priceOverrides || {}) };
+  Object.entries(pricePatch).forEach(([volumeOption, value]) => {
+    if (value === null || value === undefined) {
+      delete nextPriceOverrides[volumeOption];
+      return;
+    }
+    nextPriceOverrides[volumeOption] = Number(value);
+  });
+
   const textOverridePayload = {
     product_id: productId,
-    is_active: Object.keys(textPatch).length > 0,
+    is_active: Object.keys(nextTextOverrides).length > 0,
     updated_by: currentSession.user.id,
     category_override: null,
     name_override: null,
@@ -1079,21 +1097,21 @@ const saveCatalogRow = async (card) => {
   };
 
   const defaultVolume = row.baseVolumePrices?.defaultVolume || '1kg';
-  const hasAnyPricePatch = Object.keys(pricePatch).length > 0;
-  const defaultVolumePricePatch = Object.prototype.hasOwnProperty.call(pricePatch, defaultVolume)
-    ? pricePatch[defaultVolume]
+  const hasAnyPriceOverride = Object.keys(nextPriceOverrides).length > 0;
+  const defaultVolumePrice = Object.prototype.hasOwnProperty.call(nextPriceOverrides, defaultVolume)
+    ? nextPriceOverrides[defaultVolume]
     : null;
   const priceOverridePayload = {
     product_id: productId,
-    is_active: hasAnyPricePatch,
+    is_active: hasAnyPriceOverride,
     updated_by: currentSession.user.id,
     currency: 'UAH',
-    override_price: defaultVolumePricePatch,
-    override_price_250g: Object.prototype.hasOwnProperty.call(pricePatch, '250g') ? pricePatch['250g'] : null,
-    override_price_1kg: Object.prototype.hasOwnProperty.call(pricePatch, '1kg') ? pricePatch['1kg'] : null,
+    override_price: defaultVolumePrice,
+    override_price_250g: Object.prototype.hasOwnProperty.call(nextPriceOverrides, '250g') ? nextPriceOverrides['250g'] : null,
+    override_price_1kg: Object.prototype.hasOwnProperty.call(nextPriceOverrides, '1kg') ? nextPriceOverrides['1kg'] : null,
   };
 
-  Object.entries(textPatch).forEach(([field, value]) => {
+  Object.entries(nextTextOverrides).forEach(([field, value]) => {
     const column = catalogTextFieldColumnMap[field];
     if (!column) return;
     textOverridePayload[column] = value;
@@ -1149,24 +1167,15 @@ const saveCatalogRow = async (card) => {
     return;
   }
 
-  const nextPriceOverrides = { ...(row.priceOverrides || {}) };
-  Object.entries(pricePatch).forEach(([volumeOption, value]) => {
-    if (value === null || value === undefined) {
-      delete nextPriceOverrides[volumeOption];
-      return;
-    }
-    nextPriceOverrides[volumeOption] = Number(value);
-  });
-
   const nextState = normalizeCatalogState(data || { product_id: productId, is_available: availabilityField.checked, stock_quantity: stockQuantity, sold_quantity: row.state.soldQuantity });
   catalogAdminRows = catalogAdminRows.map((item) => item.id === productId
     ? {
       ...item,
       ...item.baseText,
-      ...textPatch,
+      ...nextTextOverrides,
       state: nextState,
       availableNow: nextState.stockQuantity === null ? null : Math.max(nextState.stockQuantity - nextState.soldQuantity, 0),
-      textOverrides: { ...textPatch },
+      textOverrides: nextTextOverrides,
       priceOverrides: nextPriceOverrides,
       price250: Object.prototype.hasOwnProperty.call(nextPriceOverrides, '250g') ? nextPriceOverrides['250g'] : item.baseVolumePrices?.['250g'],
       price1kg: Object.prototype.hasOwnProperty.call(nextPriceOverrides, '1kg') ? nextPriceOverrides['1kg'] : item.baseVolumePrices?.['1kg'],
