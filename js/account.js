@@ -43,8 +43,9 @@ let pendingConfirmationEmail = '';
 let currentSession = null;
 let currentProfile = null;
 let catalogAdminRows = [];
-const editableCatalogTextFields = ['name', 'description', 'origin', 'processing', 'alt', 'weight', 'taste', 'cup_profile', 'brew_guide', 'audience'];
+const editableCatalogTextFields = ['category', 'name', 'description', 'origin', 'processing', 'alt', 'weight', 'taste', 'cup_profile', 'brew_guide', 'audience'];
 const catalogTextFieldColumnMap = {
+  category: 'category_override',
   name: 'name_override',
   description: 'description_override',
   origin: 'origin_override',
@@ -686,6 +687,12 @@ const renderCatalogAdminList = () => {
                       <input type="number" min="0" step="1" value="${stockValue}" data-catalog-stock placeholder="Порожньо = без ліміту">
                     </label>
                     <div class="catalog-admin-text-grid">
+                      <label class="catalog-admin-field" data-catalog-field-wrapper data-catalog-field-label="Категорія" data-catalog-field-value="${escapeHtml(row.category || '')}">
+                        <span>Категорія</span>
+                        <select data-catalog-text-field="category">
+                          ${['espresso', 'filter', 'drips', 'decaf'].map((categoryValue) => `<option value="${categoryValue}" ${row.category === categoryValue ? 'selected' : ''}>${catalogCategoryLabels[categoryValue] || categoryValue}</option>`).join('')}
+                        </select>
+                      </label>
                       <label class="catalog-admin-field" data-catalog-field-wrapper data-catalog-field-label="Назва картки" data-catalog-field-value="${escapeHtml(row.name || '')}">
                         <span>Назва картки</span>
                         <input type="text" data-catalog-text-field="name" value="${escapeHtml(row.name)}">
@@ -781,7 +788,7 @@ const loadCatalogAdmin = async (session) => {
       .order('product_id', { ascending: true }),
     supabase
       .from('product_text_overrides')
-      .select('product_id, name_override, description_override, origin_override, processing_override, alt_override, weight_override, taste_override, cup_profile_override, brew_guide_override, audience_override, is_active, updated_at')
+      .select('product_id, category_override, name_override, description_override, origin_override, processing_override, alt_override, weight_override, taste_override, cup_profile_override, brew_guide_override, audience_override, is_active, updated_at')
       .eq('is_active', true),
   ]);
 
@@ -854,7 +861,7 @@ const saveCatalogRow = async (card) => {
   const textPatch = {};
 
   textInputs.forEach((input) => {
-    if (!(input instanceof HTMLInputElement) && !(input instanceof HTMLTextAreaElement)) return;
+    if (!(input instanceof HTMLInputElement) && !(input instanceof HTMLTextAreaElement) && !(input instanceof HTMLSelectElement)) return;
     const field = input.dataset.catalogTextField;
     if (!field || !editableCatalogTextFields.includes(field)) return;
 
@@ -873,6 +880,7 @@ const saveCatalogRow = async (card) => {
     product_id: productId,
     is_active: Object.keys(textPatch).length > 0,
     updated_by: currentSession.user.id,
+    category_override: null,
     name_override: null,
     description_override: null,
     origin_override: null,
@@ -1264,7 +1272,7 @@ catalogAdminList?.addEventListener('click', async (event) => {
 
 catalogAdminList?.addEventListener('input', (event) => {
   const target = event.target;
-  if (!(target instanceof HTMLInputElement)) return;
+  if (!(target instanceof HTMLInputElement) && !(target instanceof HTMLTextAreaElement) && !(target instanceof HTMLSelectElement)) return;
 
   const card = target.closest('.catalog-admin-card');
   if (!card) return;
@@ -1284,6 +1292,25 @@ catalogAdminList?.addEventListener('input', (event) => {
     if (searchInput instanceof HTMLInputElement) {
       filterCatalogCardFields(card, searchInput.value);
     }
+  }
+});
+
+catalogAdminList?.addEventListener('change', (event) => {
+  const target = event.target;
+  if (!(target instanceof HTMLSelectElement)) return;
+  if (!target.matches('[data-catalog-text-field]')) return;
+
+  const card = target.closest('.catalog-admin-card');
+  if (!card) return;
+
+  const wrapper = target.closest('[data-catalog-field-wrapper]');
+  if (wrapper instanceof HTMLElement) {
+    wrapper.dataset.catalogFieldValue = target.value;
+  }
+
+  const searchInput = card.querySelector('[data-catalog-field-search]');
+  if (searchInput instanceof HTMLInputElement) {
+    filterCatalogCardFields(card, searchInput.value);
   }
 });
 

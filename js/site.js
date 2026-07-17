@@ -91,6 +91,7 @@ const categoryLabels = {
 
 const productTextOverrideStorageKey = 'ocr_product_text_overrides_v1';
 const editableProductTextFields = [
+  'category',
   'name',
   'description',
   'origin',
@@ -370,7 +371,7 @@ const fetchActiveProductTextOverrides = async () => {
 
   const { data, error } = await supabase
     .from('product_text_overrides')
-    .select('product_id, name_override, description_override, origin_override, processing_override, alt_override, weight_override, taste_override, cup_profile_override, brew_guide_override, audience_override, is_active, updated_at')
+    .select('product_id, category_override, name_override, description_override, origin_override, processing_override, alt_override, weight_override, taste_override, cup_profile_override, brew_guide_override, audience_override, is_active, updated_at')
     .eq('is_active', true);
 
   if (error) {

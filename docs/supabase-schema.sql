@@ -369,6 +369,7 @@ create table if not exists public.product_price_overrides (
 
 create table if not exists public.product_text_overrides (
   product_id text primary key,
+  category_override text,
   name_override text,
   description_override text,
   origin_override text,
@@ -388,6 +389,7 @@ create table if not exists public.product_text_overrides (
 );
 
 alter table public.product_text_overrides
+  add column if not exists category_override text,
   add column if not exists taste_override text,
   add column if not exists cup_profile_override text,
   add column if not exists brew_guide_override text,
