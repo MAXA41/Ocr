@@ -35,6 +35,9 @@ const catalogAdminFilter = document.querySelector('#catalog-admin-filter');
 const catalogAdminRefresh = document.querySelector('#catalog-admin-refresh');
 const catalogAdminStatus = document.querySelector('#catalog-admin-status');
 const catalogAdminList = document.querySelector('#catalog-admin-list');
+const catalogAdminCreateForm = document.querySelector('#catalog-admin-create-form');
+const catalogAdminCreateStatus = document.querySelector('#catalog-admin-create-status');
+const catalogAdminCreateSubmit = document.querySelector('#catalog-admin-create-submit');
 const fullNameInput = authForm?.querySelector('input[name="fullName"]') || null;
 const passwordInput = authForm?.querySelector('input[name="password"]') || null;
 const recoveryPasswordInput = authForm?.querySelector('input[name="recoveryPassword"]') || null;
@@ -141,6 +144,12 @@ const setCatalogAdminStatus = (message, tone = 'neutral') => {
   catalogAdminStatus.dataset.tone = tone;
 };
 
+const setCatalogCreateStatus = (message, tone = 'neutral') => {
+  if (!catalogAdminCreateStatus) return;
+  catalogAdminCreateStatus.textContent = message;
+  catalogAdminCreateStatus.dataset.tone = tone;
+};
+
 const escapeHtml = (value = '') => String(value)
   .replace(/&/g, '&amp;')
   .replace(/</g, '&lt;')
@@ -169,6 +178,27 @@ const parseNonNegativePriceInput = (value) => {
   }
 
   return Math.round(parsedValue * 100) / 100;
+};
+
+const slugifyProductId = (value = '') => String(value || '')
+  .trim()
+  .toLowerCase()
+  .replace(/[^a-z0-9]+/g, '-')
+  .replace(/^-+|-+$/g, '');
+
+const normalizeOptionalText = (value) => {
+  const normalized = String(value ?? '').trim();
+  return normalized || null;
+};
+
+const parseOptionalIntegerInput = (value) => {
+  const rawValue = String(value ?? '').trim();
+  if (!rawValue) return null;
+  const parsedValue = Number(rawValue);
+  if (!Number.isInteger(parsedValue) || parsedValue < 0) {
+    return Number.NaN;
+  }
+  return parsedValue;
 };
 
 const isOneKgWeight = (weight) => /1\s*кг|1\s*kg/i.test(String(weight || ''));
@@ -224,6 +254,93 @@ const getBaseVolumePrices = (product) => {
     '1kg': Number.isFinite(basePrice) && basePrice > 0 ? basePrice : null,
     defaultVolume: '1kg',
   };
+};
+
+const normalizeRemoteCatalogProduct = (row = {}) => {
+  const productId = String(row.product_id || '').trim();
+  if (!productId) return null;
+
+  const basePrice = Number(row.base_price ?? row.price ?? 0);
+
+  return {
+    id: productId,
+    name: String(row.name || '').trim(),
+    description: String(row.description || '').trim(),
+    image: String(row.image || '').trim(),
+    alt: String(row.alt || row.name || '').trim(),
+    category: String(row.category || 'espresso').trim(),
+    price: Number.isFinite(basePrice) ? basePrice : 0,
+    weight: String(row.weight || '').trim(),
+    country: normalizeOptionalText(row.country),
+    region: normalizeOptionalText(row.region),
+    origin: normalizeOptionalText(row.origin),
+    processing: normalizeOptionalText(row.processing),
+    farm: normalizeOptionalText(row.farm),
+    variety: normalizeOptionalText(row.variety),
+    altitude: normalizeOptionalText(row.altitude),
+    score: row.score ?? null,
+    featured: Boolean(row.featured),
+    giftImage: normalizeOptionalText(row.gift_image),
+    giftAlt: normalizeOptionalText(row.gift_alt),
+  };
+};
+
+const mergeCatalogProducts = (localProducts = [], remoteRows = []) => {
+  const productMap = new Map();
+
+  (localProducts || []).forEach((product) => {
+    if (!product?.id) return;
+    productMap.set(product.id, { ...product });
+  });
+
+  (remoteRows || []).forEach((row) => {
+    const remoteProduct = normalizeRemoteCatalogProduct(row);
+    if (!remoteProduct?.id) return;
+
+    const localProduct = productMap.get(remoteProduct.id) || {};
+    productMap.set(remoteProduct.id, {
+      ...localProduct,
+      ...remoteProduct,
+      volumePrices: localProduct.volumePrices || undefined,
+    });
+  });
+
+  return [...productMap.values()];
+};
+
+const fetchCatalogProductsForAdmin = async () => {
+  const localProducts = await fetch('products.json').then((response) => response.json()).catch(() => []);
+
+  if (!isSupabaseConfigured || !supabase) {
+    return localProducts;
+  }
+
+  const { data, error } = await supabase
+    .from('product_catalog_public')
+    .select('product_id, name, description, image, alt, category, base_price, weight, country, region, origin, processing, farm, variety, altitude, score, featured, gift_image, gift_alt')
+    .order('updated_at', { ascending: false });
+
+  if (error) {
+    const isMissingRelation = error.code === 'PGRST205' || String(error.message || '').includes('product_catalog_public');
+    if (!isMissingRelation) {
+      console.error('Failed to load public catalog products', error);
+    }
+    return localProducts;
+  }
+
+  return mergeCatalogProducts(localProducts, data || []);
+};
+
+const getDefaultCatalogPrice = ({ weight, price250, price1kg }) => {
+  if (isOneKgWeight(weight)) {
+    return price1kg ?? price250 ?? 0;
+  }
+
+  if (isQuarterKgWeight(weight)) {
+    return price250 ?? price1kg ?? 0;
+  }
+
+  return price250 ?? price1kg ?? 0;
 };
 
 const runtimeEnv = globalThis.__OCR_ENV__ || {};
@@ -903,7 +1020,7 @@ const loadCatalogAdmin = async (session) => {
   setCatalogAdminStatus('Оновлюємо стан каталогу...', 'neutral');
 
   const [products, stateResponse, textOverrideResponse, initialPriceOverrideResponse] = await Promise.all([
-    fetch('products.json').then((response) => response.json()),
+    fetchCatalogProductsForAdmin(),
     supabase
       .from('product_catalog_state')
       .select('product_id, is_available, stock_quantity, sold_quantity, updated_at')
@@ -964,6 +1081,144 @@ const loadCatalogAdmin = async (session) => {
   if (!textOverrideResponse.error && !priceOverrideResponse.error) {
     setCatalogAdminStatus('Каталог готовий до редагування.', 'success');
   }
+};
+
+const createCatalogProduct = async (form) => {
+  if (!supabase || !currentSession?.user || !(form instanceof HTMLFormElement)) return;
+
+  const formData = new FormData(form);
+  const name = String(formData.get('name') || '').trim();
+  const productId = slugifyProductId(formData.get('productId') || name);
+  const category = String(formData.get('category') || 'espresso').trim();
+  const weight = String(formData.get('weight') || '').trim();
+  const description = String(formData.get('description') || '').trim();
+  const image = String(formData.get('image') || '').trim();
+  const alt = String(formData.get('alt') || name).trim();
+  const origin = normalizeOptionalText(formData.get('origin'));
+  const processing = normalizeOptionalText(formData.get('processing'));
+  const country = normalizeOptionalText(formData.get('country'));
+  const region = normalizeOptionalText(formData.get('region'));
+  const featured = formData.get('featured') === 'on';
+  const isAvailable = formData.get('isAvailable') === 'on';
+  const stockQuantity = parseOptionalIntegerInput(formData.get('stockQuantity'));
+  const price250 = parseNonNegativePriceInput(formData.get('price250'));
+  const price1kg = parseNonNegativePriceInput(formData.get('price1kg'));
+
+  if (!productId || !name || !weight || !description || !image) {
+    setCatalogCreateStatus('Заповніть ID або назву, вагу, опис і фото товару.', 'error');
+    return;
+  }
+
+  if (Number.isNaN(stockQuantity)) {
+    setCatalogCreateStatus('Залишок має бути цілим числом 0 або більше.', 'error');
+    return;
+  }
+
+  if (Number.isNaN(price250) || Number.isNaN(price1kg)) {
+    setCatalogCreateStatus('Ціни повинні бути числами 0 або більше.', 'error');
+    return;
+  }
+
+  if (price250 === null && price1kg === null) {
+    setCatalogCreateStatus('Вкажіть хоча б одну ціну: 0.250 кг або 1 кг.', 'error');
+    return;
+  }
+
+  const basePrice = getDefaultCatalogPrice({ weight, price250, price1kg });
+  const volumePrices = {};
+  if (price250 !== null) volumePrices['250g'] = price250;
+  if (price1kg !== null) volumePrices['1kg'] = price1kg;
+
+  const productPayload = {
+    product_id: productId,
+    name,
+    description,
+    image,
+    alt,
+    category,
+    price: basePrice,
+    weight,
+    country,
+    region,
+    origin,
+    processing,
+    featured,
+    raw_data: {
+      id: productId,
+      name,
+      description,
+      image,
+      alt,
+      category,
+      price: basePrice,
+      weight,
+      origin,
+      processing,
+      ...(country ? { country } : {}),
+      ...(region ? { region } : {}),
+      ...(featured ? { featured: true } : {}),
+      ...(Object.keys(volumePrices).length > 0 ? { volumePrices } : {}),
+    },
+  };
+
+  const defaultVolume = isOneKgWeight(weight) ? '1kg' : '250g';
+  const priceOverridePayload = {
+    product_id: productId,
+    is_active: Object.keys(volumePrices).length > 0,
+    updated_by: currentSession.user.id,
+    currency: 'UAH',
+    override_price: volumePrices[defaultVolume] ?? basePrice,
+    override_price_250g: volumePrices['250g'] ?? null,
+    override_price_1kg: volumePrices['1kg'] ?? null,
+  };
+
+  if (catalogAdminCreateSubmit instanceof HTMLButtonElement) {
+    catalogAdminCreateSubmit.disabled = true;
+  }
+  setCatalogCreateStatus('Створюємо товар...', 'neutral');
+
+  const [catalogResult, stateResult, priceResult] = await Promise.all([
+    supabase
+      .from('product_catalog_items')
+      .upsert(productPayload, { onConflict: 'product_id' }),
+    supabase
+      .from('product_catalog_state')
+      .upsert({
+        product_id: productId,
+        is_available: isAvailable,
+        stock_quantity: stockQuantity,
+        updated_by: currentSession.user.id,
+      }, { onConflict: 'product_id' }),
+    supabase
+      .from('product_price_overrides')
+      .upsert(priceOverridePayload, { onConflict: 'product_id' }),
+  ]);
+
+  if (catalogAdminCreateSubmit instanceof HTMLButtonElement) {
+    catalogAdminCreateSubmit.disabled = false;
+  }
+
+  if (catalogResult.error) {
+    console.error('Failed to create catalog product', catalogResult.error);
+    setCatalogCreateStatus(catalogResult.error.message || 'Не вдалося створити товар.', 'error');
+    return;
+  }
+
+  if (stateResult.error) {
+    console.error('Failed to create catalog state', stateResult.error);
+    setCatalogCreateStatus(stateResult.error.message || 'Товар створено, але стан каталогу не збережено.', 'error');
+    return;
+  }
+
+  if (priceResult.error) {
+    console.error('Failed to create catalog prices', priceResult.error);
+    setCatalogCreateStatus(priceResult.error.message || 'Товар створено, але ціни не збережено.', 'error');
+    return;
+  }
+
+  form.reset();
+  setCatalogCreateStatus(`Товар ${name} створено.`, 'success');
+  await loadCatalogAdmin(currentSession);
 };
 
 const saveCatalogRow = async (card) => {
@@ -1481,6 +1736,11 @@ catalogAdminFilter?.addEventListener('change', () => {
 catalogAdminRefresh?.addEventListener('click', async () => {
   if (!currentSession) return;
   await loadCatalogAdmin(currentSession);
+});
+
+catalogAdminCreateForm?.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  await createCatalogProduct(catalogAdminCreateForm);
 });
 
 catalogAdminList?.addEventListener('click', async (event) => {

@@ -762,6 +762,7 @@ alter table public.order_items enable row level security;
 alter table public.customer_discount_state enable row level security;
 alter table public.catalog_admins enable row level security;
 alter table public.product_catalog_state enable row level security;
+alter table public.product_catalog_items enable row level security;
 alter table public.product_price_overrides enable row level security;
 alter table public.product_text_overrides enable row level security;
 
@@ -839,6 +840,31 @@ on public.product_catalog_state
 for update
 using (public.is_catalog_admin())
 with check (public.is_catalog_admin());
+
+drop policy if exists "product_catalog_items_admin_select" on public.product_catalog_items;
+create policy "product_catalog_items_admin_select"
+on public.product_catalog_items
+for select
+using (public.is_catalog_admin());
+
+drop policy if exists "product_catalog_items_admin_insert" on public.product_catalog_items;
+create policy "product_catalog_items_admin_insert"
+on public.product_catalog_items
+for insert
+with check (public.is_catalog_admin());
+
+drop policy if exists "product_catalog_items_admin_update" on public.product_catalog_items;
+create policy "product_catalog_items_admin_update"
+on public.product_catalog_items
+for update
+using (public.is_catalog_admin())
+with check (public.is_catalog_admin());
+
+drop policy if exists "product_catalog_items_admin_delete" on public.product_catalog_items;
+create policy "product_catalog_items_admin_delete"
+on public.product_catalog_items
+for delete
+using (public.is_catalog_admin());
 
 drop policy if exists "product_price_overrides_select_active" on public.product_price_overrides;
 create policy "product_price_overrides_select_active"

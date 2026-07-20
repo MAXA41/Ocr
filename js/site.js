@@ -12,8 +12,14 @@ const viteEnv = import.meta.env || {};
 const runtimeEnv = globalThis.__OCR_ENV__ || globalThis.__OCR_CONFIG__ || {};
 
 const getEnv = (key, fallback = '') => {
-  const value = runtimeEnv[key] ?? viteEnv[key] ?? fallback;
-  return String(value).trim();
+  const candidates = [runtimeEnv[key], viteEnv[key], fallback];
+  for (const candidate of candidates) {
+    if (candidate === undefined || candidate === null) continue;
+    const value = String(candidate).trim();
+    if (value) return value;
+  }
+
+  return '';
 };
 
 const defaultOrderFallbackWebhookUrl = 'https://n8n.odesacoffeeroasters.info/webhook/ocr-orders-supabase';
@@ -81,6 +87,7 @@ const pageCategory = document.body.dataset.pageCategory || '';
 const productDetailRoot = document.querySelector('#product-detail');
 const relatedGrid = document.querySelector('#related-grid');
 let catalogProductsById = new Map();
+let baseProductWeightsById = new Map();
 const categoryLabels = {
   all: 'Всі',
   espresso: 'Еспресо',
@@ -140,21 +147,27 @@ const normalizeWeight = (value = '') => String(value || '').toLowerCase().replac
 
 const isOneKgWeight = (value = '') => {
   const normalized = normalizeWeight(value);
-  return normalized.includes('1кг');
+  return normalized.includes('1кг') || normalized.includes('1kg');
 };
 
 const isQuarterKgWeight = (value = '') => {
   const normalized = normalizeWeight(value);
-  return normalized.includes('250г') || normalized.includes('0.250кг');
+  return normalized.includes('250г')
+    || normalized.includes('250g')
+    || normalized.includes('0.250кг')
+    || normalized.includes('0.25кг')
+    || normalized.includes('0.250kg')
+    || normalized.includes('0.25kg');
 };
 
 const getVolumeSelectionConfig = (product) => {
+  const resolvedWeight = String(product?.weight || baseProductWeightsById.get(product?.id) || '').trim();
   const basePrice = Number(product.price || 0);
   const explicit250 = Number(product?.volumePrices?.['250g']);
   const explicit1kg = Number(product?.volumePrices?.['1kg']);
 
   if (Number.isFinite(explicit250) && explicit250 > 0 && Number.isFinite(explicit1kg) && explicit1kg > 0) {
-    if (isOneKgWeight(product.weight)) {
+    if (isOneKgWeight(resolvedWeight)) {
       return [
         {
           value: '1kg',
@@ -214,14 +227,14 @@ const getVolumeSelectionConfig = (product) => {
   if (product.category === 'drips') {
     return [{
       value: 'fixed-volume',
-      label: product.weight || 'Фіксований об\'єм',
-      weightLabel: product.weight || 'Фіксований об\'єм',
+      label: resolvedWeight || 'Фіксований об\'єм',
+      weightLabel: resolvedWeight || 'Фіксований об\'єм',
       price: basePrice,
       isSelectable: false,
     }];
   }
 
-  if (isOneKgWeight(product.weight)) {
+  if (isOneKgWeight(resolvedWeight)) {
     return [
       {
         value: '1kg',
@@ -240,7 +253,7 @@ const getVolumeSelectionConfig = (product) => {
     ];
   }
 
-  if (isQuarterKgWeight(product.weight)) {
+  if (isQuarterKgWeight(resolvedWeight)) {
     return [
       {
         value: '250g',
@@ -261,8 +274,8 @@ const getVolumeSelectionConfig = (product) => {
 
   return [{
     value: 'fixed-volume',
-    label: product.weight || 'Фіксований об\'єм',
-    weightLabel: product.weight || '',
+    label: resolvedWeight || 'Фіксований об\'єм',
+    weightLabel: resolvedWeight || '',
     price: basePrice,
     isSelectable: false,
   }];
@@ -524,7 +537,8 @@ const applyProductTextOverrides = (products, textOverrides) => {
       if (hasDirectKey) {
         const directValue = productOverride[directKey];
         if (directValue !== null && directValue !== undefined) {
-          if (field === 'category' && String(directValue).trim() === '') {
+          const normalizedValue = String(directValue).trim();
+          if ((field === 'category' || field === 'weight') && normalizedValue === '') {
             return;
           }
           overridePatch[field] = String(directValue);
@@ -536,7 +550,8 @@ const applyProductTextOverrides = (products, textOverrides) => {
         const mappedValue = productOverride[mappedKey];
         // Null in Supabase mapped columns means "no override", so keep base field.
         if (mappedValue !== null && mappedValue !== undefined) {
-          if (field === 'category' && String(mappedValue).trim() === '') {
+          const normalizedValue = String(mappedValue).trim();
+          if ((field === 'category' || field === 'weight') && normalizedValue === '') {
             return;
           }
           overridePatch[field] = String(mappedValue);
@@ -552,11 +567,126 @@ const applyProductTextOverrides = (products, textOverrides) => {
   });
 };
 
+const restoreMissingWeights = (products = [], fallbackWeightMap = new Map()) => {
+  if (!(fallbackWeightMap instanceof Map) || fallbackWeightMap.size === 0) {
+    return products;
+  }
+
+  return products.map((product) => {
+    const currentWeight = String(product?.weight || '').trim();
+    if (currentWeight) {
+      return product;
+    }
+
+    const fallbackWeight = String(fallbackWeightMap.get(product?.id) || '').trim();
+    if (!fallbackWeight) {
+      return product;
+    }
+
+    return {
+      ...product,
+      weight: fallbackWeight,
+    };
+  });
+};
+
 const getPrimaryTasteNotes = (description = '') => {
   return description
     .split('.')
     .map((part) => part.trim())
     .find(Boolean) || description;
+};
+
+const normalizeRemoteCatalogProduct = (row = {}) => {
+  const productId = String(row.product_id || '').trim();
+  if (!productId) return null;
+
+  return {
+    id: productId,
+    name: String(row.name || '').trim(),
+    description: String(row.description || '').trim(),
+    image: String(row.image || '').trim(),
+    alt: String(row.alt || row.name || '').trim(),
+    category: String(row.category || 'espresso').trim(),
+    price: Number(row.base_price ?? row.price ?? 0) || 0,
+    weight: String(row.weight || '').trim(),
+    country: row.country || null,
+    region: row.region || null,
+    origin: row.origin || null,
+    processing: row.processing || null,
+    farm: row.farm || null,
+    variety: row.variety || null,
+    altitude: row.altitude || null,
+    score: row.score ?? null,
+    featured: Boolean(row.featured),
+    giftImage: row.gift_image || null,
+    giftAlt: row.gift_alt || null,
+  };
+};
+
+const mergeCatalogProducts = (localProducts = [], remoteRows = []) => {
+  const productMap = new Map();
+
+  (localProducts || []).forEach((product) => {
+    if (!product?.id) return;
+    productMap.set(product.id, { ...product });
+  });
+
+  (remoteRows || []).forEach((row) => {
+    const remoteProduct = normalizeRemoteCatalogProduct(row);
+    if (!remoteProduct?.id) return;
+
+    const localProduct = productMap.get(remoteProduct.id) || {};
+    const hasLocalProduct = Boolean(localProduct && localProduct.id);
+    const mergedProduct = {
+      ...localProduct,
+      ...remoteProduct,
+      // Keep local data when Supabase fields are temporarily empty.
+      name: remoteProduct.name || localProduct.name || '',
+      description: remoteProduct.description || localProduct.description || '',
+      image: remoteProduct.image || localProduct.image || '',
+      alt: remoteProduct.alt || localProduct.alt || '',
+      category: remoteProduct.category || localProduct.category || 'espresso',
+      weight: remoteProduct.weight || localProduct.weight || '',
+      // Preserve local bestseller curation for products that exist in products.json.
+      featured: hasLocalProduct ? Boolean(localProduct.featured) : Boolean(remoteProduct.featured),
+      volumePrices: localProduct.volumePrices || undefined,
+    };
+
+    productMap.set(remoteProduct.id, {
+      ...mergedProduct,
+    });
+  });
+
+  return [...productMap.values()];
+};
+
+const fetchCatalogProducts = async () => {
+  const localProducts = await fetch('products.json').then((response) => response.json()).catch(() => []);
+  baseProductWeightsById = new Map(
+    (localProducts || [])
+      .filter((product) => product?.id)
+      .map((product) => [product.id, String(product.weight || '').trim()])
+  );
+
+  if (!isSupabaseConfigured || !supabase) {
+    return localProducts;
+  }
+
+  const { data, error } = await supabase
+    .from('product_catalog_public')
+    .select('product_id, name, description, image, alt, category, base_price, weight, country, region, origin, processing, farm, variety, altitude, score, featured, gift_image, gift_alt')
+    .order('updated_at', { ascending: false });
+
+  if (error) {
+    const isMissingRelation = error.code === 'PGRST205' || String(error.message || '').includes('product_catalog_public');
+    if (!isMissingRelation) {
+      console.error('Failed to load product catalog items', error);
+    }
+    return localProducts;
+  }
+
+  return mergeCatalogProducts(localProducts, data || []);
 };
 
 const inferProductCountry = (product) => {
@@ -901,9 +1031,12 @@ const attachBuyHandlers = () => {
 };
 
 if (bestsellerGrid || categoryGrid || productDetailRoot) {
-  fetch('products.json')
-    .then((res) => res.json())
+  fetchCatalogProducts()
     .then(async (products) => {
+      const fallbackWeightMap = new Map(
+        (products || []).map((product) => [product.id, String(product.weight || '').trim()])
+      );
+
       const [remoteTextOverrides, priceOverrideMap] = await Promise.all([
         fetchActiveProductTextOverrides(),
         fetchActivePriceOverrides(),
@@ -912,7 +1045,8 @@ if (bestsellerGrid || categoryGrid || productDetailRoot) {
       const localTextOverrides = loadProductTextOverrides();
       const remotelyAdjustedProducts = applyProductTextOverrides(products, remoteTextOverrides);
       const textAdjustedProducts = applyProductTextOverrides(remotelyAdjustedProducts, localTextOverrides);
-      const pricedProducts = applyPriceOverrides(textAdjustedProducts, priceOverrideMap);
+      const weightAdjustedProducts = restoreMissingWeights(textAdjustedProducts, fallbackWeightMap);
+      const pricedProducts = applyPriceOverrides(weightAdjustedProducts, priceOverrideMap);
       const stateMap = await fetchCatalogStateMap(products.map((product) => product.id));
       const enrichedProducts = mergeProductsWithCatalogState(pricedProducts, stateMap);
       syncCatalogProducts(enrichedProducts);
@@ -1153,6 +1287,8 @@ const clearCartBtn = document.querySelector('#clear-cart');
 const checkoutForm = document.querySelector('#checkout-form');
 const checkoutStatus = document.querySelector('#checkout-status');
 const checkoutSummary = document.querySelector('#checkout-summary');
+const priceRequestForm = document.querySelector('#price-request-lead-form');
+const priceRequestStatus = document.querySelector('#price-request-status');
 const partnerCitiesList = document.querySelector('#partner-cities-list');
 let currentCityOptions = [];
 let currentDeliveryLocationOptions = [];
@@ -1862,6 +1998,12 @@ const setCheckoutStatus = (message, tone = 'neutral') => {
   checkoutStatus.dataset.tone = tone;
 };
 
+const setPriceRequestStatus = (message, tone = 'neutral') => {
+  if (!priceRequestStatus) return;
+  priceRequestStatus.textContent = message;
+  priceRequestStatus.dataset.tone = tone;
+};
+
 const getStoredJson = (key) => {
   try {
     return JSON.parse(localStorage.getItem(key) || 'null');
@@ -2323,6 +2465,46 @@ const submitToWebhook = async (payload) => {
   }
 
   return result;
+};
+
+const submitPriceRequest = async ({ phone, email }) => {
+  if (!fallbackWebhookUrl) {
+    throw new Error('Не налаштовано резервний webhook-канал.');
+  }
+
+  const payload = {
+    name: 'Запит прайсу',
+    email,
+    phone,
+    city: '',
+    deliveryMethod: 'business-partnership',
+    deliveryMethodLabel: 'Партнерство для бізнесу',
+    deliveryDetails: '',
+    paymentMethod: 'price-request',
+    paymentMethodLabel: 'Запит прайсу',
+    comment: 'Клієнт хоче отримати прайс для бізнес-партнерства.',
+    cart: [],
+    orderItems: '',
+    total: 0,
+    totalLabel: '0 грн',
+    source: 'website',
+    brand: 'Odesa Coffee Roasters',
+    deliveryChannel: 'lead-price-request',
+    leadType: 'price-request',
+    leadTypeLabel: 'Запит прайсу',
+    sharedSecret: webhookSharedSecret,
+    createdAt: new Date().toISOString(),
+    pageUrl: window.location.href,
+    pagePath: window.location.pathname,
+  };
+
+  await fetch(fallbackWebhookUrl, {
+    method: 'POST',
+    mode: 'no-cors',
+    body: new URLSearchParams(payload),
+  });
+
+  return { ok: true };
 };
 
 const submitToSupabase = async (payload) => {
@@ -2827,6 +3009,43 @@ if (cartButton) {
     renderCart();
     syncDeliveryFields();
     renderCheckoutSummary();
+  });
+}
+
+if (priceRequestForm) {
+  priceRequestForm.addEventListener('submit', async (event) => {
+    event.preventDefault();
+
+    if (!priceRequestForm.reportValidity()) {
+      return;
+    }
+
+    const formData = new FormData(priceRequestForm);
+    const phone = formData.get('phone')?.toString().trim() || '';
+    const email = formData.get('email')?.toString().trim() || '';
+    const submitButton = priceRequestForm.querySelector('button[type="submit"]');
+
+    if (!phone || !email) {
+      setPriceRequestStatus('Перевірте, будь ласка, телефон і email.', 'error');
+      return;
+    }
+
+    try {
+      if (submitButton) submitButton.disabled = true;
+      setPriceRequestStatus('Відправляємо запит прайсу...', 'neutral');
+
+      await submitPriceRequest({ phone, email });
+
+      priceRequestForm.reset();
+      setPriceRequestStatus('Дякуємо. Ми надішлемо прайс найближчим часом.', 'success');
+      showToast('Запит прайсу відправлено.', 'success');
+    } catch (error) {
+      console.error('Price request submission failed', error);
+      setPriceRequestStatus(error.message || 'Не вдалося відправити запит прайсу. Спробуйте ще раз.', 'error');
+      showToast('Не вдалося відправити запит прайсу.', 'error');
+    } finally {
+      if (submitButton) submitButton.disabled = false;
+    }
   });
 }
 

@@ -150,6 +150,86 @@
             </div>
           </div>
           <p class="account-auth-help" id="catalog-admin-lead">Панель для керування товарами в продажу, залишками та вже оформленими позиціями.</p>
+          <details class="catalog-admin-create-panel">
+            <summary class="catalog-admin-create-summary">Додати новий товар</summary>
+            <form class="catalog-admin-create-form" id="catalog-admin-create-form">
+              <div class="catalog-admin-text-grid">
+                <label class="catalog-admin-field">
+                  <span>ID товару</span>
+                  <input type="text" name="productId" placeholder="Наприклад: colombia-new-lot">
+                </label>
+                <label class="catalog-admin-field">
+                  <span>Категорія</span>
+                  <select name="category" required>
+                    <option value="espresso">Еспресо</option>
+                    <option value="filter">Фільтр</option>
+                    <option value="drips">Дріпи</option>
+                    <option value="decaf">Декаф</option>
+                  </select>
+                </label>
+                <label class="catalog-admin-field">
+                  <span>Назва товару</span>
+                  <input type="text" name="name" required placeholder="Наприклад: Colombia Ombligon 250 г">
+                </label>
+                <label class="catalog-admin-field">
+                  <span>Вага / формат</span>
+                  <input type="text" name="weight" required placeholder="250 г або 1 кг">
+                </label>
+                <label class="catalog-admin-field catalog-admin-field-wide">
+                  <span>Опис</span>
+                  <textarea name="description" rows="3" required placeholder="Короткий опис лоту для картки"></textarea>
+                </label>
+                <label class="catalog-admin-field catalog-admin-field-wide">
+                  <span>Фото товару</span>
+                  <input type="text" name="image" required placeholder="images/your-photo.webp або https://...">
+                </label>
+                <label class="catalog-admin-field catalog-admin-field-wide">
+                  <span>Alt для фото</span>
+                  <input type="text" name="alt" placeholder="Опис фото для картки товару">
+                </label>
+                <label class="catalog-admin-field">
+                  <span>Ціна 0.250 кг, грн</span>
+                  <input type="number" name="price250" min="0" step="0.01" placeholder="Наприклад: 360">
+                </label>
+                <label class="catalog-admin-field">
+                  <span>Ціна 1 кг, грн</span>
+                  <input type="number" name="price1kg" min="0" step="0.01" placeholder="Наприклад: 1290">
+                </label>
+                <label class="catalog-admin-field">
+                  <span>Походження</span>
+                  <input type="text" name="origin" placeholder="Наприклад: South Kivu Province">
+                </label>
+                <label class="catalog-admin-field">
+                  <span>Обробка</span>
+                  <input type="text" name="processing" placeholder="Наприклад: Натуральна">
+                </label>
+                <label class="catalog-admin-field">
+                  <span>Країна</span>
+                  <input type="text" name="country" placeholder="Наприклад: Rwanda">
+                </label>
+                <label class="catalog-admin-field">
+                  <span>Регіон</span>
+                  <input type="text" name="region" placeholder="Наприклад: South Kivu Province">
+                </label>
+                <label class="catalog-admin-field">
+                  <span>Заведено на склад, шт.</span>
+                  <input type="number" name="stockQuantity" min="0" step="1" placeholder="Порожньо = без ліміту">
+                </label>
+                <label class="catalog-admin-toggle">
+                  <input type="checkbox" name="isAvailable" checked>
+                  <span>Показувати в продажу</span>
+                </label>
+                <label class="catalog-admin-toggle">
+                  <input type="checkbox" name="featured">
+                  <span>Показувати в хітах продажу</span>
+                </label>
+              </div>
+              <div class="catalog-admin-create-actions">
+                <button class="btn primary" type="submit" id="catalog-admin-create-submit">Додати товар</button>
+                <p class="form-status" id="catalog-admin-create-status" aria-live="polite"></p>
+              </div>
+            </form>
+          </details>
           <div class="catalog-admin-toolbar">
             <label class="catalog-admin-field catalog-admin-field-search">
               <span>Пошук по каталогу</span>
@@ -203,6 +283,6 @@
   </footer>
 
   <script src="/env.js?v=1"></script>
-  <script type="module" src="js/account.js?v=9"></script>
+  <script type="module" src="js/account.js?v=10"></script>
 </body>
 </html>

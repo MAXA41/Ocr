@@ -38,6 +38,31 @@
 }
 ```
 
+## Запит прайсу з головної
+
+Кнопка `Отримати прайс` на головній сторінці тепер відкриває коротку форму з телефоном і email та відправляє окремий lead у той самий webhook-канал, що й замовлення.
+
+Приклад payload:
+
+```json
+{
+  "name": "Запит прайсу",
+  "email": "client@example.com",
+  "phone": "+380991112233",
+  "deliveryMethodLabel": "Партнерство для бізнесу",
+  "paymentMethodLabel": "Запит прайсу",
+  "comment": "Клієнт хоче отримати прайс для бізнес-партнерства.",
+  "source": "website",
+  "brand": "Odesa Coffee Roasters",
+  "deliveryChannel": "lead-price-request",
+  "leadType": "price-request",
+  "leadTypeLabel": "Запит прайсу",
+  "createdAt": "2026-07-20T12:00:00.000Z"
+}
+```
+
+У workflow для Telegram достатньо додати гілку для `deliveryChannel = lead-price-request` або просто форматувати повідомлення з полів `phone` та `email`.
+
 ## Рекомендуемая схема в n8n
 
 1. `Webhook`
