@@ -13,6 +13,7 @@ export default defineConfig({
         drips: resolve(__dirname, 'drips.html'),
         espresso: resolve(__dirname, 'espresso.html'),
         filter: resolve(__dirname, 'filter.html'),
+        priceRequest: resolve(__dirname, 'price-request.html'),
         product: resolve(__dirname, 'product.html'),
       },
     },
