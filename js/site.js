@@ -1426,7 +1426,7 @@ const checkoutLabels = {
   },
   paymentMethod: {
     '': 'Не обрано',
-    'mono-card': 'Оплата карткою Mono',
+    'mono-card': 'Оплата карткою',
     'bank-details': 'Оплата за реквізитами',
     cod: 'Післяплата',
     'cash-pickup': 'Готівкою при самовивозі',
