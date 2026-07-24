@@ -33,10 +33,11 @@ jobs:
 
       - name: Build public runtime config
         env:
-          VITE_ORDER_PROVIDER: ${{ vars['VITE_ORDER_PROVIDER'] }}
+          VITE_ORDER_PROVIDER: ${{ vars['VITE_ORDER_PROVIDER'] || 'webhook' }}
           VITE_WEB3FORMS_ACCESS_KEY: ${{ vars['VITE_WEB3FORMS_ACCESS_KEY'] }}
-          VITE_ORDER_FALLBACK_WEBHOOK_URL: ${{ vars['VITE_ORDER_FALLBACK_WEBHOOK_URL'] }}
-          VITE_ORDER_DUPLICATE_TO_WEBHOOK: ${{ vars['VITE_ORDER_DUPLICATE_TO_WEBHOOK'] }}
+          VITE_ORDER_FALLBACK_WEBHOOK_URL: ${{ vars['VITE_ORDER_FALLBACK_WEBHOOK_URL'] || 'https://n8n.odesacoffeeroasters.info/webhook/ocr-orders-supabase' }}
+          N8N_PUBLIC_BASE_URL: ${{ vars['N8N_PUBLIC_BASE_URL'] || 'https://n8n.odesacoffeeroasters.info' }}
+          VITE_ORDER_DUPLICATE_TO_WEBHOOK: ${{ vars['VITE_ORDER_DUPLICATE_TO_WEBHOOK'] || 'true' }}
           VITE_ORDER_WEBHOOK_SHARED_SECRET: ${{ vars['VITE_ORDER_WEBHOOK_SHARED_SECRET'] }}
           VITE_NOVA_POSHTA_API_KEY: ${{ vars['VITE_NOVA_POSHTA_API_KEY'] }}
           VITE_SUPABASE_URL: ${{ vars['VITE_SUPABASE_URL'] }}
@@ -44,8 +45,14 @@ jobs:
           VITE_AUTH_REDIRECT_URL: ${{ vars['VITE_AUTH_REDIRECT_URL'] }}
         run: npm run public-env:build
 
+      - name: Inspect build inputs
+        run: |
+          node -v
+          npm -v
+          node -e "const fs = require('node:fs'); const htmlFiles = fs.readdirSync('.').filter((file) => file.endsWith('.html')); console.log('html files:', htmlFiles.length); console.log('price-request.html exists:', fs.existsSync('price-request.html')); console.log('public/env.js bytes:', fs.statSync('public/env.js').size);"
+
       - name: Build site
-        run: npm run build
+        run: npm run build -- --debug
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3

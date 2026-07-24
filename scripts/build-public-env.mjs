@@ -12,13 +12,21 @@ function getPublicEnvValue(merged, key, fallback = '') {
   return String(merged[key] ?? fallback).trim();
 }
 
+function getPublicFallbackWebhookUrl(merged) {
+  const explicitWebhookUrl = getPublicEnvValue(merged, 'VITE_ORDER_FALLBACK_WEBHOOK_URL');
+  if (explicitWebhookUrl) return explicitWebhookUrl;
+
+  const publicBaseUrl = getPublicEnvValue(merged, 'N8N_PUBLIC_BASE_URL', 'https://n8n.odesacoffeeroasters.info').replace(/\/$/, '');
+  return `${publicBaseUrl}/webhook/ocr-orders-supabase`;
+}
+
 function main() {
   const merged = loadLocalEnv();
 
   const publicEnv = {
-    VITE_ORDER_PROVIDER: getPublicEnvValue(merged, 'VITE_ORDER_PROVIDER', 'web3forms'),
+    VITE_ORDER_PROVIDER: getPublicEnvValue(merged, 'VITE_ORDER_PROVIDER', 'webhook'),
     VITE_WEB3FORMS_ACCESS_KEY: getPublicEnvValue(merged, 'VITE_WEB3FORMS_ACCESS_KEY'),
-    VITE_ORDER_FALLBACK_WEBHOOK_URL: getPublicEnvValue(merged, 'VITE_ORDER_FALLBACK_WEBHOOK_URL'),
+    VITE_ORDER_FALLBACK_WEBHOOK_URL: getPublicFallbackWebhookUrl(merged),
     VITE_ORDER_DUPLICATE_TO_WEBHOOK: getPublicEnvValue(merged, 'VITE_ORDER_DUPLICATE_TO_WEBHOOK', 'true'),
     VITE_ORDER_WEBHOOK_SHARED_SECRET: getPublicEnvValue(merged, 'VITE_ORDER_WEBHOOK_SHARED_SECRET'),
     VITE_NOVA_POSHTA_API_KEY: getPublicEnvValue(merged, 'VITE_NOVA_POSHTA_API_KEY'),
