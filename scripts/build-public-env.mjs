@@ -16,7 +16,7 @@ function getPublicFallbackWebhookUrl(merged) {
   const explicitWebhookUrl = getPublicEnvValue(merged, 'VITE_ORDER_FALLBACK_WEBHOOK_URL');
   if (explicitWebhookUrl) return explicitWebhookUrl;
 
-  const publicBaseUrl = getPublicEnvValue(merged, 'N8N_PUBLIC_BASE_URL', 'https://n8n.odesacoffeeroasters.info').replace(/\/$/, '');
+  const publicBaseUrl = getPublicEnvValue(merged, 'N8N_PUBLIC_BASE_URL', 'https://n8n.oroasters.com.ua').replace(/\/$/, '');
   return `${publicBaseUrl}/webhook/ocr-orders-supabase`;
 }
 

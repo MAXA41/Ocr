@@ -11,7 +11,7 @@ supabase secrets set \
   SUPABASE_URL=https://YOUR_PROJECT.supabase.co \
   SUPABASE_SERVICE_ROLE_KEY=YOUR_SERVICE_ROLE_KEY \
   MONO_MERCHANT_TOKEN=YOUR_MONO_TOKEN \
-  PUBLIC_SITE_URL=https://odesacoffeeroasters.info
+  PUBLIC_SITE_URL=https://oroasters.com.ua
 ```
 
 Нужны именно эти значения:

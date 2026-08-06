@@ -69,7 +69,7 @@
 2. включен вход по `Email + Password`
 3. включено подтверждение email
 4. в `Site URL` указан production domain
-5. в `Redirect URLs` добавлен `https://odesacoffeeroasters.info/account.html`
+5. в `Redirect URLs` добавлен `https://oroasters.com.ua/account.html`
 
 ### Supabase Edge Functions
 

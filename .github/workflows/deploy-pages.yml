@@ -35,8 +35,8 @@ jobs:
         env:
           VITE_ORDER_PROVIDER: ${{ vars['VITE_ORDER_PROVIDER'] || 'webhook' }}
           VITE_WEB3FORMS_ACCESS_KEY: ${{ vars['VITE_WEB3FORMS_ACCESS_KEY'] }}
-          VITE_ORDER_FALLBACK_WEBHOOK_URL: ${{ vars['VITE_ORDER_FALLBACK_WEBHOOK_URL'] || 'https://n8n.odesacoffeeroasters.info/webhook/ocr-orders-supabase' }}
-          N8N_PUBLIC_BASE_URL: ${{ vars['N8N_PUBLIC_BASE_URL'] || 'https://n8n.odesacoffeeroasters.info' }}
+          VITE_ORDER_FALLBACK_WEBHOOK_URL: ${{ vars['VITE_ORDER_FALLBACK_WEBHOOK_URL'] || 'https://n8n.oroasters.com.ua/webhook/ocr-orders-supabase' }}
+          N8N_PUBLIC_BASE_URL: ${{ vars['N8N_PUBLIC_BASE_URL'] || 'https://n8n.oroasters.com.ua' }}
           VITE_ORDER_DUPLICATE_TO_WEBHOOK: ${{ vars['VITE_ORDER_DUPLICATE_TO_WEBHOOK'] || 'true' }}
           VITE_ORDER_WEBHOOK_SHARED_SECRET: ${{ vars['VITE_ORDER_WEBHOOK_SHARED_SECRET'] }}
           VITE_NOVA_POSHTA_API_KEY: ${{ vars['VITE_NOVA_POSHTA_API_KEY'] }}

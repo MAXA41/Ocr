@@ -7,7 +7,7 @@ window.__OCR_ENV__ = {
   VITE_NOVA_POSHTA_API_KEY: "5d7e7680adca1bbc14e0f9e9ef86b750",
   VITE_SUPABASE_URL: "https://sxxlotfbcblnjgcvxaqe.supabase.co",
   VITE_SUPABASE_PUBLISHABLE_KEY: "sb_publishable_6Sqqk08Zt_txQFQJeacUhg_OPTpNLxf",
-  VITE_AUTH_REDIRECT_URL: "https://odesacoffeeroasters.info/account.html",
+  VITE_AUTH_REDIRECT_URL: "https://oroasters.com.ua/account.html",
 };
 
 window.__OCR_CONFIG__ = {

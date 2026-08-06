@@ -64,51 +64,51 @@ Deno.serve(async (request) => {
     return jsonResponse({ error: 'Missing required checkout fields.' }, { status: 400 });
   }
 
-  const admin = createSupabaseAdminClient();
-  const productIds = [...new Set(cart.map((item) => String(item.id || item.productId || '').trim()).filter(Boolean))];
-
-  const { data: catalogRows, error: catalogError } = await admin
-    .from('product_catalog_public')
-    .select('product_id,name,category,price,is_available,availability_status')
-    .in('product_id', productIds);
-
-  if (catalogError) {
-    return jsonResponse({ error: catalogError.message }, { status: 500 });
-  }
-
-  const catalogMap = new Map<string, any>();
-  for (const row of catalogRows ?? []) {
-    catalogMap.set(String(row.product_id), row);
-  }
-
-  const normalizedItems = cart.map((item) => {
-    const productId = String(item.id || item.productId || '').trim();
-    const catalogItem = catalogMap.get(productId);
-
-    if (!catalogItem) {
-      throw new Error(`Unknown product: ${productId}`);
-    }
-
-    if (catalogItem.is_available === false || catalogItem.availability_status === 'out_of_stock') {
-      throw new Error(`Product is unavailable: ${productId}`);
-    }
-
-    const quantity = Math.max(1, Math.trunc(Number(item.quantity || 1)));
-    const unitPrice = Number(catalogItem.price || 0);
-
-    return {
-      product_id: productId,
-      product_title: String(item.name || catalogItem.name || productId),
-      category: String(item.category || catalogItem.category || ''),
-      quantity,
-      unit_price: unitPrice,
-      grind_method: item.grindMethod ?? null,
-      grind_label: item.grindLabel ?? null,
-      raw_item: item,
-    };
-  });
-
   try {
+    const admin = createSupabaseAdminClient();
+    const productIds = [...new Set(cart.map((item) => String(item.id || item.productId || '').trim()).filter(Boolean))];
+
+    const { data: catalogRows, error: catalogError } = await admin
+      .from('product_catalog_public')
+      .select('product_id,name,category,price,is_available,availability_status')
+      .in('product_id', productIds);
+
+    if (catalogError) {
+      throw new Error(catalogError.message);
+    }
+
+    const catalogMap = new Map<string, any>();
+    for (const row of catalogRows ?? []) {
+      catalogMap.set(String(row.product_id), row);
+    }
+
+    const normalizedItems = cart.map((item) => {
+      const productId = String(item.id || item.productId || '').trim();
+      const catalogItem = catalogMap.get(productId);
+
+      if (!catalogItem) {
+        throw new Error(`Unknown product: ${productId}`);
+      }
+
+      if (catalogItem.is_available === false || catalogItem.availability_status === 'out_of_stock') {
+        throw new Error(`Product is unavailable: ${productId}`);
+      }
+
+      const quantity = Math.max(1, Math.trunc(Number(item.quantity || 1)));
+      const unitPrice = Number(catalogItem.price || 0);
+
+      return {
+        product_id: productId,
+        product_title: String(item.name || catalogItem.name || productId),
+        category: String(item.category || catalogItem.category || ''),
+        quantity,
+        unit_price: unitPrice,
+        grind_method: item.grindMethod ?? null,
+        grind_label: item.grindLabel ?? null,
+        raw_item: item,
+      };
+    });
+
     const computedSubtotal = normalizedItems.reduce((sum, item) => sum + item.unit_price * item.quantity, 0);
     const safeDiscount = Math.min(discountAmount, computedSubtotal);
     const safeTotal = Math.max(0, total > 0 ? total : computedSubtotal - safeDiscount);
@@ -202,7 +202,11 @@ Deno.serve(async (request) => {
       body: JSON.stringify(monoPayload),
     });
 
-    const monoResult = await monoResponse.json().catch(() => ({})) as Record<string, unknown>;
+    const contentType = monoResponse.headers.get('content-type') || '';
+    const monoResult = contentType.includes('application/json')
+      ? await monoResponse.json().catch(() => ({})) as Record<string, unknown>
+      : { rawText: await monoResponse.text() };
+
     const invoiceId = extractMonoInvoiceId(monoResult);
     const paymentUrl = extractMonoPaymentUrl(monoResult);
 
@@ -223,7 +227,10 @@ Deno.serve(async (request) => {
       return jsonResponse(
         {
           error: 'Failed to create Mono invoice.',
+          status: monoResponse.status,
+          statusText: monoResponse.statusText,
           details: monoResult,
+          request: monoPayload,
         },
         { status: 502 },
       );
@@ -254,8 +261,9 @@ Deno.serve(async (request) => {
     return jsonResponse(
       {
         error: error instanceof Error ? error.message : 'Failed to create Mono invoice.',
+        details: error instanceof Error ? error.stack : null,
       },
-      { status: 400 },
+      { status: 500 },
     );
   }
 });

@@ -174,7 +174,7 @@ https://api.telegram.org/bot<TELEGRAM_BOT_TOKEN>/setWebhook?url=<N8N_TELEGRAM_WE
 
 По текущему коду и локальному конфигу уже подготовлено:
 
-1. production domain `https://odesacoffeeroasters.info`
+1. production domain `https://oroasters.com.ua`
 2. заполнены `VITE_ORDER_FALLBACK_WEBHOOK_URL`, `VITE_NOVA_POSHTA_API_KEY`, `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`, `VITE_AUTH_REDIRECT_URL`
 3. фронтенд уже умеет писать `customerId`, `customerEmail`, `sharedSecret`, список `orderItems` и детали помола в order payload
 4. админ-учет товара уже ожидает таблицы `catalog_admins`, `product_catalog_state` и `product_catalog_public`

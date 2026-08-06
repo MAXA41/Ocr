@@ -46,7 +46,7 @@ http://localhost:5173/account.html
 
 ```text
 http://localhost:5173/account.html
-https://odesacoffeeroasters.info/account.html
+https://oroasters.com.ua/account.html
 ```
 
 Если используешь GitHub Pages preview или другой дополнительный адрес, добавь и его тоже.
@@ -54,7 +54,7 @@ https://odesacoffeeroasters.info/account.html
 4. В локальном `.env.local` или в прод-конфиге укажи тот же URL в переменной:
 
 ```text
-VITE_AUTH_REDIRECT_URL=https://odesacoffeeroasters.info/account.html
+VITE_AUTH_REDIRECT_URL=https://oroasters.com.ua/account.html
 ```
 
 Для локальной разработки можно временно переключать на:

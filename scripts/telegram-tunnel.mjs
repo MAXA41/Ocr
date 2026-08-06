@@ -2,7 +2,7 @@ import { spawn } from 'node:child_process';
 import localtunnel from 'localtunnel';
 import { loadLocalEnv } from './lib/local-env.mjs';
 
-const defaultPublicBaseUrl = 'https://n8n.odesacoffeeroasters.info';
+const defaultPublicBaseUrl = 'https://n8n.oroasters.com.ua';
 
 function getConfig() {
   const merged = loadLocalEnv();
