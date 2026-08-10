@@ -186,9 +186,16 @@
                 </label>
                 <label class="catalog-admin-field catalog-admin-field-wide">
                   <span>Фото товару</span>
-                  <input type="text" name="image" required placeholder="images/your-photo.webp або https://...">
+                  <input type="text" name="image" list="catalog-image-suggestions" required placeholder="images/your-photo.webp або https://...">
                   <small class="catalog-admin-hint">Додайте файл у папку images і вкажіть шлях на кшталт images/lot-2026.webp, або вставте повний https:// URL картинки.</small>
                 </label>
+                <datalist id="catalog-image-suggestions">
+                  <option value="images/burundi_baho.webp"></option>
+                  <option value="images/colombia_hulia_coocentral.webp"></option>
+                  <option value="images/guatemala_dona_linda.webp"></option>
+                  <option value="images/honduras_montecillos.webp"></option>
+                  <option value="images/rwanda_kivu_honey.webp"></option>
+                </datalist>
                 <label class="catalog-admin-field catalog-admin-field-wide">
                   <span>Alt для фото</span>
                   <input type="text" name="alt" placeholder="Опис фото для картки товару">
