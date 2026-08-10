@@ -7,22 +7,23 @@ const integerOrNull = (value) => {
 };
 
 export const normalizeCatalogState = (record = {}) => {
-  const isAvailable = record.is_available !== false;
-  const stockQuantity = integerOrNull(record.stock_quantity);
-  const soldQuantity = integerOrNull(record.sold_quantity) ?? 0;
-  const explicitAvailable = integerOrNull(record.available_quantity);
+  const isAvailable = (record.is_available ?? record.isAvailable) !== false;
+  const stockQuantity = integerOrNull(record.stock_quantity ?? record.stockQuantity);
+  const soldQuantity = integerOrNull(record.sold_quantity ?? record.soldQuantity) ?? 0;
+  const explicitAvailable = integerOrNull(record.available_quantity ?? record.availableQuantity);
   const availableQuantity = explicitAvailable ?? (stockQuantity === null ? null : Math.max(stockQuantity - soldQuantity, 0));
   const availabilityStatus = record.availability_status
+    || record.availabilityStatus
     || (!isAvailable ? 'disabled' : availableQuantity !== null && availableQuantity <= 0 ? 'out_of_stock' : 'available');
 
   return {
-    productId: String(record.product_id || '').trim(),
+    productId: String(record.product_id || record.productId || '').trim(),
     isAvailable,
     stockQuantity,
     soldQuantity,
     availableQuantity,
     availabilityStatus,
-    updatedAt: record.updated_at || null,
+    updatedAt: record.updated_at || record.updatedAt || null,
   };
 };
 
@@ -99,6 +100,6 @@ export const fetchCatalogStateMap = async (productIds = []) => {
 export const mergeProductsWithCatalogState = (products = [], stateMap = new Map()) => {
   return products.map((product) => ({
     ...product,
-    catalogState: stateMap.get(product.id) || normalizeCatalogState({ product_id: product.id }),
+    catalogState: stateMap.get(product.id) || normalizeCatalogState(product.catalogState || { product_id: product.id }),
   }));
 };

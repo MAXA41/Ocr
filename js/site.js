@@ -5,7 +5,7 @@ import {
   getProductCatalogState,
   isProductAvailableForPurchase,
   mergeProductsWithCatalogState,
-} from './catalog-state.js';
+} from './catalog-state.js?v=2';
 
 // Mobile menu toggle
 const viteEnv = import.meta.env || {};
@@ -335,6 +335,41 @@ const renderProductCollection = (container, products, showCategory = false) => {
   attachBuyHandlers();
 };
 
+const pruneDisabledProductsInContainer = async (container) => {
+  if (!container) return;
+
+  const ids = [...container.querySelectorAll('.product-buy[data-id]')]
+    .map((button) => button.dataset.id)
+    .filter(Boolean);
+
+  if (ids.length === 0) return;
+
+  const uniqueIds = [...new Set(ids)];
+  const stateMap = await fetchCatalogStateMap(uniqueIds);
+  if (!(stateMap instanceof Map) || stateMap.size === 0) return;
+
+  container.querySelectorAll('.product-card').forEach((card) => {
+    if (!(card instanceof HTMLElement)) return;
+    const buyButton = card.querySelector('.product-buy[data-id]');
+    if (!(buyButton instanceof HTMLButtonElement)) return;
+
+    const productId = buyButton.dataset.id;
+    if (!productId) return;
+
+    const state = stateMap.get(productId);
+    if (state?.availabilityStatus === 'disabled') {
+      card.remove();
+    }
+  });
+
+  if (container.children.length === 0 && container === categoryGrid) {
+    renderEmptyCategory();
+    return;
+  }
+
+  attachBuyHandlers();
+};
+
 const renderEmptyCategory = () => {
   if (!categoryGrid) return;
   categoryGrid.innerHTML = `
@@ -621,6 +656,13 @@ const normalizeRemoteCatalogProduct = (row = {}) => {
     featured: Boolean(row.featured),
     giftImage: row.gift_image || null,
     giftAlt: row.gift_alt || null,
+    catalogState: {
+      product_id: productId,
+      is_available: row.is_available,
+      available_quantity: row.available_quantity,
+      availability_status: row.availability_status,
+      updated_at: row.updated_at || null,
+    },
   };
 };
 
@@ -675,7 +717,7 @@ const fetchCatalogProducts = async () => {
 
   const { data, error } = await supabase
     .from('product_catalog_public')
-    .select('product_id, name, description, image, alt, category, base_price, weight, country, region, origin, processing, farm, variety, altitude, score, featured, gift_image, gift_alt')
+    .select('product_id, name, description, image, alt, category, base_price, weight, country, region, origin, processing, farm, variety, altitude, score, featured, gift_image, gift_alt, is_available, available_quantity, availability_status, updated_at')
     .order('updated_at', { ascending: false });
 
   if (error) {
@@ -841,6 +883,7 @@ const renderProductDetail = (product, allProducts) => {
   if (relatedGrid) {
     const relatedProducts = allProducts
       .filter((item) => item.category === product.category && item.id !== product.id)
+      .filter((item) => isProductVisibleInCatalog(item))
       .slice(0, 3);
 
     relatedGrid.innerHTML = relatedProducts.length > 0
@@ -887,6 +930,10 @@ const syncCatalogProducts = (products) => {
 
 const getCatalogProductById = (productId) => {
   return catalogProductsById.get(productId) || null;
+};
+
+const isProductVisibleInCatalog = (product) => {
+  return getProductCatalogState(product).availabilityStatus !== 'disabled';
 };
 
 const formatAvailabilityLimitMessage = (product, availableQuantity) => {
@@ -1049,18 +1096,21 @@ if (bestsellerGrid || categoryGrid || productDetailRoot) {
       const pricedProducts = applyPriceOverrides(weightAdjustedProducts, priceOverrideMap);
       const stateMap = await fetchCatalogStateMap(products.map((product) => product.id));
       const enrichedProducts = mergeProductsWithCatalogState(pricedProducts, stateMap);
+      const visibleProducts = enrichedProducts.filter((product) => isProductVisibleInCatalog(product));
       syncCatalogProducts(enrichedProducts);
       reconcileCartWithCatalogState();
 
       if (bestsellerGrid) {
-        const featuredProducts = enrichedProducts.filter((product) => product.featured).slice(0, 3);
+        const featuredProducts = visibleProducts.filter((product) => product.featured).slice(0, 3);
         renderProductCollection(bestsellerGrid, featuredProducts, true);
+        await pruneDisabledProductsInContainer(bestsellerGrid);
       }
 
       if (categoryGrid && pageCategory) {
-        const categoryProducts = enrichedProducts.filter((product) => product.category === pageCategory);
+        const categoryProducts = visibleProducts.filter((product) => product.category === pageCategory);
         if (categoryProducts.length > 0) {
           renderProductCollection(categoryGrid, categoryProducts, false);
+          await pruneDisabledProductsInContainer(categoryGrid);
         } else {
           renderEmptyCategory();
         }
@@ -1068,9 +1118,9 @@ if (bestsellerGrid || categoryGrid || productDetailRoot) {
 
       if (productDetailRoot) {
         const productId = new URLSearchParams(window.location.search).get('id');
-        const product = enrichedProducts.find((item) => item.id === productId);
+        const product = visibleProducts.find((item) => item.id === productId);
         if (product) {
-          renderProductDetail(product, enrichedProducts);
+          renderProductDetail(product, visibleProducts);
         } else {
           renderProductNotFound();
         }
