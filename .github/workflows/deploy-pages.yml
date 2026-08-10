@@ -52,7 +52,7 @@ jobs:
           node -e "const fs = require('node:fs'); const htmlFiles = fs.readdirSync('.').filter((file) => file.endsWith('.html')); console.log('html files:', htmlFiles.length); console.log('price-request.html exists:', fs.existsSync('price-request.html')); console.log('public/env.js bytes:', fs.statSync('public/env.js').size);"
 
       - name: Build site
-        run: npm run build -- --debug
+        run: npm run build
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
