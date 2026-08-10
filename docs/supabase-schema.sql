@@ -1,5 +1,4 @@
 create extension if not exists pgcrypto;
-
 create or replace function public.set_updated_at()
 returns trigger
 language plpgsql
@@ -105,6 +104,7 @@ create table if not exists public.orders (
   mono_invoice_status text,
   mono_invoice_payload jsonb not null default '{}'::jsonb,
   paid_at timestamptz,
+  client_request_id text,
   customer_name text not null,
   customer_email text not null,
   customer_phone text not null,
@@ -165,6 +165,8 @@ create index if not exists orders_customer_email_idx on public.orders (lower(cus
 create index if not exists orders_status_idx on public.orders (status);
 create index if not exists orders_payment_status_idx on public.orders (payment_status);
 create index if not exists orders_payment_reference_idx on public.orders (payment_reference);
+create unique index if not exists orders_client_request_id_idx on public.orders (client_request_id)
+  where client_request_id is not null;
 create index if not exists orders_placed_at_idx on public.orders (placed_at desc);
 
 create table if not exists public.order_items (
@@ -200,6 +202,7 @@ create or replace function public.create_public_order(
   p_total_amount numeric,
   p_items_summary text,
   p_raw_payload jsonb,
+  p_client_request_id text,
   p_placed_at timestamptz,
   p_items jsonb
 )
@@ -212,6 +215,7 @@ declare
   v_order_id uuid;
   v_order_number bigint;
   v_customer_id uuid;
+  v_client_request_id text := nullif(btrim(coalesce(p_client_request_id, '')), '');
   v_item jsonb;
 begin
   if coalesce(btrim(p_customer_name), '') = '' then
@@ -236,10 +240,24 @@ begin
 
   v_customer_id := auth.uid();
 
+  if v_client_request_id is not null then
+    select id, order_number
+    into v_order_id, v_order_number
+    from public.orders
+    where client_request_id = v_client_request_id
+    limit 1;
+
+    if found then
+      return query
+      select v_order_id, v_order_number;
+    end if;
+  end if;
+
   insert into public.orders (
     customer_id,
     source,
     status,
+    client_request_id,
     customer_name,
     customer_email,
     customer_phone,
@@ -264,6 +282,7 @@ begin
     v_customer_id,
     coalesce(nullif(btrim(p_source), ''), 'website'),
     'new',
+    v_client_request_id,
     p_customer_name,
     lower(p_customer_email),
     p_customer_phone,
@@ -319,7 +338,7 @@ begin
 end;
 $$;
 
-grant execute on function public.create_public_order(text, text, text, text, text, text, text, text, text, text, text, text, numeric, text, jsonb, timestamptz, jsonb) to anon, authenticated;
+grant execute on function public.create_public_order(text, text, text, text, text, text, text, text, text, text, text, text, numeric, text, jsonb, text, timestamptz, jsonb) to anon, authenticated;
 
 create table if not exists public.customer_discount_state (
   customer_id uuid primary key references public.profiles(id) on delete cascade,
@@ -374,6 +393,7 @@ create table if not exists public.product_text_overrides (
   category_override text,
   name_override text,
   description_override text,
+  image_override text,
   origin_override text,
   processing_override text,
   alt_override text,
@@ -392,6 +412,7 @@ create table if not exists public.product_text_overrides (
 
 alter table public.product_text_overrides
   add column if not exists category_override text,
+  add column if not exists image_override text,
   add column if not exists taste_override text,
   add column if not exists cup_profile_override text,
   add column if not exists brew_guide_override text,

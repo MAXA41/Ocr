@@ -126,7 +126,7 @@ Email: {{$json.email}}
 Доставка: {{$json.deliveryMethodLabel}}
 Деталі доставки: {{$json.deliveryDetails}}
 Оплата: {{$json.paymentMethodLabel}}
-Коментар: {{$json.comment}}
+Коментар до замовлення: {{$json.comment}}
 Сума: {{$json.totalLabel}}
 
 Товари:
@@ -171,7 +171,7 @@ return [
         `Доставка: ${order.deliveryMethodLabel || order.deliveryMethod || "-"}`,
         `Деталі доставки: ${order.deliveryDetails || "-"}`,
         `Оплата: ${order.paymentMethodLabel || order.paymentMethod || "-"}`,
-        `Коментар: ${order.comment || "-"}`,
+        `Коментар до замовлення: ${order.comment || "-"}`,
         `Сума: ${order.totalLabel || `${order.total} грн`}`,
         "",
         "Товари:",

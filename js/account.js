@@ -46,12 +46,14 @@ let pendingConfirmationEmail = '';
 let currentSession = null;
 let currentProfile = null;
 let catalogAdminRows = [];
+let catalogAdminHasUnsavedChanges = false;
 const catalogVolumeOptions = ['250g', '1kg'];
-const editableCatalogTextFields = ['category', 'name', 'description', 'origin', 'processing', 'alt', 'weight', 'taste', 'cup_profile', 'brew_guide', 'audience'];
+const editableCatalogTextFields = ['category', 'name', 'description', 'image', 'origin', 'processing', 'alt', 'weight', 'taste', 'cup_profile', 'brew_guide', 'audience'];
 const catalogTextFieldColumnMap = {
   category: 'category_override',
   name: 'name_override',
   description: 'description_override',
+  image: 'image_override',
   origin: 'origin_override',
   processing: 'processing_override',
   alt: 'alt_override',
@@ -646,6 +648,7 @@ const renderOrders = (orders) => {
 
 const hideCatalogAdmin = () => {
   catalogAdminRows = [];
+  catalogAdminHasUnsavedChanges = false;
   if (catalogAdminPanel) catalogAdminPanel.hidden = true;
   if (catalogAdminList) catalogAdminList.innerHTML = '';
   setCatalogAdminStatus('', 'neutral');
@@ -688,6 +691,7 @@ const applyCatalogCardTemplate = (card, templateKey) => {
     }
   });
 
+  catalogAdminHasUnsavedChanges = true;
   filterCatalogCardFields(card, card.querySelector('[data-catalog-field-search]')?.value || '');
 };
 
@@ -969,6 +973,10 @@ const renderCatalogAdminList = () => {
                         <span>Опис картки</span>
                         <textarea rows="3" data-catalog-text-field="description">${escapeHtml(row.description || '')}</textarea>
                       </label>
+                      <label class="catalog-admin-field catalog-admin-field-wide" data-catalog-field-wrapper data-catalog-field-label="Фото" data-catalog-field-value="${escapeHtml(row.image || '')}">
+                        <span>Фото (images/... або https://...)</span>
+                        <input type="text" data-catalog-text-field="image" value="${escapeHtml(row.image || '')}" placeholder="images/products/example.webp">
+                      </label>
                       <label class="catalog-admin-field catalog-admin-field-wide" data-catalog-field-wrapper data-catalog-field-label="Смак" data-catalog-field-value="${escapeHtml(flavorHint)}">
                         <span>Смак</span>
                         <textarea rows="2" data-catalog-text-field="taste" placeholder="Що відчувається в ароматиці та післясмаку">${escapeHtml(flavorHint)}</textarea>
@@ -1056,7 +1064,7 @@ const loadCatalogAdmin = async (session) => {
       .order('product_id', { ascending: true }),
     supabase
       .from('product_text_overrides')
-      .select('product_id, category_override, name_override, description_override, origin_override, processing_override, alt_override, weight_override, taste_override, cup_profile_override, brew_guide_override, audience_override, is_active, updated_at')
+      .select('product_id, category_override, name_override, description_override, image_override, origin_override, processing_override, alt_override, weight_override, taste_override, cup_profile_override, brew_guide_override, audience_override, is_active, updated_at')
       .eq('is_active', true),
     supabase
       .from('product_price_overrides')
@@ -1106,6 +1114,7 @@ const loadCatalogAdmin = async (session) => {
   stateWithTextRows.textOverrides = textOverrideRows;
   stateWithTextRows.priceOverrides = priceOverrideRows;
   catalogAdminRows = buildCatalogAdminRows(products, stateWithTextRows);
+  catalogAdminHasUnsavedChanges = false;
   renderCatalogAdminList();
   if (!textOverrideResponse.error && !priceOverrideResponse.error) {
     setCatalogAdminStatus('Каталог готовий до редагування.', 'success');
@@ -1256,6 +1265,7 @@ const createCatalogProduct = async (form) => {
   }
 
   form.reset();
+  catalogAdminHasUnsavedChanges = false;
   setCatalogCreateStatus(`Товар ${name} створено.`, 'success');
   await loadCatalogAdmin(currentSession);
 };
@@ -1302,13 +1312,21 @@ const saveCatalogRow = async (card) => {
   const priceInputs = card.querySelectorAll('[data-catalog-price-field]');
   const textPatch = {};
   const pricePatch = {};
+  let textValidationError = '';
 
   textInputs.forEach((input) => {
     if (!(input instanceof HTMLInputElement) && !(input instanceof HTMLTextAreaElement) && !(input instanceof HTMLSelectElement)) return;
     const field = input.dataset.catalogTextField;
     if (!field || !editableCatalogTextFields.includes(field)) return;
 
-    const nextValue = String(input.value ?? '').trim();
+    const rawValue = String(input.value ?? '').trim();
+    const nextValue = field === 'image' ? rawValue.replace(/\\/g, '/') : rawValue;
+
+    if (field === 'image' && nextValue !== '' && !isValidCatalogImageValue(nextValue)) {
+      textValidationError = 'Фото має бути у форматі images/your-file.webp або повний https:// URL з розширенням зображення.';
+      return;
+    }
+
     const baseValue = String(row.baseText?.[field] ?? '').trim();
     const hasCurrentOverride = Object.prototype.hasOwnProperty.call(row.textOverrides || {}, field);
 
@@ -1318,6 +1336,17 @@ const saveCatalogRow = async (card) => {
       textPatch[field] = null;
     }
   });
+
+  if (textValidationError) {
+    if (rowStatus) {
+      rowStatus.textContent = textValidationError;
+      rowStatus.dataset.tone = 'error';
+    }
+    if (saveButton instanceof HTMLButtonElement) {
+      saveButton.disabled = false;
+    }
+    return;
+  }
 
   for (const input of priceInputs) {
     if (!(input instanceof HTMLInputElement)) continue;
@@ -1380,6 +1409,7 @@ const saveCatalogRow = async (card) => {
     category_override: null,
     name_override: null,
     description_override: null,
+    image_override: null,
     origin_override: null,
     processing_override: null,
     alt_override: null,
@@ -1477,6 +1507,7 @@ const saveCatalogRow = async (card) => {
     : item);
 
   renderCatalogAdminList();
+  catalogAdminHasUnsavedChanges = false;
   setCatalogAdminStatus(`Оновлено товар: ${row.name}.`, 'success');
 };
 
@@ -1493,6 +1524,7 @@ const setSignedInState = (session) => {
     renderProfile(null);
     renderDiscountState(null);
     renderOrders([]);
+    catalogAdminHasUnsavedChanges = false;
     hideCatalogAdmin();
   }
 };
@@ -1562,6 +1594,21 @@ const init = async () => {
     if (event === 'PASSWORD_RECOVERY') {
       setAuthMode('recovery');
       setAuthStatus('Створіть новий пароль для завершення відновлення.', 'neutral');
+      return;
+    }
+
+    if (session && catalogAdminHasUnsavedChanges && event !== 'SIGNED_OUT') {
+      // Do not rerender admin data while user is editing unsaved fields.
+      currentSession = session || null;
+      if (userEmail) userEmail.textContent = session?.user?.email || '';
+      setCatalogAdminStatus('Є незбережені зміни. Дані не перезавантажуються, доки ви не натиснете "Зберегти" або "Оновити дані".', 'neutral');
+      return;
+    }
+
+    if (event === 'TOKEN_REFRESHED') {
+      // Keep auth session fresh without reloading admin UI to avoid wiping unsaved form edits.
+      currentSession = session || null;
+      if (userEmail) userEmail.textContent = session?.user?.email || '';
       return;
     }
 
@@ -1824,6 +1871,13 @@ catalogAdminList?.addEventListener('input', (event) => {
     if (searchInput instanceof HTMLInputElement) {
       filterCatalogCardFields(card, searchInput.value);
     }
+
+    catalogAdminHasUnsavedChanges = true;
+    return;
+  }
+
+  if (target.matches('[data-catalog-availability]') || target.matches('[data-catalog-stock]')) {
+    catalogAdminHasUnsavedChanges = true;
   }
 });
 
@@ -1844,6 +1898,8 @@ catalogAdminList?.addEventListener('change', (event) => {
   if (searchInput instanceof HTMLInputElement) {
     filterCatalogCardFields(card, searchInput.value);
   }
+
+  catalogAdminHasUnsavedChanges = true;
 });
 
 profileList?.addEventListener('submit', async (event) => {

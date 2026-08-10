@@ -52,6 +52,7 @@ Deno.serve(async (request) => {
   const deliveryDetails = String(payload.deliveryDetails || '').trim() || null;
   const paymentMethodLabel = String(payload.paymentMethodLabel || '').trim() || 'Оплата карткою Mono';
   const comment = String(payload.comment || '').trim() || null;
+  const clientRequestId = String(payload.checkoutRequestId || payload.clientRequestId || payload.requestId || '').trim() || null;
   const subtotal = Number(payload.subtotal || 0);
   const discountAmount = Math.max(0, Number(payload.discountAmount || 0));
   const total = Math.max(0, Number(payload.total || Math.max(subtotal - discountAmount, 0)));
@@ -119,61 +120,139 @@ Deno.serve(async (request) => {
     const supabaseBaseUrl = extractSupabaseBaseUrl();
     const returnUrl = String(payload.returnUrl || `${baseUrl}/account.html?payment=mono-success`).trim();
 
-    const { data: order, error: orderError } = await admin
-      .from('orders')
-      .insert({
-        source: String(payload.source || 'website'),
-        status: 'new',
-        payment_provider: 'mono',
-        payment_status: 'pending',
-        customer_name: customerName,
-        customer_email: customerEmail,
-        customer_phone: customerPhone,
-        city,
-        delivery_method: deliveryMethod,
-        delivery_method_label: deliveryMethodLabel,
-        delivery_details: deliveryDetails,
-        payment_method: paymentMethod,
-        payment_method_label: paymentMethodLabel,
-        comment,
-        currency: 'UAH',
-        subtotal_amount: computedSubtotal,
-        discount_percent: 0,
-        discount_amount: safeDiscount,
-        total_amount: safeTotal,
-        accumulation_amount: 0,
-        items_summary: orderItemsSummary,
-        raw_payload: payload,
-        payment_gateway: 'mono',
-      })
-      .select('id, order_number')
-      .single();
+    let existingOrder: { id: string; order_number: number; payment_payload?: Record<string, unknown> | null; mono_invoice_payload?: Record<string, unknown> | null; payment_reference?: string | null; mono_invoice_id?: string | null; } | null = null;
 
-    if (orderError || !order) {
-      throw orderError ?? new Error('Failed to create order.');
+    if (clientRequestId) {
+      const { data: existingOrderData, error: existingOrderError } = await admin
+        .from('orders')
+        .select('id, order_number, payment_payload, mono_invoice_payload, payment_reference, mono_invoice_id')
+        .eq('client_request_id', clientRequestId)
+        .maybeSingle();
+
+      if (existingOrderError) {
+        throw existingOrderError;
+      }
+
+      if (existingOrderData) {
+        existingOrder = existingOrderData as typeof existingOrder;
+      }
     }
 
-    const orderId = String(order.id);
-    const orderNumber = Number(order.order_number);
+    let orderId: string;
+    let orderNumber: number;
 
-    const { error: orderItemsError } = await admin
-      .from('order_items')
-      .insert(
-        normalizedItems.map((item) => ({
-          order_id: orderId,
-          product_id: item.product_id,
-          product_title: item.product_title,
-          category: item.category,
-          quantity: item.quantity,
-          unit_price: item.unit_price,
-          grind_method: item.grind_method,
-          grind_label: item.grind_label,
-          raw_item: item.raw_item,
-        })),
-      );
+    if (existingOrder) {
+      orderId = existingOrder.id;
+      orderNumber = Number(existingOrder.order_number);
 
-    if (orderItemsError) {
-      throw orderItemsError;
+      const existingPaymentPayload = existingOrder.payment_payload || {};
+      const existingMonoInvoicePayload = existingOrder.mono_invoice_payload || {};
+      const existingPaymentUrl = String(
+        (existingPaymentPayload.response as Record<string, unknown> | undefined)?.pageUrl
+        || (existingMonoInvoicePayload as Record<string, unknown>)?.pageUrl
+        || '',
+      ).trim();
+
+      if (existingPaymentUrl) {
+        return jsonResponse({
+          orderId,
+          orderNumber,
+          invoiceId: existingOrder.mono_invoice_id || existingOrder.payment_reference || null,
+          paymentUrl: existingPaymentUrl,
+          paymentStatus: 'pending',
+        });
+      }
+    }
+
+    if (!existingOrder) {
+      const { data: order, error: orderError } = await admin
+        .from('orders')
+        .insert({
+          source: String(payload.source || 'website'),
+          status: 'new',
+          payment_provider: 'mono',
+          payment_status: 'pending',
+          client_request_id: clientRequestId,
+          customer_name: customerName,
+          customer_email: customerEmail,
+          customer_phone: customerPhone,
+          city,
+          delivery_method: deliveryMethod,
+          delivery_method_label: deliveryMethodLabel,
+          delivery_details: deliveryDetails,
+          payment_method: paymentMethod,
+          payment_method_label: paymentMethodLabel,
+          comment,
+          currency: 'UAH',
+          subtotal_amount: computedSubtotal,
+          discount_percent: 0,
+          discount_amount: safeDiscount,
+          total_amount: safeTotal,
+          accumulation_amount: 0,
+          items_summary: orderItemsSummary,
+          raw_payload: payload,
+          payment_gateway: 'mono',
+        })
+        .select('id, order_number')
+        .single();
+
+      if (orderError || !order) {
+        throw orderError ?? new Error('Failed to create order.');
+      }
+
+      orderId = String(order.id);
+      orderNumber = Number(order.order_number);
+
+      const { error: orderItemsError } = await admin
+        .from('order_items')
+        .insert(
+          normalizedItems.map((item) => ({
+            order_id: orderId,
+            product_id: item.product_id,
+            product_title: item.product_title,
+            category: item.category,
+            quantity: item.quantity,
+            unit_price: item.unit_price,
+            grind_method: item.grind_method,
+            grind_label: item.grind_label,
+            raw_item: item.raw_item,
+          })),
+        );
+
+      if (orderItemsError) {
+        throw orderItemsError;
+      }
+    } else {
+      const { count: existingOrderItemsCount, error: orderItemsCountError } = await admin
+        .from('order_items')
+        .select('id', { count: 'exact', head: true })
+        .eq('order_id', orderId);
+
+      if (orderItemsCountError) {
+        throw orderItemsCountError;
+      }
+
+      if (!existingOrderItemsCount) {
+        const { error: orderItemsError } = await admin
+          .from('order_items')
+          .insert(
+            normalizedItems.map((item) => ({
+              order_id: orderId,
+              product_id: item.product_id,
+              product_title: item.product_title,
+              category: item.category,
+              quantity: item.quantity,
+              unit_price: item.unit_price,
+              grind_method: item.grind_method,
+              grind_label: item.grind_label,
+              raw_item: item.raw_item,
+            })),
+          );
+
+        if (orderItemsError) {
+          throw orderItemsError;
+        }
+      }
     }
 
     const monoPayload = {

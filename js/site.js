@@ -30,6 +30,7 @@ const duplicateToWebhook = getEnv('VITE_ORDER_DUPLICATE_TO_WEBHOOK', 'true') ===
 const webhookSharedSecret = getEnv('VITE_ORDER_WEBHOOK_SHARED_SECRET', 'ocr_4f9b8d2c7a1e63f0c5b9a472de18f6c3a9e54b7d1c8f20ea6b3d91f472ac58e1');
 const novaPoshtaApiKey = getEnv('VITE_NOVA_POSHTA_API_KEY', '5d7e7680adca1bbc14e0f9e9ef86b750');
 const monoCreateInvoiceUrl = supabaseUrl ? `${supabaseUrl.replace(/\/$/, '')}/functions/v1/mono-create-invoice` : '';
+const checkoutRequestStorageKey = 'ocr_checkout_request_id_v1';
 const novaPoshtaInitialPageSize = 100;
 const novaPoshtaSearchPageSize = 50;
 const deliveryAutocompleteLimit = 24;
@@ -49,6 +50,29 @@ const ensureToast = () => {
   document.body.append(toast);
 
   return toast;
+};
+
+const getCheckoutRequestId = () => {
+  try {
+    const existing = window.sessionStorage.getItem(checkoutRequestStorageKey)?.trim();
+    if (existing) {
+      return existing;
+    }
+
+    const generated = crypto.randomUUID();
+    window.sessionStorage.setItem(checkoutRequestStorageKey, generated);
+    return generated;
+  } catch {
+    return crypto.randomUUID();
+  }
+};
+
+const clearCheckoutRequestId = () => {
+  try {
+    window.sessionStorage.removeItem(checkoutRequestStorageKey);
+  } catch {
+    // Ignore storage failures; retries will still work with a fresh request id.
+  }
 };
 
 let toastTimer;
@@ -101,6 +125,7 @@ const editableProductTextFields = [
   'category',
   'name',
   'description',
+  'image',
   'origin',
   'processing',
   'alt',
@@ -422,6 +447,14 @@ const formatProductCode = (product) => {
     .toUpperCase();
 };
 
+const isValidCatalogImageValue = (value) => {
+  const normalized = String(value || '').trim().replace(/\\/g, '/');
+  if (!normalized) return false;
+  const localImagePattern = /^\/?images\/.+\.(webp|jpg|jpeg|png|gif|avif|svg)$/i;
+  const remoteImagePattern = /^https?:\/\/.+\.(webp|jpg|jpeg|png|gif|avif|svg)(\?.*)?$/i;
+  return localImagePattern.test(normalized) || remoteImagePattern.test(normalized);
+};
+
 const fetchActiveProductTextOverrides = async () => {
   if (!isSupabaseConfigured || !supabase) {
     return new Map();
@@ -429,7 +462,7 @@ const fetchActiveProductTextOverrides = async () => {
 
   const { data, error } = await supabase
     .from('product_text_overrides')
-    .select('product_id, category_override, name_override, description_override, origin_override, processing_override, alt_override, weight_override, taste_override, cup_profile_override, brew_guide_override, audience_override, is_active, updated_at')
+    .select('product_id, category_override, name_override, description_override, image_override, origin_override, processing_override, alt_override, weight_override, taste_override, cup_profile_override, brew_guide_override, audience_override, is_active, updated_at')
     .eq('is_active', true);
 
   if (error) {
@@ -576,7 +609,10 @@ const applyProductTextOverrides = (products, textOverrides) => {
           if ((field === 'category' || field === 'weight') && normalizedValue === '') {
             return;
           }
-          overridePatch[field] = String(directValue);
+          if (field === 'image' && !isValidCatalogImageValue(normalizedValue)) {
+            return;
+          }
+          overridePatch[field] = field === 'image' ? normalizedValue.replace(/\\/g, '/') : String(directValue);
         }
         return;
       }
@@ -589,7 +625,10 @@ const applyProductTextOverrides = (products, textOverrides) => {
           if ((field === 'category' || field === 'weight') && normalizedValue === '') {
             return;
           }
-          overridePatch[field] = String(mappedValue);
+          if (field === 'image' && !isValidCatalogImageValue(normalizedValue)) {
+            return;
+          }
+          overridePatch[field] = field === 'image' ? normalizedValue.replace(/\\/g, '/') : String(mappedValue);
         }
       }
     });
@@ -2446,6 +2485,7 @@ const buildOrderPayload = ({
       volumeLabel: getVolumeLabel(item),
     })),
     orderItems: buildCartSummary(cart),
+    checkoutRequestId: getCheckoutRequestId(),
     createdAt: new Date().toISOString(),
     source: 'website',
     paymentProvider: paymentMethod === 'mono-card' ? 'mono' : 'manual',
@@ -2589,6 +2629,7 @@ const submitToSupabase = async (payload) => {
     p_total_amount: Number(payload.total || 0),
     p_items_summary: payload.orderItems || null,
     p_raw_payload: payload,
+    p_client_request_id: payload.checkoutRequestId || null,
     p_placed_at: payload.createdAt || new Date().toISOString(),
     p_items: orderItems,
   });
@@ -2996,6 +3037,8 @@ if (checkoutForm) {
         cart,
         total: pricing.total,
       });
+
+      clearCheckoutRequestId();
 
       localStorage.setItem(latestOrderKey, JSON.stringify({
         name,
