@@ -22,7 +22,7 @@ const getEnv = (key, fallback = '') => {
   return '';
 };
 
-const defaultOrderFallbackWebhookUrl = 'https://n8n.oroasters.com.ua/webhook/ocr-orders-supabase';
+const defaultOrderFallbackWebhookUrl = 'https://n8n.odesacoffeeroasters.info/webhook/ocr-orders-supabase';
 const orderProvider = getEnv('VITE_ORDER_PROVIDER', 'webhook');
 const web3FormsAccessKey = getEnv('VITE_WEB3FORMS_ACCESS_KEY');
 const fallbackWebhookUrl = getEnv('VITE_ORDER_FALLBACK_WEBHOOK_URL', defaultOrderFallbackWebhookUrl);
