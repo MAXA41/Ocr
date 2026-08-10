@@ -1612,6 +1612,14 @@ body[data-page-category="filter"] .hero .btn.ghost {
   margin: 0;
 }
 
+.catalog-admin-hint {
+  display: block;
+  margin-top: 6px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--olive);
+}
+
 .catalog-admin-summary-side {
   display: grid;
   gap: 12px;

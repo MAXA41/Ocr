@@ -168,6 +168,23 @@ const isMissingColumnError = (error, columnName) => {
   return error.code === 'PGRST204' || normalizedMessage.includes(String(columnName).toLowerCase());
 };
 
+const isCatalogRlsAccessError = (error) => {
+  if (!error) return false;
+  const message = String(error.message || '').toLowerCase();
+  const details = String(error.details || '').toLowerCase();
+  return error.code === '42501'
+    || message.includes('row-level security')
+    || details.includes('row-level security');
+};
+
+const isValidCatalogImageValue = (value) => {
+  const normalized = String(value || '').trim().replace(/\\/g, '/');
+  if (!normalized) return false;
+  const localImagePattern = /^\/?images\/.+\.(webp|jpg|jpeg|png|gif|avif|svg)$/i;
+  const remoteImagePattern = /^https?:\/\/.+\.(webp|jpg|jpeg|png|gif|avif|svg)(\?.*)?$/i;
+  return localImagePattern.test(normalized) || remoteImagePattern.test(normalized);
+};
+
 const parseNonNegativePriceInput = (value) => {
   const rawValue = String(value ?? '').trim();
   if (!rawValue) return null;
@@ -331,15 +348,27 @@ const fetchCatalogProductsForAdmin = async () => {
   return mergeCatalogProducts(localProducts, data || []);
 };
 
-const getDefaultCatalogPrice = ({ weight, price250, price1kg }) => {
-  if (isOneKgWeight(weight)) {
-    return price1kg ?? price250 ?? 0;
+const inferCatalogWeight = ({ category, price250, price1kg }) => {
+  if (category === 'drips') {
+    return 'Фіксований формат';
   }
 
-  if (isQuarterKgWeight(weight)) {
-    return price250 ?? price1kg ?? 0;
+  if (price250 !== null && price1kg !== null) {
+    return '250 г / 1 кг';
   }
 
+  if (price1kg !== null) {
+    return '1 кг';
+  }
+
+  if (price250 !== null) {
+    return '250 г';
+  }
+
+  return 'Фіксований формат';
+};
+
+const getDefaultCatalogPrice = ({ price250, price1kg }) => {
   return price250 ?? price1kg ?? 0;
 };
 
@@ -1090,9 +1119,8 @@ const createCatalogProduct = async (form) => {
   const name = String(formData.get('name') || '').trim();
   const productId = slugifyProductId(formData.get('productId') || name);
   const category = String(formData.get('category') || 'espresso').trim();
-  const weight = String(formData.get('weight') || '').trim();
   const description = String(formData.get('description') || '').trim();
-  const image = String(formData.get('image') || '').trim();
+  const image = String(formData.get('image') || '').trim().replace(/\\/g, '/');
   const alt = String(formData.get('alt') || name).trim();
   const origin = normalizeOptionalText(formData.get('origin'));
   const processing = normalizeOptionalText(formData.get('processing'));
@@ -1104,8 +1132,13 @@ const createCatalogProduct = async (form) => {
   const price250 = parseNonNegativePriceInput(formData.get('price250'));
   const price1kg = parseNonNegativePriceInput(formData.get('price1kg'));
 
-  if (!productId || !name || !weight || !description || !image) {
-    setCatalogCreateStatus('Заповніть ID або назву, вагу, опис і фото товару.', 'error');
+  if (!productId || !name || !description || !image) {
+    setCatalogCreateStatus('Заповніть ID або назву, опис і фото товару.', 'error');
+    return;
+  }
+
+  if (!isValidCatalogImageValue(image)) {
+    setCatalogCreateStatus('Фото має бути у форматі images/your-file.webp або повний https:// URL з розширенням зображення.', 'error');
     return;
   }
 
@@ -1124,7 +1157,9 @@ const createCatalogProduct = async (form) => {
     return;
   }
 
-  const basePrice = getDefaultCatalogPrice({ weight, price250, price1kg });
+  const weight = inferCatalogWeight({ category, price250, price1kg });
+
+  const basePrice = getDefaultCatalogPrice({ price250, price1kg });
   const volumePrices = {};
   if (price250 !== null) volumePrices['250g'] = price250;
   if (price1kg !== null) volumePrices['1kg'] = price1kg;
@@ -1161,7 +1196,7 @@ const createCatalogProduct = async (form) => {
     },
   };
 
-  const defaultVolume = isOneKgWeight(weight) ? '1kg' : '250g';
+  const defaultVolume = price250 !== null ? '250g' : '1kg';
   const priceOverridePayload = {
     product_id: productId,
     is_active: Object.keys(volumePrices).length > 0,
@@ -1200,6 +1235,10 @@ const createCatalogProduct = async (form) => {
 
   if (catalogResult.error) {
     console.error('Failed to create catalog product', catalogResult.error);
+    if (isCatalogRlsAccessError(catalogResult.error)) {
+      setCatalogCreateStatus('Немає прав на створення товару (RLS). Додайте email адміністратора в таблицю catalog_admins у Supabase і увійдіть у кабінет повторно.', 'error');
+      return;
+    }
     setCatalogCreateStatus(catalogResult.error.message || 'Не вдалося створити товар.', 'error');
     return;
   }
