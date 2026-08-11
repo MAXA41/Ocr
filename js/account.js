@@ -975,7 +975,7 @@ const renderCatalogAdminList = () => {
                       </label>
                       <label class="catalog-admin-field catalog-admin-field-wide" data-catalog-field-wrapper data-catalog-field-label="Фото" data-catalog-field-value="${escapeHtml(row.image || '')}">
                         <span>Фото (images/... або https://...)</span>
-                        <input type="text" data-catalog-text-field="image" value="${escapeHtml(row.image || '')}" placeholder="images/products/example.webp">
+                        <input type="text" data-catalog-text-field="image" list="catalog-image-suggestions" value="${escapeHtml(row.image || '')}" placeholder="images/products/example.webp">
                       </label>
                       <label class="catalog-admin-field catalog-admin-field-wide" data-catalog-field-wrapper data-catalog-field-label="Смак" data-catalog-field-value="${escapeHtml(flavorHint)}">
                         <span>Смак</span>
