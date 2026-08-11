@@ -56,7 +56,7 @@ jobs:
       - name: Build site
         env:
           NODE_ENV: development
-        run: npm run build
+        run: npx --yes vite@5.4.21 build
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
