@@ -29,7 +29,9 @@ jobs:
           cache: npm
 
       - name: Install dependencies
-        run: npm ci --include=dev
+        env:
+          NODE_ENV: development
+        run: npm ci
 
       - name: Build public runtime config
         env:
@@ -52,6 +54,8 @@ jobs:
           node -e "const fs = require('node:fs'); const htmlFiles = fs.readdirSync('.').filter((file) => file.endsWith('.html')); console.log('html files:', htmlFiles.length); console.log('price-request.html exists:', fs.existsSync('price-request.html')); console.log('public/env.js bytes:', fs.statSync('public/env.js').size);"
 
       - name: Build site
+        env:
+          NODE_ENV: development
         run: npm run build
 
       - name: Upload Pages artifact
