@@ -53,10 +53,15 @@ jobs:
           npm -v
           node -e "const fs = require('node:fs'); const htmlFiles = fs.readdirSync('.').filter((file) => file.endsWith('.html')); console.log('html files:', htmlFiles.length); console.log('price-request.html exists:', fs.existsSync('price-request.html')); console.log('public/env.js bytes:', fs.statSync('public/env.js').size);"
 
+      - name: Ensure Vite CLI
+        run: |
+          npm i --no-save vite@5.4.21
+          npx vite --version
+
       - name: Build site
         env:
           NODE_ENV: development
-        run: npx --yes vite@5.4.21 build
+        run: npx vite build
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
