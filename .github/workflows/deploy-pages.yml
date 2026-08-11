@@ -56,7 +56,17 @@ jobs:
       - name: Build site
         env:
           NODE_ENV: development
-        run: npm run build
+        run: |
+          rm -rf dist
+          mkdir -p dist
+          cp -f *.html dist/
+          cp -f products.json dist/
+          cp -f CNAME dist/
+          cp -rf css dist/
+          cp -rf js dist/
+          cp -rf images dist/
+          cp -f public/env.js dist/env.js
+          touch dist/.nojekyll
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
