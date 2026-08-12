@@ -66,6 +66,8 @@ jobs:
           cp -rf js dist/
           cp -rf images dist/
           cp -f public/env.js dist/env.js
+          cp -f public/robots.txt dist/robots.txt
+          cp -f public/sitemap.xml dist/sitemap.xml
           touch dist/.nojekyll
 
       - name: Upload Pages artifact
