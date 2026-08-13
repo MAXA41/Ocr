@@ -1186,14 +1186,14 @@ const cartTotal = document.querySelector('#cart-total');
 const cartClose = document.querySelector('#cart-close');
 
 const cartGrindOptions = [
-  { value: '', label: 'Оберіть помол' },
+  { value: '', label: 'Оберіть помел' },
   { value: 'beans', label: 'У зерні' },
-  { value: 'espresso', label: 'Помол під еспресо' },
-  { value: 'moka', label: 'Помол під гейзер' },
-  { value: 'filter', label: 'Помол під фільтр' },
-  { value: 'aeropress', label: 'Помол під AeroPress' },
-  { value: 'french-press', label: 'Помол під French Press' },
-  { value: 'turka', label: 'Помол під турку' },
+  { value: 'espresso', label: 'Помел під еспресо' },
+  { value: 'moka', label: 'Помел під гейзер' },
+  { value: 'filter', label: 'Помел під фільтр' },
+  { value: 'aeropress', label: 'Помел під AeroPress' },
+  { value: 'french-press', label: 'Помел під French Press' },
+  { value: 'turka', label: 'Помел під турку' },
 ];
 
 const cartVolumeOptions = [
@@ -1274,7 +1274,7 @@ const getGrindLabel = (item) => {
     return 'Готовий дріп';
   }
 
-  return cartGrindOptions.find((option) => option.value === item.grindMethod)?.label || 'Оберіть помол';
+  return cartGrindOptions.find((option) => option.value === item.grindMethod)?.label || 'Оберіть помел';
 };
 
 const getGrindOptionsMarkup = (item) => {
@@ -1313,8 +1313,8 @@ const renderCart = () => {
         <div class="cart-item-main">
           <span class="cart-item-title">${item.title}</span>
           <div class="cart-item-grind">
-            <label for="grind-${item.cartLineId}">Помол для цієї позиції</label>
-            <select class="item-grind${!item.grindMethod && item.category !== 'drips' ? ' is-invalid' : ''}" id="grind-${item.cartLineId}" data-line-id="${item.cartLineId}" aria-label="Помол для ${item.title}" ${item.category === 'drips' ? 'disabled' : ''}>
+            <label for="grind-${item.cartLineId}">Помел для цієї позиції</label>
+            <select class="item-grind${!item.grindMethod && item.category !== 'drips' ? ' is-invalid' : ''}" id="grind-${item.cartLineId}" data-line-id="${item.cartLineId}" aria-label="Помел для ${item.title}" ${item.category === 'drips' ? 'disabled' : ''}>
               ${getGrindOptionsMarkup(item)}
             </select>
           </div>
@@ -2339,13 +2339,13 @@ const renderCheckoutSummary = () => {
     <div class="checkout-summary-row"><span>До сплати</span><strong>${pricing.total} грн</strong></div>
     <div class="checkout-summary-row"><span>Доставка</span><strong>${getCheckoutLabel('deliveryMethod', deliveryMethod)}</strong></div>
     <div class="checkout-summary-row"><span>Оплата</span><strong>${getCheckoutLabel('paymentMethod', paymentMethod)}</strong></div>
-    <small>Помол та об\'єм вказуються окремо для кожного товару в кошику. Вартість доставки уточнюється менеджером після підтвердження.</small>
+    <small>Помел та об\'єм вказуються окремо для кожного товару в кошику. Вартість доставки уточнюється менеджером після підтвердження.</small>
     <div class="checkout-summary-items">
       ${items.map((item) => `
         <div class="checkout-summary-item">
           <div class="checkout-summary-item-copy">
             <span class="checkout-summary-item-title">${item.title} x${item.qty}</span>
-            <span class="checkout-summary-item-grind">Помол: ${getGrindLabel(item)}</span>
+            <span class="checkout-summary-item-grind">Помел: ${getGrindLabel(item)}</span>
             <span class="checkout-summary-item-volume">Об\'єм: ${getVolumeLabel(item)}</span>
           </div>
           <strong>${item.price * item.qty} грн</strong>
@@ -2887,7 +2887,7 @@ const validateCartItems = () => {
     invalidSelect.focus();
   }
 
-  setCheckoutStatus('Оберіть спосіб помолу для кожного товару в кошику.', 'error');
+  setCheckoutStatus('Оберіть спосіб помелу для кожного товару в кошику.', 'error');
   return false;
 };
 
@@ -3072,10 +3072,10 @@ if (checkoutForm) {
       renderCheckoutSummary();
       const orderNumberLabel = submission.result?.orderNumber ? ` #${submission.result.orderNumber}` : '';
       const successMessage = submission.channel === 'supabase'
-        ? `Замовлення${orderNumberLabel} прийнято. Ми зв'яжемося з вами найближчим часом для підтвердження деталей і помолу.`
+        ? `Замовлення${orderNumberLabel} прийнято. Ми зв'яжемося з вами найближчим часом для підтвердження деталей і помелу.`
         : submission.channel === 'webhook'
-        ? 'Замовлення відправлено через резервний канал. Ми зв\'яжемося з вами найближчим часом для підтвердження деталей і помолу.'
-        : `Замовлення прийнято. Доставка: ${getCheckoutLabel('deliveryMethod', deliveryMethod)}. Помол по кожній позиції збережено.`;
+        ? 'Замовлення відправлено через резервний канал. Ми зв\'яжемося з вами найближчим часом для підтвердження деталей і помелу.'
+        : `Замовлення прийнято. Доставка: ${getCheckoutLabel('deliveryMethod', deliveryMethod)}. Помел по кожній позиції збережено.`;
       setCheckoutStatus(successMessage, 'success');
       showToast('Замовлення прийнято. Дякуємо!', 'success');
       checkoutForm.reset();
