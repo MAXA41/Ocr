@@ -309,7 +309,7 @@ const mergeCatalogProducts = (localProducts = [], remoteRows = []) => {
 
   (localProducts || []).forEach((product) => {
     if (!product?.id) return;
-    productMap.set(product.id, { ...product });
+    productMap.set(product.id, { ...product, catalogSource: 'local' });
   });
 
   (remoteRows || []).forEach((row) => {
@@ -320,6 +320,7 @@ const mergeCatalogProducts = (localProducts = [], remoteRows = []) => {
     productMap.set(remoteProduct.id, {
       ...localProduct,
       ...remoteProduct,
+      catalogSource: localProduct.id ? 'local' : 'remote',
       volumePrices: localProduct.volumePrices || undefined,
     });
   });
@@ -1010,7 +1011,12 @@ const renderCatalogAdminList = () => {
                         <textarea rows="2" data-catalog-text-field="alt">${escapeHtml(row.alt || '')}</textarea>
                       </label>
                     </div>
-                    <button class="btn light" type="button" data-catalog-save>Зберегти</button>
+                    <div class="catalog-admin-card-actions">
+                      <button class="btn light" type="button" data-catalog-save>Зберегти</button>
+                      ${row.catalogSource === 'remote'
+                        ? '<button class="btn danger" type="button" data-catalog-delete>Видалити позицію</button>'
+                        : '<p class="catalog-admin-delete-note">Локальна позиція: для повного видалення приберіть її з products.json.</p>'}
+                    </div>
                   </div>
                   <p class="form-status" data-catalog-row-status></p>
                 </div>
@@ -1511,6 +1517,56 @@ const saveCatalogRow = async (card) => {
   setCatalogAdminStatus(`Оновлено товар: ${row.name}.`, 'success');
 };
 
+const deleteCatalogRow = async (card) => {
+  if (!supabase || !currentSession?.user || !(card instanceof HTMLElement)) return;
+
+  const productId = String(card.dataset.productId || '').trim();
+  const row = catalogAdminRows.find((item) => item.id === productId);
+  const rowStatus = card.querySelector('[data-catalog-row-status]');
+  const deleteButton = card.querySelector('[data-catalog-delete]');
+
+  if (!productId || !row || row.catalogSource !== 'remote' || !(deleteButton instanceof HTMLButtonElement)) return;
+
+  const confirmed = window.confirm(`Видалити позицію «${row.name}»? Цю дію не можна скасувати.`);
+  if (!confirmed) return;
+
+  deleteButton.disabled = true;
+  if (rowStatus) {
+    rowStatus.textContent = 'Видаляємо позицію...';
+    rowStatus.dataset.tone = 'neutral';
+  }
+
+  const relatedTables = ['product_price_overrides', 'product_text_overrides', 'product_catalog_state'];
+  for (const table of relatedTables) {
+    const { error } = await supabase.from(table).delete().eq('product_id', productId);
+    if (error) {
+      console.error(`Failed to delete ${table} for catalog product`, error);
+      deleteButton.disabled = false;
+      if (rowStatus) {
+        rowStatus.textContent = error.message || 'Не вдалося очистити дані товару перед видаленням.';
+        rowStatus.dataset.tone = 'error';
+      }
+      return;
+    }
+  }
+
+  const { error } = await supabase.from('product_catalog_items').delete().eq('product_id', productId);
+  if (error) {
+    console.error('Failed to delete catalog product', error);
+    deleteButton.disabled = false;
+    if (rowStatus) {
+      rowStatus.textContent = error.message || 'Не вдалося видалити товар.';
+      rowStatus.dataset.tone = 'error';
+    }
+    return;
+  }
+
+  catalogAdminRows = catalogAdminRows.filter((item) => item.id !== productId);
+  renderCatalogAdminList();
+  catalogAdminHasUnsavedChanges = false;
+  setCatalogAdminStatus(`Позицію «${row.name}» видалено.`, 'success');
+};
+
 const setSignedInState = (session) => {
   currentSession = session || null;
   const isSignedIn = Boolean(session?.user);
@@ -1841,12 +1897,21 @@ catalogAdminList?.addEventListener('click', async (event) => {
   }
 
   const saveButton = target.closest('[data-catalog-save]');
-  if (!(saveButton instanceof HTMLButtonElement)) return;
+  if (saveButton instanceof HTMLButtonElement) {
+    const card = saveButton.closest('.catalog-admin-card');
+    if (!(card instanceof HTMLElement)) return;
 
-  const card = saveButton.closest('.catalog-admin-card');
+    await saveCatalogRow(card);
+    return;
+  }
+
+  const deleteButton = target.closest('[data-catalog-delete]');
+  if (!(deleteButton instanceof HTMLButtonElement)) return;
+
+  const card = deleteButton.closest('.catalog-admin-card');
   if (!(card instanceof HTMLElement)) return;
 
-  await saveCatalogRow(card);
+  await deleteCatalogRow(card);
 });
 
 catalogAdminList?.addEventListener('input', (event) => {

@@ -1797,6 +1797,12 @@ body[data-page-category="filter"] .hero .btn.ghost {
   border-color: rgba(15, 15, 13, 0.1);
 }
 
+.btn.danger {
+  background: #9d2e24;
+  color: #fff8f0;
+  border-color: #9d2e24;
+}
+
 .btn.outline {
   border-color: rgba(15, 15, 13, 0.2);
   background: transparent;
@@ -1806,6 +1812,19 @@ body[data-page-category="filter"] .hero .btn.ghost {
 
 .btn:hover {
   transform: translateY(-2px);
+}
+
+.catalog-admin-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.catalog-admin-delete-note {
+  margin: 0;
+  font-size: 12px;
+  color: rgba(15, 15, 13, 0.62);
 }
 
 .hero-list {

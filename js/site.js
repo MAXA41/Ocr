@@ -1518,7 +1518,6 @@ const checkoutLabels = {
     'mono-card': 'Оплата карткою',
     'bank-details': 'Оплата за реквізитами',
     cod: 'Післяплата',
-    'cash-pickup': 'Готівкою при самовивозі',
   },
 };
 

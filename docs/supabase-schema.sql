@@ -862,6 +862,12 @@ for update
 using (public.is_catalog_admin())
 with check (public.is_catalog_admin());
 
+drop policy if exists "product_catalog_state_admin_delete" on public.product_catalog_state;
+create policy "product_catalog_state_admin_delete"
+on public.product_catalog_state
+for delete
+using (public.is_catalog_admin());
+
 drop policy if exists "product_catalog_items_admin_select" on public.product_catalog_items;
 create policy "product_catalog_items_admin_select"
 on public.product_catalog_items
