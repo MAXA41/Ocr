@@ -2711,19 +2711,6 @@ const submitOrder = async (order) => {
   if (payload.paymentMethod === 'mono-card') {
     const monoResult = await submitViaMonoAcquiring(payload);
 
-    if (fallbackWebhookUrl) {
-      submitToWebhook({
-        ...payload,
-        deliveryChannel: 'mono-supabase-webhook',
-        orderId: monoResult.orderId || null,
-        orderNumber: monoResult.orderNumber || null,
-        monoInvoiceId: monoResult.invoiceId || null,
-        monoPaymentUrl: monoResult.paymentUrl || null,
-      }).catch((error) => {
-        console.error('Mono backup webhook notification failed', error);
-      });
-    }
-
     return { channel: 'mono', result: monoResult };
   }
 
