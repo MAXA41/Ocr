@@ -11,7 +11,9 @@ supabase secrets set \
   SUPABASE_URL=https://YOUR_PROJECT.supabase.co \
   SUPABASE_SERVICE_ROLE_KEY=YOUR_SERVICE_ROLE_KEY \
   MONO_MERCHANT_TOKEN=YOUR_MONO_TOKEN \
-  PUBLIC_SITE_URL=https://oroasters.com.ua
+  PUBLIC_SITE_URL=https://oroasters.com.ua \
+  N8N_PAID_ORDER_WEBHOOK_URL=https://n8n.odesacoffeeroasters.info/webhook/ocr-paid-order \
+  N8N_PAID_ORDER_WEBHOOK_SECRET=separate-random-secret
 ```
 
 Нужны именно эти значения:
@@ -20,6 +22,8 @@ supabase secrets set \
 2. `SUPABASE_SERVICE_ROLE_KEY` для записи в `orders`, `order_items` и обновления payment status
 3. `MONO_MERCHANT_TOKEN` для запроса invoice в Mono
 4. `PUBLIC_SITE_URL` для redirect после оплаты
+5. `N8N_PAID_ORDER_WEBHOOK_URL` для защищённого webhook локального n8n после успешной оплаты
+6. `N8N_PAID_ORDER_WEBHOOK_SECRET` должен совпадать с одноимённой user environment variable локального n8n
 
 ### 2. Применить SQL-схему
 
@@ -79,6 +83,9 @@ npm run supabase:functions:deploy:mono-webhook
 2. ищет заказ по `mono_invoice_id`, `payment_reference` или `order_number`
 3. обновляет `payment_status`
 4. при успешной оплате переводит `orders.status` в `paid`
+5. при первом переходе заказа в `paid` вызывает локальный n8n для Telegram-уведомления без создания дубликата заказа
+
+Для этого импортируй и активируй `.local-n8n/paid-order-notification-personalized.json` в локальном n8n. Его webhook path: `ocr-paid-order`.
 
 ### 6. Что должно быть на фронтенде
 

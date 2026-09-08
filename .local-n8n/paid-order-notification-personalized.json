@@ -1,0 +1,87 @@
+[
+{
+  "name": "OCR Orders: Paid Order Telegram Notification",
+  "nodes": [
+    {
+      "parameters": { "httpMethod": "POST", "path": "ocr-paid-order", "responseMode": "responseNode", "options": {} },
+      "id": "1",
+      "name": "Paid Order Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 320],
+      "webhookId": "ocr-paid-order"
+    },
+    {
+      "parameters": {
+        "jsCode": "const incoming = $json.body && typeof $json.body === 'object' ? $json.body : $json;\nconst order = incoming.order && typeof incoming.order === 'object' ? incoming.order : {};\nconst expectedSecret = String($env.N8N_PAID_ORDER_WEBHOOK_SECRET || '');\nconst secretValid = Boolean(expectedSecret) && incoming.sharedSecret === expectedSecret;\n\nconst text = [\n  'Нове замовлення з сайту Odesa Coffee Roasters',\n  '',\n  `Клієнт: ${order.customer_name || '-'}`,\n  `Телефон: ${order.customer_phone || '-'}`,\n  `Місто: ${order.city || '-'}`,\n  `Доставка: ${order.delivery_method_label || '-'}${order.delivery_details ? ` (${order.delivery_details})` : ''}`,\n  `Оплата: ${order.payment_method_label || 'Mono'} (оплачено)`,\n  '',\n  'Товари:',\n  order.items_summary || '-',\n  '',\n  `Разом: ${Number(order.total_amount || 0)} грн`,\n  `Номер замовлення: #${order.order_number || '-'}`,\n  order.comment ? `Коментар: ${order.comment}` : '',\n  `Дата: ${new Date().toISOString()}`\n].filter(Boolean).join('\\n');\n\nreturn [{ json: { secretValid, text } }];"
+      },
+      "id": "2",
+      "name": "Validate And Format Paid Order",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [500, 320]
+    },
+    {
+      "parameters": { "jsCode": "return $json.secretValid ? [{ json: $json }] : [];" },
+      "id": "3",
+      "name": "Pass Valid Request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [760, 320]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{'https://api.telegram.org/bot' + $env.TELEGRAM_BOT_TOKEN + '/sendMessage'}}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ chat_id: $env.TELEGRAM_CHAT_ID, text: $json.text }) }}",
+        "options": {}
+      },
+      "id": "4",
+      "name": "Notify Telegram",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1020, 240]
+    },
+    {
+      "parameters": { "respondWith": "json", "responseBody": "={\n  \"ok\": true\n}", "options": {} },
+      "id": "5",
+      "name": "Respond Success",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.3,
+      "position": [1280, 240]
+    },
+    {
+      "parameters": { "respondWith": "json", "responseCode": 401, "responseBody": "={\n  \"ok\": false,\n  \"message\": \"Unauthorized\"\n}", "options": {} },
+      "id": "6",
+      "name": "Respond Unauthorized",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.3,
+      "position": [1020, 420]
+    },
+    {
+      "parameters": { "jsCode": "return $json.secretValid ? [] : [{ json: $json }];" },
+      "id": "7",
+      "name": "Pass Unauthorized Request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [760, 420]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Paid Order Webhook": { "main": [[{ "node": "Validate And Format Paid Order", "type": "main", "index": 0 }]] },
+    "Validate And Format Paid Order": { "main": [[{ "node": "Pass Valid Request", "type": "main", "index": 0 }, { "node": "Pass Unauthorized Request", "type": "main", "index": 0 }]] },
+    "Pass Valid Request": { "main": [[{ "node": "Notify Telegram", "type": "main", "index": 0 }]] },
+    "Pass Unauthorized Request": { "main": [[{ "node": "Respond Unauthorized", "type": "main", "index": 0 }]] },
+    "Notify Telegram": { "main": [[{ "node": "Respond Success", "type": "main", "index": 0 }]] }
+  },
+  "active": true,
+  "settings": { "executionOrder": "v1" },
+  "versionId": "local-paid-order-notification-workflow",
+  "meta": { "templateCredsSetupCompleted": false },
+  "id": "local-paid-order-notification-workflow",
+  "tags": []
+}
+]
