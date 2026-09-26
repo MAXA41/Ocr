@@ -1176,8 +1176,10 @@ if (bestsellerGrid || categoryGrid || productDetailRoot) {
 const cartKey = 'ocr_cart_items';
 const checkoutDraftKey = 'ocr_checkout_draft';
 const latestOrderKey = 'latest_order';
-const baristaPromoCode = 'barista';
-const baristaPromoDiscountRate = 0.1;
+const promoDiscountRates = {
+  barista: 0.1,
+  'o.10': 0.1,
+};
 const cartButton = document.querySelector('.cart-button');
 const cartCount = document.querySelector('#cart-count');
 const cartModal = document.querySelector('#cart-modal');
@@ -1246,8 +1248,9 @@ const normalizePromoCode = (value = '') => String(value || '').trim().toLowerCas
 const calculateCartPricing = (items, promoCode = '') => {
   const subtotal = items.reduce((sum, item) => sum + item.price * item.qty, 0);
   const normalizedPromoCode = normalizePromoCode(promoCode);
-  const isPromoApplied = subtotal > 0 && normalizedPromoCode === baristaPromoCode;
-  const discountAmount = isPromoApplied ? Math.round(subtotal * baristaPromoDiscountRate) : 0;
+  const promoDiscountRate = promoDiscountRates[normalizedPromoCode] || 0;
+  const isPromoApplied = subtotal > 0 && promoDiscountRate > 0;
+  const discountAmount = isPromoApplied ? Math.round(subtotal * promoDiscountRate) : 0;
   const total = Math.max(subtotal - discountAmount, 0);
 
   return {

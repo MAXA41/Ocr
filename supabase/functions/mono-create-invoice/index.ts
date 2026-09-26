@@ -20,6 +20,10 @@ type CartItem = {
 };
 
 const monoToken = Deno.env.get('MONO_MERCHANT_TOKEN')?.trim() || '';
+const promoDiscountRates: Record<string, number> = {
+  barista: 0.1,
+  'o.10': 0.1,
+};
 
 const getInvoiceAmount = (totalAmount: number) => Math.max(0, Math.round(totalAmount * 100));
 
@@ -53,9 +57,8 @@ Deno.serve(async (request) => {
   const paymentMethodLabel = String(payload.paymentMethodLabel || '').trim() || 'Оплата карткою Mono';
   const comment = String(payload.comment || '').trim() || null;
   const clientRequestId = String(payload.checkoutRequestId || payload.clientRequestId || payload.requestId || '').trim() || null;
-  const subtotal = Number(payload.subtotal || 0);
-  const discountAmount = Math.max(0, Number(payload.discountAmount || 0));
-  const total = Math.max(0, Number(payload.total || Math.max(subtotal - discountAmount, 0)));
+  const promoCode = String(payload.promoCode || '').trim();
+  const promoDiscountRate = promoDiscountRates[promoCode.toLowerCase()] || 0;
 
   if (paymentMethod !== 'mono-card') {
     return jsonResponse({ error: 'Mono checkout only supports mono-card orders.' }, { status: 400 });
@@ -111,8 +114,10 @@ Deno.serve(async (request) => {
     });
 
     const computedSubtotal = normalizedItems.reduce((sum, item) => sum + item.unit_price * item.quantity, 0);
-    const safeDiscount = Math.min(discountAmount, computedSubtotal);
-    const safeTotal = Math.max(0, total > 0 ? total : computedSubtotal - safeDiscount);
+    const safeDiscount = promoDiscountRate > 0
+      ? Math.round(computedSubtotal * promoDiscountRate)
+      : 0;
+    const safeTotal = Math.max(0, computedSubtotal - safeDiscount);
     const orderItemsSummary = normalizedItems
       .map((item) => `${item.product_title} x${item.quantity}`)
       .join(', ');
@@ -185,7 +190,7 @@ Deno.serve(async (request) => {
           comment,
           currency: 'UAH',
           subtotal_amount: computedSubtotal,
-          discount_percent: 0,
+          discount_percent: promoDiscountRate * 100,
           discount_amount: safeDiscount,
           total_amount: safeTotal,
           accumulation_amount: 0,
