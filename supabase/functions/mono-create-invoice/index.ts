@@ -15,6 +15,8 @@ type CartItem = {
   quantity?: number;
   price?: number;
   category?: string;
+  volumeOption?: string | null;
+  volumeLabel?: string | null;
   grindMethod?: string | null;
   grindLabel?: string | null;
 };
@@ -26,6 +28,37 @@ const promoDiscountRates: Record<string, number> = {
 };
 
 const getInvoiceAmount = (totalAmount: number) => Math.max(0, Math.round(totalAmount * 100));
+
+const getVolumeLabel = (volumeOption: string) => {
+  if (volumeOption === '250g') return '250 г';
+  if (volumeOption === '1kg') return '1 кг';
+  return '';
+};
+
+const getCatalogUnitPrice = (catalogItem: Record<string, unknown>, volumeOption: string) => {
+  const rawData = catalogItem.raw_data && typeof catalogItem.raw_data === 'object'
+    ? catalogItem.raw_data as Record<string, unknown>
+    : {};
+  const volumePrices = rawData.volumePrices && typeof rawData.volumePrices === 'object'
+    ? rawData.volumePrices as Record<string, unknown>
+    : {};
+  const overrideColumn = volumeOption === '250g'
+    ? 'override_price_250g'
+    : volumeOption === '1kg'
+      ? 'override_price_1kg'
+      : '';
+  const overridePrice = overrideColumn ? Number(catalogItem[overrideColumn]) : Number.NaN;
+  const configuredPrice = Number(volumePrices[volumeOption]);
+
+  if (Number.isFinite(overridePrice) && overridePrice >= 0) return overridePrice;
+  if (Number.isFinite(configuredPrice) && configuredPrice >= 0) return configuredPrice;
+
+  const basePrice = Number(catalogItem.price || 0);
+  const weight = String(catalogItem.weight || '').toLowerCase().replace(/\s+/g, '');
+  if (volumeOption === '250g' && (weight.includes('1кг') || weight.includes('1kg'))) return Math.round(basePrice * 0.25);
+  if (volumeOption === '1kg' && (weight.includes('250г') || weight.includes('250g'))) return Math.round(basePrice * 4);
+  return basePrice;
+};
 
 Deno.serve(async (request) => {
   if (request.method === 'OPTIONS') {
@@ -74,7 +107,7 @@ Deno.serve(async (request) => {
 
     const { data: catalogRows, error: catalogError } = await admin
       .from('product_catalog_public')
-      .select('product_id,name,category,price,is_available,availability_status')
+      .select('product_id,name,category,price,weight,override_price_250g,override_price_1kg,is_available,availability_status')
       .in('product_id', productIds);
 
     if (catalogError) {
@@ -84,6 +117,20 @@ Deno.serve(async (request) => {
     const catalogMap = new Map<string, any>();
     for (const row of catalogRows ?? []) {
       catalogMap.set(String(row.product_id), row);
+    }
+
+    const { data: catalogItemRows, error: catalogItemsError } = await admin
+      .from('product_catalog_items')
+      .select('product_id,raw_data')
+      .in('product_id', productIds);
+
+    if (catalogItemsError) {
+      throw new Error(catalogItemsError.message);
+    }
+
+    for (const row of catalogItemRows ?? []) {
+      const catalogItem = catalogMap.get(String(row.product_id));
+      if (catalogItem) catalogItem.raw_data = row.raw_data;
     }
 
     const normalizedItems = cart.map((item) => {
@@ -99,11 +146,14 @@ Deno.serve(async (request) => {
       }
 
       const quantity = Math.max(1, Math.trunc(Number(item.quantity || 1)));
-      const unitPrice = Number(catalogItem.price || 0);
+      const volumeOption = String(item.volumeOption || '').trim();
+      const unitPrice = getCatalogUnitPrice(catalogItem, volumeOption);
+      const volumeLabel = getVolumeLabel(volumeOption);
+      const productTitle = String(item.name || catalogItem.name || productId);
 
       return {
         product_id: productId,
-        product_title: String(item.name || catalogItem.name || productId),
+        product_title: volumeLabel ? `${productTitle} (${volumeLabel})` : productTitle,
         category: String(item.category || catalogItem.category || ''),
         quantity,
         unit_price: unitPrice,
