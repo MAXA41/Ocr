@@ -26,7 +26,7 @@ const promoDiscountRates: Record<string, number> = {
   barista: 0.1,
   'o.10': 0.1,
 };
-const isPromoExcludedProduct = (productTitle: string) => /30\s*(drip|дріп)/i.test(productTitle);
+const isPromoExcludedProduct = (productTitle: string) => /(?:30\s*(drip|дріп)|svarog\s*drip\s*box)/i.test(productTitle);
 
 const getInvoiceAmount = (totalAmount: number) => Math.max(0, Math.round(totalAmount * 100));
 

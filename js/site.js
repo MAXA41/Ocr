@@ -1190,7 +1190,7 @@ const promoDiscountRates = {
   barista: 0.1,
   'o.10': 0.1,
 };
-const isPromoExcludedProduct = (item) => /30\s*(drip|дріп)/i.test(String(item?.title || item?.name || ''));
+const isPromoExcludedProduct = (item) => /(?:30\s*(drip|дріп)|svarog\s*drip\s*box)/i.test(String(item?.title || item?.name || ''));
 const cartButton = document.querySelector('.cart-button');
 const cartCount = document.querySelector('#cart-count');
 const cartModal = document.querySelector('#cart-modal');
