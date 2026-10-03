@@ -1180,6 +1180,7 @@ const promoDiscountRates = {
   barista: 0.1,
   'o.10': 0.1,
 };
+const isPromoExcludedProduct = (item) => /30\s*(drip|дріп)/i.test(String(item?.title || item?.name || ''));
 const cartButton = document.querySelector('.cart-button');
 const cartCount = document.querySelector('#cart-count');
 const cartModal = document.querySelector('#cart-modal');
@@ -1240,13 +1241,16 @@ const normalizeCartItem = (item) => ({
   ...item,
   cartLineId: item.cartLineId || createCartLineId(),
   grindMethod: item.category === 'drips' ? 'drip-ready' : item.grindMethod || '',
-  volumeOption: item.category === 'drips' ? 'fixed-volume' : item.volumeOption || inferVolumeOptionFromItem(item),
+  volumeOption: item.category === 'drips' || isNonCoffeeProduct(item) ? 'fixed-volume' : item.volumeOption || inferVolumeOptionFromItem(item),
 });
 
 const normalizePromoCode = (value = '') => String(value || '').trim().toLowerCase();
 
 const calculateCartPricing = (items, promoCode = '') => {
   const subtotal = items.reduce((sum, item) => sum + item.price * item.qty, 0);
+  const promoEligibleSubtotal = items
+    .filter((item) => !isPromoExcludedProduct(item))
+    .reduce((sum, item) => sum + item.price * item.qty, 0);
   const normalizedPromoCode = normalizePromoCode(promoCode);
   const promoDiscountRate = promoDiscountRates[normalizedPromoCode] || 0;
   const isPromoApplied = subtotal > 0 && promoDiscountRate > 0;

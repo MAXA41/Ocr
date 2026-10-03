@@ -26,6 +26,7 @@ const promoDiscountRates: Record<string, number> = {
   barista: 0.1,
   'o.10': 0.1,
 };
+const isPromoExcludedProduct = (productTitle: string) => /30\s*(drip|дріп)/i.test(productTitle);
 
 const getInvoiceAmount = (totalAmount: number) => Math.max(0, Math.round(totalAmount * 100));
 
@@ -183,8 +184,11 @@ Deno.serve(async (request) => {
     });
 
     const computedSubtotal = normalizedItems.reduce((sum, item) => sum + item.unit_price * item.quantity, 0);
+    const promoEligibleSubtotal = normalizedItems
+      .filter((item) => !isPromoExcludedProduct(item.product_title))
+      .reduce((sum, item) => sum + item.unit_price * item.quantity, 0);
     const safeDiscount = promoDiscountRate > 0
-      ? Math.round(computedSubtotal * promoDiscountRate)
+      ? Math.round(promoEligibleSubtotal * promoDiscountRate)
       : 0;
     const safeTotal = Math.max(0, computedSubtotal - safeDiscount);
     const orderItemsSummary = normalizedItems
