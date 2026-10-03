@@ -1216,7 +1216,7 @@ const createCartLineId = () => {
 const inferVolumeOptionFromItem = (item) => {
   const source = `${item.weight || ''} ${item.title || ''}`;
 
-  if (item.category === 'drips') {
+  if (item.category === 'drips' || isNonCoffeeProduct(item)) {
     return 'fixed-volume';
   }
 
