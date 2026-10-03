@@ -754,10 +754,17 @@ const fetchCatalogProducts = async () => {
     return localProducts;
   }
 
-  const { data, error } = await supabase
-    .from('product_catalog_public')
-    .select('product_id, name, description, image, alt, category, base_price, weight, country, region, origin, processing, farm, variety, altitude, score, featured, gift_image, gift_alt, is_available, available_quantity, availability_status, updated_at')
-    .order('updated_at', { ascending: false });
+  let data;
+  let error;
+  try {
+    ({ data, error } = await supabase
+      .from('product_catalog_public')
+      .select('product_id, name, description, image, alt, category, base_price, weight, country, region, origin, processing, farm, variety, altitude, score, featured, gift_image, gift_alt, is_available, available_quantity, availability_status, updated_at')
+      .order('updated_at', { ascending: false }));
+  } catch (requestError) {
+    console.error('Failed to load product catalog items', requestError);
+    return localProducts;
+  }
 
   if (error) {
     const isMissingRelation = error.code === 'PGRST205' || String(error.message || '').includes('product_catalog_public');
@@ -1123,17 +1130,20 @@ if (bestsellerGrid || categoryGrid || productDetailRoot) {
         (products || []).map((product) => [product.id, String(product.weight || '').trim()])
       );
 
-      const [remoteTextOverrides, priceOverrideMap] = await Promise.all([
+      const [textOverridesResult, priceOverridesResult, stateResult] = await Promise.allSettled([
         fetchActiveProductTextOverrides(),
         fetchActivePriceOverrides(),
+        fetchCatalogStateMap(products.map((product) => product.id)),
       ]);
+      const remoteTextOverrides = textOverridesResult.status === 'fulfilled' ? textOverridesResult.value : new Map();
+      const priceOverrideMap = priceOverridesResult.status === 'fulfilled' ? priceOverridesResult.value : new Map();
+      const stateMap = stateResult.status === 'fulfilled' ? stateResult.value : new Map();
 
       const localTextOverrides = loadProductTextOverrides();
       const remotelyAdjustedProducts = applyProductTextOverrides(products, remoteTextOverrides);
       const textAdjustedProducts = applyProductTextOverrides(remotelyAdjustedProducts, localTextOverrides);
       const weightAdjustedProducts = restoreMissingWeights(textAdjustedProducts, fallbackWeightMap);
       const pricedProducts = applyPriceOverrides(weightAdjustedProducts, priceOverrideMap);
-      const stateMap = await fetchCatalogStateMap(products.map((product) => product.id));
       const enrichedProducts = mergeProductsWithCatalogState(pricedProducts, stateMap);
       const visibleProducts = enrichedProducts.filter((product) => isProductVisibleInCatalog(product));
       syncCatalogProducts(enrichedProducts);
