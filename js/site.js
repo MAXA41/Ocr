@@ -1132,9 +1132,7 @@ const attachBuyHandlers = () => {
   });
 };
 
-if (bestsellerGrid || categoryGrid || productDetailRoot) {
-  fetchCatalogProducts()
-    .then(async (products) => {
+const renderCatalogProducts = async (products) => {
       const fallbackWeightMap = new Map(
         (products || []).map((product) => [product.id, String(product.weight || '').trim()])
       );
@@ -1183,10 +1181,17 @@ if (bestsellerGrid || categoryGrid || productDetailRoot) {
           renderProductNotFound();
         }
       }
-    })
-    .catch((err) => {
-      console.error('Failed to load products', err);
-    });
+};
+
+if (bestsellerGrid || categoryGrid || productDetailRoot) {
+  fetch('products.json')
+    .then((response) => response.ok ? response.json() : [])
+    .then((products) => renderCatalogProducts(products))
+    .catch((err) => console.error('Failed to render local product catalog', err));
+
+  fetchCatalogProducts()
+    .then((products) => renderCatalogProducts(products))
+    .catch((err) => console.error('Failed to refresh product catalog', err));
 } else {
   attachBuyHandlers();
 }
