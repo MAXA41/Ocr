@@ -743,17 +743,17 @@ const mergeCatalogProducts = (localProducts = [], remoteRows = []) => {
   return [...productMap.values()];
 };
 
+const resolveCatalogRequest = (request, fallback) => Promise.race([
+  request,
+  new Promise((resolve) => window.setTimeout(() => resolve(fallback), catalogRequestTimeoutMs)),
+]);
+
 const fetchCatalogProducts = async () => {
   const localProducts = await fetch('products.json').then((response) => response.json()).catch(() => []);
   baseProductWeightsById = new Map(
     (localProducts || [])
       .filter((product) => product?.id)
       .map((product) => [product.id, String(product.weight || '').trim()])
-const resolveCatalogRequest = (request, fallback) => Promise.race([
-  request,
-  new Promise((resolve) => window.setTimeout(() => resolve(fallback), catalogRequestTimeoutMs)),
-]);
-
   );
 
   if (!isSupabaseConfigured || !supabase) {
