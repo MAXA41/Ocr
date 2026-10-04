@@ -112,6 +112,7 @@ const productDetailRoot = document.querySelector('#product-detail');
 const relatedGrid = document.querySelector('#related-grid');
 let catalogProductsById = new Map();
 let baseProductWeightsById = new Map();
+const catalogRequestTimeoutMs = 2000;
 const categoryLabels = {
   all: 'Всі',
   espresso: 'Еспресо',
@@ -748,6 +749,11 @@ const fetchCatalogProducts = async () => {
     (localProducts || [])
       .filter((product) => product?.id)
       .map((product) => [product.id, String(product.weight || '').trim()])
+const resolveCatalogRequest = (request, fallback) => Promise.race([
+  request,
+  new Promise((resolve) => window.setTimeout(() => resolve(fallback), catalogRequestTimeoutMs)),
+]);
+
   );
 
   if (!isSupabaseConfigured || !supabase) {
@@ -757,10 +763,13 @@ const fetchCatalogProducts = async () => {
   let data;
   let error;
   try {
-    ({ data, error } = await supabase
-      .from('product_catalog_public')
-      .select('product_id, name, description, image, alt, category, base_price, weight, country, region, origin, processing, farm, variety, altitude, score, featured, gift_image, gift_alt, is_available, available_quantity, availability_status, updated_at')
-      .order('updated_at', { ascending: false }));
+    ({ data, error } = await resolveCatalogRequest(
+      supabase
+        .from('product_catalog_public')
+        .select('product_id, name, description, image, alt, category, base_price, weight, country, region, origin, processing, farm, variety, altitude, score, featured, gift_image, gift_alt, is_available, available_quantity, availability_status, updated_at')
+        .order('updated_at', { ascending: false }),
+      { data: null, error: { code: 'CATALOG_TIMEOUT', message: 'Catalog request timed out' } }
+    ));
   } catch (requestError) {
     console.error('Failed to load product catalog items', requestError);
     return localProducts;
@@ -1131,9 +1140,9 @@ if (bestsellerGrid || categoryGrid || productDetailRoot) {
       );
 
       const [textOverridesResult, priceOverridesResult, stateResult] = await Promise.allSettled([
-        fetchActiveProductTextOverrides(),
-        fetchActivePriceOverrides(),
-        fetchCatalogStateMap(products.map((product) => product.id)),
+        resolveCatalogRequest(fetchActiveProductTextOverrides(), new Map()),
+        resolveCatalogRequest(fetchActivePriceOverrides(), new Map()),
+        resolveCatalogRequest(fetchCatalogStateMap(products.map((product) => product.id)), new Map()),
       ]);
       const remoteTextOverrides = textOverridesResult.status === 'fulfilled' ? textOverridesResult.value : new Map();
       const priceOverrideMap = priceOverridesResult.status === 'fulfilled' ? priceOverridesResult.value : new Map();
