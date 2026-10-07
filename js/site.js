@@ -1265,7 +1265,7 @@ const normalizeCartItem = (item) => ({
   ...item,
   cartLineId: item.cartLineId || createCartLineId(),
   grindMethod: item.category === 'drips' ? 'drip-ready' : item.grindMethod || '',
-  volumeOption: item.category === 'drips' || isNonCoffeeProduct(item) ? 'fixed-volume' : item.volumeOption || inferVolumeOptionFromItem(item),
+  volumeOption: item.category === 'drips' ? 'fixed-volume' : item.volumeOption || inferVolumeOptionFromItem(item),
 });
 
 const normalizePromoCode = (value = '') => String(value || '').trim().toLowerCase();
