@@ -119,7 +119,12 @@ const categoryLabels = {
   filter: 'Фільтр',
   decaf: 'Декаф',
   drips: 'Дріпи',
+  accessories: 'Аксесуари',
+  merch: 'Мерч',
 };
+
+const nonCoffeeCategories = new Set(['accessories', 'merch']);
+const isNonCoffeeProduct = (product) => nonCoffeeCategories.has(product.category);
 
 const productTextOverrideStorageKey = 'ocr_product_text_overrides_v1';
 const editableProductTextFields = [
@@ -191,6 +196,22 @@ const getVolumeSelectionConfig = (product) => {
   const basePrice = Number(product.price || 0);
   const explicit250 = Number(product?.volumePrices?.['250g']);
   const explicit1kg = Number(product?.volumePrices?.['1kg']);
+  const customVariants = Array.isArray(product?.customVariants) ? product.customVariants : [];
+
+  const customOptions = customVariants.map((variant) => {
+    const labels = {
+      'merch': 'За штуку (мерч)',
+      'piece': 'За штуку',
+    };
+    const label = labels[variant.unit] || variant.unit;
+    return {
+      value: `custom-${variant.unit}`,
+      label,
+      weightLabel: label,
+      price: variant.price,
+      isSelectable: true,
+    };
+  });
 
   if (Number.isFinite(explicit250) && explicit250 > 0 && Number.isFinite(explicit1kg) && explicit1kg > 0) {
     if (isOneKgWeight(resolvedWeight)) {
@@ -209,6 +230,7 @@ const getVolumeSelectionConfig = (product) => {
           price: explicit250,
           isSelectable: true,
         },
+        ...customOptions,
       ];
     }
 
@@ -227,30 +249,41 @@ const getVolumeSelectionConfig = (product) => {
         price: explicit1kg,
         isSelectable: true,
       },
+      ...customOptions,
     ];
   }
 
   if (Number.isFinite(explicit250) && explicit250 > 0) {
-    return [{
-      value: '250g',
-      label: '0.250 кг',
-      weightLabel: '250 г',
-      price: explicit250,
-      isSelectable: false,
-    }];
+    return [
+      {
+        value: '250g',
+        label: '0.250 кг',
+        weightLabel: '250 г',
+        price: explicit250,
+        isSelectable: false,
+      },
+      ...customOptions,
+    ];
   }
 
   if (Number.isFinite(explicit1kg) && explicit1kg > 0) {
-    return [{
-      value: '1kg',
-      label: '1 кг',
-      weightLabel: '1 кг',
-      price: explicit1kg,
-      isSelectable: false,
-    }];
+    return [
+      {
+        value: '1kg',
+        label: '1 кг',
+        weightLabel: '1 кг',
+        price: explicit1kg,
+        isSelectable: false,
+      },
+      ...customOptions,
+    ];
   }
 
-  if (product.category === 'drips') {
+  if (customOptions.length > 0) {
+    return customOptions;
+  }
+
+  if (product.category === 'drips' || isNonCoffeeProduct(product)) {
     return [{
       value: 'fixed-volume',
       label: resolvedWeight || 'Фіксований об\'єм',
@@ -398,15 +431,16 @@ const pruneDisabledProductsInContainer = async (container) => {
 
 const renderEmptyCategory = () => {
   if (!categoryGrid) return;
+  const categoryLabel = categoryLabels[pageCategory] || 'Ця категорія';
   categoryGrid.innerHTML = `
     <article class="coffee-card empty-state">
-      <h3>Декаф незабаром повернеться в меню</h3>
-      <p>Сторінка вже готова під окремі позиції без кофеїну. Щойно з'явиться новий декаф-лот, він автоматично потрапить у цей розділ.</p>
+      <h3>${categoryLabel} незабаром з'являться в каталозі</h3>
+      <p>Сторінка вже готова. Щойно нові позиції будуть додані до каталогу, вони автоматично з'являться в цьому розділі.</p>
       <div class="card-meta">
         <span>оновлення каталогу</span>
         <span>окремий напрямок</span>
       </div>
-      <a class="btn outline" href="index.html#contact">Запитати про декаф</a>
+      <a class="btn outline" href="index.html#contact">Запитати про наявність</a>
     </article>`;
 };
 
@@ -485,7 +519,7 @@ const fetchActivePriceOverrides = async () => {
 
   const { data, error } = await supabase
     .from('product_price_overrides')
-    .select('product_id, override_price, override_price_250g, override_price_1kg, currency, is_active, updated_at')
+    .select('product_id, override_price, override_price_250g, override_price_1kg, custom_variants, color_variants, currency, is_active, updated_at')
     .eq('is_active', true);
 
   if (error) {
@@ -515,11 +549,39 @@ const applyPriceOverrides = (products, priceOverrideMap) => {
     const overridePrice250 = Number(override.override_price_250g);
     const overridePrice1kg = Number(override.override_price_1kg);
 
+    let customVariants = [];
+    if (override.custom_variants) {
+      try {
+        const parsed = typeof override.custom_variants === 'string' 
+          ? JSON.parse(override.custom_variants)
+          : override.custom_variants;
+        if (Array.isArray(parsed)) {
+          customVariants = parsed;
+        }
+      } catch (error) {
+        console.warn(`Failed to parse custom_variants for product ${product.id}`, error);
+      }
+    }
+
+    let colorVariants = [];
+    if (override.color_variants) {
+      try {
+        const parsed = typeof override.color_variants === 'string'
+          ? JSON.parse(override.color_variants)
+          : override.color_variants;
+        if (Array.isArray(parsed)) {
+          colorVariants = parsed;
+        }
+      } catch (error) {
+        console.warn(`Failed to parse color_variants for product ${product.id}`, error);
+      }
+    }
+
     const hasVolumeOverride250 = Number.isFinite(overridePrice250) && overridePrice250 >= 0;
     const hasVolumeOverride1kg = Number.isFinite(overridePrice1kg) && overridePrice1kg >= 0;
     const hasLegacyOverride = Number.isFinite(overridePrice) && overridePrice >= 0;
 
-    if (!hasVolumeOverride250 && !hasVolumeOverride1kg && !hasLegacyOverride) {
+    if (!hasVolumeOverride250 && !hasVolumeOverride1kg && !hasLegacyOverride && customVariants.length === 0 && colorVariants.length === 0) {
       return product;
     }
 
@@ -548,6 +610,8 @@ const applyPriceOverrides = (products, priceOverrideMap) => {
     const pricedProduct = {
       ...product,
       volumePrices: nextVolumePrices,
+      customVariants: customVariants.length > 0 ? customVariants : undefined,
+      colorVariants: colorVariants.length > 0 ? colorVariants : undefined,
     };
     const defaultVolumeOption = getVolumeSelectionConfig(pricedProduct)[0] || { price: product.price };
     const resolvedPrice = Number(defaultVolumeOption.price || product.price || 0);
@@ -1277,8 +1341,8 @@ const calculateCartPricing = (items, promoCode = '') => {
     .reduce((sum, item) => sum + item.price * item.qty, 0);
   const normalizedPromoCode = normalizePromoCode(promoCode);
   const promoDiscountRate = promoDiscountRates[normalizedPromoCode] || 0;
-  const isPromoApplied = subtotal > 0 && promoDiscountRate > 0;
-  const discountAmount = isPromoApplied ? Math.round(subtotal * promoDiscountRate) : 0;
+  const isPromoApplied = promoEligibleSubtotal > 0 && promoDiscountRate > 0;
+  const discountAmount = isPromoApplied ? Math.round(promoEligibleSubtotal * promoDiscountRate) : 0;
   const total = Math.max(subtotal - discountAmount, 0);
 
   return {
@@ -1305,12 +1369,16 @@ const getGrindLabel = (item) => {
     return 'Готовий дріп';
   }
 
+  if (isNonCoffeeProduct(item)) return 'Не потрібен';
+
   return cartGrindOptions.find((option) => option.value === item.grindMethod)?.label || 'Оберіть помел';
 };
 
 const getGrindOptionsMarkup = (item) => {
   const options = item.category === 'drips'
     ? [{ value: 'drip-ready', label: 'Готовий дріп' }]
+    : isNonCoffeeProduct(item)
+      ? [{ value: '', label: 'Не потрібен' }]
     : cartGrindOptions;
 
   return options
@@ -1319,7 +1387,7 @@ const getGrindOptionsMarkup = (item) => {
 };
 
 const getVolumeLabel = (item) => {
-  if (item.category === 'drips') {
+  if (item.category === 'drips' || isNonCoffeeProduct(item)) {
     return 'Фіксований об\'єм';
   }
 
@@ -1345,7 +1413,7 @@ const renderCart = () => {
           <span class="cart-item-title">${item.title}</span>
           <div class="cart-item-grind">
             <label for="grind-${item.cartLineId}">Помел для цієї позиції</label>
-            <select class="item-grind${!item.grindMethod && item.category !== 'drips' ? ' is-invalid' : ''}" id="grind-${item.cartLineId}" data-line-id="${item.cartLineId}" aria-label="Помел для ${item.title}" ${item.category === 'drips' ? 'disabled' : ''}>
+            <select class="item-grind${!item.grindMethod && item.category !== 'drips' && !isNonCoffeeProduct(item) ? ' is-invalid' : ''}" id="grind-${item.cartLineId}" data-line-id="${item.cartLineId}" aria-label="Помел для ${item.title}" ${item.category === 'drips' || isNonCoffeeProduct(item) ? 'disabled' : ''}>
               ${getGrindOptionsMarkup(item)}
             </select>
           </div>
@@ -1541,6 +1609,7 @@ const checkoutLabels = {
     '': 'Не обрано',
     'nova-branch': 'Нова Пошта: відділення',
     'nova-locker': 'Нова Пошта: поштомат',
+    'ukrposhta': 'Укрпошта: відділення Київ',
     courier: 'Адресна доставка',
     pickup: 'Самовивіз з кав\'ярні партнера',
   },
@@ -2236,6 +2305,15 @@ const getDeliveryFieldConfig = (deliveryMethod) => {
     };
   }
 
+  if (deliveryMethod === 'ukrposhta') {
+    return {
+      cityLabel: 'Місто',
+      detailsLabel: 'Відділення Укрпошти',
+      detailsPlaceholder: 'Київ, відділення 02223',
+      cityRequired: false,
+    };
+  }
+
   return {
     cityLabel: 'Місто',
     detailsLabel: 'Відділення / адреса',
@@ -2293,6 +2371,24 @@ const syncDeliveryFields = () => {
     deliveryDetails.hidden = true;
     deliveryDetails.disabled = true;
     deliveryDetails.value = pickupSelect.value;
+  } else if (deliveryMethod === 'ukrposhta') {
+    lastNovaPoshtaBaseLookupKey = '';
+    cityInput.value = 'Київ';
+    cityInput.disabled = true;
+    cityInput.placeholder = 'Київ';
+    cityHint.textContent = 'Доставка Укрпоштою доступна тільки до Києва, відділення 02223';
+    pickupHint.textContent = '';
+    npHint.textContent = '';
+    pickupSelect.hidden = true;
+    pickupSelect.disabled = true;
+    pickupSelect.value = '';
+    deliveryLocationSelect.hidden = true;
+    deliveryLocationSelect.disabled = true;
+    deliveryLocationSelect.value = '';
+    hideDeliveryAutocomplete();
+    deliveryDetails.hidden = false;
+    deliveryDetails.disabled = false;
+    deliveryDetails.value = 'Київ, відділення 02223';
   } else if (deliveryMethod === 'nova-branch' || deliveryMethod === 'nova-locker' || deliveryMethod === 'courier') {
     renderCityOptions(ukraineCities);
     cityInput.placeholder = 'Почніть вводити місто України';
@@ -2892,7 +2988,7 @@ const validateCartItems = () => {
   }
 
   const cart = getCart();
-  const invalidItem = cart.find((item) => item.category !== 'drips' && !item.grindMethod);
+  const invalidItem = cart.find((item) => item.category !== 'drips' && !isNonCoffeeProduct(item) && !item.grindMethod);
 
   cartItemsContainer?.querySelectorAll('.item-grind').forEach((select) => clearFieldValidation(select));
 

@@ -425,6 +425,16 @@ alter table public.product_price_overrides
   add column if not exists override_price_250g numeric(10, 2) check (override_price_250g is null or override_price_250g >= 0),
   add column if not exists override_price_1kg numeric(10, 2) check (override_price_1kg is null or override_price_1kg >= 0);
 
+alter table public.product_price_overrides
+  add column if not exists custom_variants jsonb default '[]'::jsonb;
+
+comment on column public.product_price_overrides.custom_variants is 'Array of variant objects: [{unit: "50g", price: 150}, {unit: "piece", price: 45}, {unit: "none", price: 500}]';
+
+alter table public.product_price_overrides
+  add column if not exists color_variants jsonb default '[]'::jsonb;
+
+comment on column public.product_price_overrides.color_variants is 'Array of color variant objects: [{name: "Black", image_url: "https://...", description: "Чорна обпалювання"}, {name: "Light", image_url: "https://...", description: "Світла обпалювання"}]';
+
 create index if not exists product_price_overrides_active_idx
   on public.product_price_overrides (is_active, updated_at desc);
 

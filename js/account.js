@@ -785,6 +785,38 @@ const buildCatalogAdminRows = (products, stateRows) => {
       ? activePriceOverrides['1kg']
       : baseVolumePrices['1kg'];
 
+    let customVariants = [];
+    if (priceOverrideRow?.custom_variants) {
+      try {
+        const parsed = typeof priceOverrideRow.custom_variants === 'string'
+          ? JSON.parse(priceOverrideRow.custom_variants)
+          : priceOverrideRow.custom_variants;
+        customVariants = Array.isArray(parsed) ? parsed : [];
+      } catch (e) {
+        console.warn('Failed to parse custom_variants for product', product.id, e);
+      }
+    }
+
+    let colorVariants = [];
+    if (priceOverrideRow?.color_variants) {
+      try {
+        const parsed = typeof priceOverrideRow.color_variants === 'string'
+          ? JSON.parse(priceOverrideRow.color_variants)
+          : priceOverrideRow.color_variants;
+        colorVariants = Array.isArray(parsed) ? parsed : [];
+      } catch (e) {
+        console.warn('Failed to parse color_variants for product', product.id, e);
+      }
+    }
+
+    let customUnit = '';
+    if (customVariants.length > 0) {
+      const customVariant = customVariants.find((v) => v.unit && v.unit !== 'merch' && v.unit !== 'piece');
+      if (customVariant) {
+        customUnit = customVariant.unit;
+      }
+    }
+
     return {
       ...textAdjustedProduct,
       state,
@@ -795,6 +827,9 @@ const buildCatalogAdminRows = (products, stateRows) => {
       priceOverrides: activePriceOverrides,
       price250: resolvedPrice250,
       price1kg: resolvedPrice1kg,
+      customVariants,
+      colorVariants,
+      customUnit,
     };
   });
 };
@@ -959,6 +994,52 @@ const renderCatalogAdminList = () => {
                         <input type="number" min="0" step="0.01" data-catalog-price-field="1kg" value="${escapeHtml(String(price1kgValue))}" placeholder="Наприклад: 1130">
                       </label>
                     </div>
+                    <fieldset class="catalog-admin-fieldset">
+                      <legend>Додаткові варианти упаковки</legend>
+                      <div class="catalog-admin-text-grid">
+                        <label class="catalog-admin-field" data-catalog-field-wrapper data-catalog-field-label="Ціна за штуку (мерч)" data-catalog-field-value="">
+                          <span>Ціна за штуку (мерч, без міри)</span>
+                          <input type="number" min="0" step="0.01" data-catalog-price-field="merch" value="${escapeHtml(String(row.priceOverrides?.['merch'] || ''))}" placeholder="Наприклад: 45">
+                        </label>
+                        <label class="catalog-admin-field" data-catalog-field-wrapper data-catalog-field-label="Ціна за штуку" data-catalog-field-value="">
+                          <span>Ціна за штуку (пакетик, штука)</span>
+                          <input type="number" min="0" step="0.01" data-catalog-price-field="piece" value="${escapeHtml(String(row.priceOverrides?.['piece'] || ''))}" placeholder="Наприклад: 65">
+                        </label>
+                        <label class="catalog-admin-field" data-catalog-field-wrapper data-catalog-field-label="Кастомна вага (текст)" data-catalog-field-value="">
+                          <span>Кастомна міра (наприклад: 50г)</span>
+                          <input type="text" data-catalog-custom-unit placeholder="Наприклад: 50g" value="${escapeHtml(String(row.customUnit || ''))}">
+                        </label>
+                        <label class="catalog-admin-field" data-catalog-field-wrapper data-catalog-field-label="Ціна за кастомну міру" data-catalog-field-value="">
+                          <span>Ціна за кастомну міру, грн</span>
+                          <input type="number" min="0" step="0.01" data-catalog-price-field="custom" value="${escapeHtml(String(row.priceOverrides?.['custom'] || ''))}" placeholder="Наприклад: 150">
+                        </label>
+                      </div>
+                    </fieldset>
+                    <fieldset class="catalog-admin-fieldset">
+                      <legend>Варіанти кольорів</legend>
+                      <div class="catalog-admin-colors-container" data-catalog-colors-container>
+                        ${(row.colorVariants || []).map((color, idx) => `
+                          <div class="catalog-admin-color-item" data-catalog-color-item="${idx}">
+                            <div class="catalog-admin-text-grid">
+                              <label class="catalog-admin-field">
+                                <span>Назва кольору</span>
+                                <input type="text" class="catalog-color-name" value="${escapeHtml(color.name || '')}" placeholder="Наприклад: Чорна обпалювання">
+                              </label>
+                              <label class="catalog-admin-field">
+                                <span>Опис кольору</span>
+                                <input type="text" class="catalog-color-description" value="${escapeHtml(color.description || '')}" placeholder="Наприклад: Темна, інтенсивна">
+                              </label>
+                              <label class="catalog-admin-field catalog-admin-field-wide">
+                                <span>URL фото</span>
+                                <input type="text" class="catalog-color-image" value="${escapeHtml(color.image_url || '')}" placeholder="images/... або https://...">
+                              </label>
+                              <button type="button" class="btn ghost remove-color" title="Видалити цей колір">✕ Видалити</button>
+                            </div>
+                          </div>
+                        `).join('')}
+                      </div>
+                      <button type="button" class="btn ghost add-color" data-catalog-add-color>+ Додати колір</button>
+                    </fieldset>
                     <div class="catalog-admin-text-grid">
                       <label class="catalog-admin-field" data-catalog-field-wrapper data-catalog-field-label="Категорія" data-catalog-field-value="${escapeHtml(row.category || '')}">
                         <span>Категорія</span>
@@ -1074,7 +1155,7 @@ const loadCatalogAdmin = async (session) => {
       .eq('is_active', true),
     supabase
       .from('product_price_overrides')
-      .select('product_id, override_price, override_price_250g, override_price_1kg, currency, is_active, updated_at')
+      .select('product_id, override_price, override_price_250g, override_price_1kg, currency, is_active, custom_variants, color_variants, updated_at')
       .eq('is_active', true),
   ]);
 
@@ -1354,10 +1435,12 @@ const saveCatalogRow = async (card) => {
     return;
   }
 
+  const catalogVolumeOptionsWithCustom = ['250g', '1kg', 'merch', 'piece', 'custom'];
+
   for (const input of priceInputs) {
     if (!(input instanceof HTMLInputElement)) continue;
     const volumeOption = input.dataset.catalogPriceField;
-    if (!volumeOption || !catalogVolumeOptions.includes(volumeOption)) continue;
+    if (!volumeOption || !catalogVolumeOptionsWithCustom.includes(volumeOption)) continue;
 
     const parsedValue = parseNonNegativePriceInput(input.value);
     if (Number.isNaN(parsedValue)) {
@@ -1426,19 +1509,57 @@ const saveCatalogRow = async (card) => {
     audience_override: null,
   };
 
+  const customUnitInput = card.querySelector('[data-catalog-custom-unit]');
+  const customUnit = customUnitInput ? String(customUnitInput.value || '').trim() : '';
+
   const defaultVolume = row.baseVolumePrices?.defaultVolume || '1kg';
   const hasAnyPriceOverride = Object.keys(nextPriceOverrides).length > 0;
   const defaultVolumePrice = Object.prototype.hasOwnProperty.call(nextPriceOverrides, defaultVolume)
     ? nextPriceOverrides[defaultVolume]
     : null;
+  
+  const customVariants = [];
+  if (Object.prototype.hasOwnProperty.call(nextPriceOverrides, 'merch') && nextPriceOverrides['merch'] !== null) {
+    customVariants.push({ unit: 'merch', price: nextPriceOverrides['merch'] });
+  }
+  if (Object.prototype.hasOwnProperty.call(nextPriceOverrides, 'piece') && nextPriceOverrides['piece'] !== null) {
+    customVariants.push({ unit: 'piece', price: nextPriceOverrides['piece'] });
+  }
+  if (customUnit && Object.prototype.hasOwnProperty.call(nextPriceOverrides, 'custom') && nextPriceOverrides['custom'] !== null) {
+    customVariants.push({ unit: customUnit, price: nextPriceOverrides['custom'] });
+  }
+
+  const colorVariants = [];
+  const colorContainer = card.querySelector('[data-catalog-colors-container]');
+  if (colorContainer) {
+    const colorItems = colorContainer.querySelectorAll('[data-catalog-color-item]');
+    colorItems.forEach((item) => {
+      const nameInput = item.querySelector('.catalog-color-name');
+      const descInput = item.querySelector('.catalog-color-description');
+      const imageInput = item.querySelector('.catalog-color-image');
+      
+      if (nameInput instanceof HTMLInputElement && descInput instanceof HTMLInputElement && imageInput instanceof HTMLInputElement) {
+        const name = String(nameInput.value || '').trim();
+        const description = String(descInput.value || '').trim();
+        const image_url = String(imageInput.value || '').trim();
+        
+        if (name) {
+          colorVariants.push({ name, description, image_url });
+        }
+      }
+    });
+  }
+
   const priceOverridePayload = {
     product_id: productId,
-    is_active: hasAnyPriceOverride,
+    is_active: hasAnyPriceOverride || customVariants.length > 0 || colorVariants.length > 0,
     updated_by: currentSession.user.id,
     currency: 'UAH',
     override_price: defaultVolumePrice,
     override_price_250g: Object.prototype.hasOwnProperty.call(nextPriceOverrides, '250g') ? nextPriceOverrides['250g'] : null,
     override_price_1kg: Object.prototype.hasOwnProperty.call(nextPriceOverrides, '1kg') ? nextPriceOverrides['1kg'] : null,
+    custom_variants: customVariants.length > 0 ? JSON.stringify(customVariants) : null,
+    color_variants: colorVariants.length > 0 ? JSON.stringify(colorVariants) : null,
   };
 
   Object.entries(nextTextOverrides).forEach(([field, value]) => {
@@ -1912,6 +2033,57 @@ catalogAdminList?.addEventListener('click', async (event) => {
   if (!(card instanceof HTMLElement)) return;
 
   await deleteCatalogRow(card);
+});
+
+catalogAdminList?.addEventListener('click', (event) => {
+  const target = event.target;
+  if (!(target instanceof HTMLElement)) return;
+
+  const addColorBtn = target.closest('[data-catalog-add-color]');
+  if (addColorBtn instanceof HTMLButtonElement) {
+    event.preventDefault();
+    const card = addColorBtn.closest('.catalog-admin-card');
+    if (!card) return;
+
+    const container = card.querySelector('[data-catalog-colors-container]');
+    if (!container) return;
+
+    const nextIdx = container.querySelectorAll('[data-catalog-color-item]').length;
+    const colorItem = document.createElement('div');
+    colorItem.className = 'catalog-admin-color-item';
+    colorItem.dataset.catalogColorItem = String(nextIdx);
+    colorItem.innerHTML = `
+      <div class="catalog-admin-text-grid">
+        <label class="catalog-admin-field">
+          <span>Назва кольору</span>
+          <input type="text" class="catalog-color-name" placeholder="Наприклад: Чорна обпалювання">
+        </label>
+        <label class="catalog-admin-field">
+          <span>Опис кольору</span>
+          <input type="text" class="catalog-color-description" placeholder="Наприклад: Темна, інтенсивна">
+        </label>
+        <label class="catalog-admin-field catalog-admin-field-wide">
+          <span>URL фото</span>
+          <input type="text" class="catalog-color-image" placeholder="images/... або https://...">
+        </label>
+        <button type="button" class="btn ghost remove-color" title="Видалити цей колір">✕ Видалити</button>
+      </div>
+    `;
+    container.appendChild(colorItem);
+    catalogAdminHasUnsavedChanges = true;
+    return;
+  }
+
+  const removeColorBtn = target.closest('.remove-color');
+  if (removeColorBtn instanceof HTMLButtonElement) {
+    event.preventDefault();
+    const colorItem = removeColorBtn.closest('[data-catalog-color-item]');
+    if (colorItem instanceof HTMLElement) {
+      colorItem.remove();
+      catalogAdminHasUnsavedChanges = true;
+    }
+    return;
+  }
 });
 
 catalogAdminList?.addEventListener('input', (event) => {

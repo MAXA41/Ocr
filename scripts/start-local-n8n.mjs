@@ -101,7 +101,7 @@ async function main() {
       N8N_USER_FOLDER: path.resolve('.n8n-local'),
       N8N_SECURE_COOKIE: 'false',
       N8N_BLOCK_ENV_ACCESS_IN_NODE: 'false',
-      N8N_RUNNERS_ENABLED: 'false',
+      N8N_RUNNERS_ENABLED: 'true',
     },
   });
 

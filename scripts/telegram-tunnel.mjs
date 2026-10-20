@@ -1,4 +1,6 @@
 import { spawn } from 'node:child_process';
+import { existsSync } from 'node:fs';
+import path from 'node:path';
 import localtunnel from 'localtunnel';
 import { loadLocalEnv } from './lib/local-env.mjs';
 
@@ -8,7 +10,6 @@ function getConfig() {
   const merged = loadLocalEnv();
   const token = merged.N8N_TELEGRAM_BOT_TOKEN || merged.TELEGRAM_BOT_TOKEN || '';
   const webhookPath = merged.N8N_TELEGRAM_ADMIN_WEBHOOK_PATH || 'ocr-telegram-admin';
-  const orderWebhookPath = merged.N8N_ORDER_WEBHOOK_PATH || 'ocr-orders-supabase';
   const publicBaseUrl = String(merged.N8N_PUBLIC_BASE_URL || defaultPublicBaseUrl).trim().replace(/\/$/, '');
   const cloudflareTunnelToken = String(merged.CLOUDFLARED_TUNNEL_TOKEN || '').trim();
 
@@ -19,7 +20,6 @@ function getConfig() {
   return {
     token,
     webhookPath,
-    orderWebhookPath,
     publicBaseUrl,
     cloudflareTunnelToken,
   };
@@ -40,38 +40,26 @@ async function callTelegram(token, method, body) {
   return json;
 }
 
-async function probeBaseUrl(baseUrl, webhookPath, orderWebhookPath) {
+async function probeBaseUrl(baseUrl) {
   const requestHeaders = { 'bypass-tunnel-reminder': 'true' };
-  const adminWebhookUrl = `${baseUrl}/webhook/${webhookPath}`;
-  const orderWebhookUrl = `${baseUrl}/webhook/${orderWebhookPath}`;
-
-  const adminResponse = await fetch(adminWebhookUrl, {
+  const response = await fetch(`${baseUrl}/healthz`, {
     method: 'GET',
     headers: requestHeaders,
   });
 
-  if (![200, 400, 404, 405].includes(adminResponse.status)) {
-    throw new Error(`Admin webhook probe failed with ${adminResponse.status}`);
-  }
-
-  const orderResponse = await fetch(orderWebhookUrl, {
-    method: 'GET',
-    headers: requestHeaders,
-  });
-
-  if (![200, 400, 404, 405].includes(orderResponse.status)) {
-    throw new Error(`Order webhook probe failed with ${orderResponse.status}`);
+  if (!response.ok) {
+    throw new Error(`n8n health check failed with ${response.status}`);
   }
 
   return baseUrl;
 }
 
-async function waitForBaseUrl(baseUrl, webhookPath, orderWebhookPath, attempts = 20, delayMs = 3000) {
+async function waitForBaseUrl(baseUrl, attempts = 20, delayMs = 3000) {
   let lastError;
 
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
     try {
-      return await probeBaseUrl(baseUrl, webhookPath, orderWebhookPath);
+      return await probeBaseUrl(baseUrl);
     } catch (error) {
       lastError = error;
       console.log(`[telegram-tunnel] waiting for tunnel (${attempt}/${attempts}) -> ${error.message}`);
@@ -93,30 +81,36 @@ async function bindWebhook(token, webhookPath, baseUrl) {
 }
 
 function startCloudflareNamedTunnel(token) {
+  const installedBinary =
+    process.platform === 'win32'
+      ? path.join(process.env.LOCALAPPDATA || '', 'cloudflared', 'cloudflared.exe')
+      : '';
+  const useInstalledBinary = Boolean(installedBinary) && existsSync(installedBinary);
   const npxCommand = process.platform === 'win32' ? 'npx.cmd' : 'npx';
-  const child = spawn(npxCommand, [
-    '--yes',
-    'cloudflared',
+  const command = useInstalledBinary ? installedBinary : npxCommand;
+  const args = [
+    ...(useInstalledBinary ? [] : ['--yes', 'cloudflared']),
     'tunnel',
     '--no-autoupdate',
     'run',
     '--token',
     token,
-  ], {
+  ];
+  const child = spawn(command, args, {
     stdio: 'inherit',
-    shell: process.platform === 'win32',
+    shell: !useInstalledBinary && process.platform === 'win32',
   });
 
   return child;
 }
 
-async function runWithCloudflareNamedTunnel({ token, webhookPath, orderWebhookPath, publicBaseUrl, cloudflareTunnelToken }) {
+async function runWithCloudflareNamedTunnel({ token, webhookPath, publicBaseUrl, cloudflareTunnelToken }) {
   if (!publicBaseUrl) {
     throw new Error('Missing N8N_PUBLIC_BASE_URL for stable cloudflared mode');
   }
 
   const child = startCloudflareNamedTunnel(cloudflareTunnelToken);
-  const activeHost = await waitForBaseUrl(publicBaseUrl, webhookPath, orderWebhookPath);
+  const activeHost = await waitForBaseUrl(publicBaseUrl);
 
   console.log(`[telegram-tunnel] public url -> ${activeHost}`);
   await bindWebhook(token, webhookPath, activeHost);
@@ -138,12 +132,12 @@ async function runWithCloudflareNamedTunnel({ token, webhookPath, orderWebhookPa
   });
 }
 
-async function runWithLocalTunnel({ token, webhookPath, orderWebhookPath }) {
+async function runWithLocalTunnel({ token, webhookPath }) {
   const tunnel = await localtunnel({
     port: 5678,
     host: 'https://loca.lt',
   });
-  const activeHost = await probeBaseUrl(tunnel.url, webhookPath, orderWebhookPath);
+  const activeHost = await probeBaseUrl(tunnel.url);
 
   console.log(`[telegram-tunnel] public url -> ${activeHost}`);
   await bindWebhook(token, webhookPath, activeHost);

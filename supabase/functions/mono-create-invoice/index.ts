@@ -6,13 +6,14 @@ import {
   extractMonoInvoiceId,
   extractMonoPaymentUrl,
   jsonResponse,
-} from '../_shared/mono.ts';
+} from "../_shared/mono.ts";
 
 type CartItem = {
   id?: string;
   productId?: string;
   name?: string;
   quantity?: number;
+  qty?: number;
   price?: number;
   category?: string;
   volumeOption?: string | null;
@@ -21,19 +22,21 @@ type CartItem = {
   grindLabel?: string | null;
 };
 
-const monoToken = Deno.env.get('MONO_MERCHANT_TOKEN')?.trim() || '';
+const monoToken = Deno.env.get("MONO_MERCHANT_TOKEN")?.trim() || "";
 const promoDiscountRates: Record<string, number> = {
   barista: 0.1,
-  'o.10': 0.1,
+  "o.10": 0.1,
 };
-const isPromoExcludedProduct = (productTitle: string) => /(?:30\s*(drip|дріп)|svarog\s*drip\s*box)/i.test(productTitle);
+const isPromoExcludedProduct = (productTitle: string) =>
+  /(?:30\s*(drip|дріп)|svarog\s*drip\s*box)/i.test(productTitle);
 
-const getInvoiceAmount = (totalAmount: number) => Math.max(0, Math.round(totalAmount * 100));
+const getInvoiceAmount = (totalAmount: number) =>
+  Math.max(0, Math.round(totalAmount * 100));
 
 const getVolumeLabel = (volumeOption: string) => {
-  if (volumeOption === '250g') return '250 г';
-  if (volumeOption === '1kg') return '1 кг';
-  return '';
+  if (volumeOption === "250g") return "250 г";
+  if (volumeOption === "1kg") return "1 кг";
+  return "";
 };
 
 const getCatalogUnitPrice = (
@@ -41,79 +44,156 @@ const getCatalogUnitPrice = (
   priceOverride: Record<string, unknown> | undefined,
   volumeOption: string,
 ) => {
-  const rawData = catalogItem.raw_data && typeof catalogItem.raw_data === 'object'
-    ? catalogItem.raw_data as Record<string, unknown>
-    : {};
-  const volumePrices = rawData.volumePrices && typeof rawData.volumePrices === 'object'
-    ? rawData.volumePrices as Record<string, unknown>
-    : {};
-  const overrideColumn = volumeOption === '250g'
-    ? 'override_price_250g'
-    : volumeOption === '1kg'
-      ? 'override_price_1kg'
-      : '';
-  const overridePrice = overrideColumn ? Number(priceOverride?.[overrideColumn]) : Number.NaN;
+  const rawData =
+    catalogItem.raw_data && typeof catalogItem.raw_data === "object"
+      ? (catalogItem.raw_data as Record<string, unknown>)
+      : {};
+  const volumePrices =
+    rawData.volumePrices && typeof rawData.volumePrices === "object"
+      ? (rawData.volumePrices as Record<string, unknown>)
+      : {};
+  const overrideColumn =
+    volumeOption === "250g"
+      ? "override_price_250g"
+      : volumeOption === "1kg"
+        ? "override_price_1kg"
+        : "";
+  const overridePrice = overrideColumn
+    ? Number(priceOverride?.[overrideColumn])
+    : Number.NaN;
   const configuredPrice = Number(volumePrices[volumeOption]);
+  const legacyOverridePrice = Number(priceOverride?.override_price);
 
-  if (Number.isFinite(overridePrice) && overridePrice >= 0) return overridePrice;
-  if (Number.isFinite(configuredPrice) && configuredPrice >= 0) return configuredPrice;
+  if (Number.isFinite(overridePrice) && overridePrice >= 0)
+    return overridePrice;
 
-  const basePrice = Number(catalogItem.price || 0);
-  const weight = String(catalogItem.weight || '').toLowerCase().replace(/\s+/g, '');
-  if (volumeOption === '250g' && (weight.includes('1кг') || weight.includes('1kg'))) return Math.round(basePrice * 0.25);
-  if (volumeOption === '1kg' && (weight.includes('250г') || weight.includes('250g'))) return Math.round(basePrice * 4);
-  return basePrice;
+  const weight = String(catalogItem.weight || "")
+    .toLowerCase()
+    .replace(/\s+/g, "");
+  if (Number.isFinite(legacyOverridePrice) && legacyOverridePrice >= 0) {
+    if (
+      volumeOption === "250g" &&
+      (weight.includes("1кг") || weight.includes("1kg"))
+    ) {
+      return Math.round(legacyOverridePrice * 0.25);
+    }
+    if (
+      volumeOption === "1kg" &&
+      (weight.includes("250г") || weight.includes("250g"))
+    ) {
+      return Math.round(legacyOverridePrice * 4);
+    }
+    return legacyOverridePrice;
+  }
+
+  if (Number.isFinite(configuredPrice) && configuredPrice >= 0)
+    return configuredPrice;
+
+  const catalogPrice = Number(catalogItem.price);
+  const basePrice = Number(catalogItem.base_price);
+  const rawPrice = Number(rawData.price);
+  const fallbackPrice = [catalogPrice, basePrice, rawPrice].find(
+    (price) => Number.isFinite(price) && price > 0,
+  );
+
+  if (
+    volumeOption === "250g" &&
+    (weight.includes("1кг") || weight.includes("1kg"))
+  )
+    return Math.round((fallbackPrice || 0) * 0.25);
+  if (
+    volumeOption === "1kg" &&
+    (weight.includes("250г") || weight.includes("250g"))
+  )
+    return Math.round((fallbackPrice || 0) * 4);
+  return fallbackPrice || 0;
 };
 
 Deno.serve(async (request) => {
-  if (request.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
+  if (request.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders });
   }
 
-  if (request.method !== 'POST') {
-    return jsonResponse({ error: 'Method not allowed' }, { status: 405 });
+  if (request.method !== "POST") {
+    return jsonResponse({ error: "Method not allowed" }, { status: 405 });
   }
 
   if (!monoToken) {
-    return jsonResponse({ error: 'Mono merchant token is not configured.' }, { status: 500 });
+    return jsonResponse(
+      { error: "Mono merchant token is not configured." },
+      { status: 500 },
+    );
   }
 
-  const payload = await request.json().catch(() => null) as Record<string, unknown> | null;
-  if (!payload || typeof payload !== 'object') {
-    return jsonResponse({ error: 'Invalid JSON payload.' }, { status: 400 });
+  const payload = (await request.json().catch(() => null)) as Record<
+    string,
+    unknown
+  > | null;
+  if (!payload || typeof payload !== "object") {
+    return jsonResponse({ error: "Invalid JSON payload." }, { status: 400 });
   }
 
-  const paymentMethod = String(payload.paymentMethod || '').trim();
-  const cart = Array.isArray(payload.cart) ? payload.cart as CartItem[] : [];
-  const customerName = String(payload.name || '').trim();
-  const customerEmail = String(payload.email || '').trim().toLowerCase();
-  const customerPhone = String(payload.phone || '').trim();
-  const city = String(payload.city || '').trim() || null;
-  const deliveryMethod = String(payload.deliveryMethod || '').trim();
-  const deliveryMethodLabel = String(payload.deliveryMethodLabel || '').trim() || null;
-  const deliveryDetails = String(payload.deliveryDetails || '').trim() || null;
-  const paymentMethodLabel = String(payload.paymentMethodLabel || '').trim() || 'Оплата карткою Mono';
-  const comment = String(payload.comment || '').trim() || null;
-  const clientRequestId = String(payload.checkoutRequestId || payload.clientRequestId || payload.requestId || '').trim() || null;
-  const promoCode = String(payload.promoCode || '').trim();
+  const paymentMethod = String(payload.paymentMethod || "").trim();
+  const cart = Array.isArray(payload.cart) ? (payload.cart as CartItem[]) : [];
+  const customerName = String(payload.name || "").trim();
+  const customerEmail = String(payload.email || "")
+    .trim()
+    .toLowerCase();
+  const customerPhone = String(payload.phone || "").trim();
+  const city = String(payload.city || "").trim() || null;
+  const deliveryMethod = String(payload.deliveryMethod || "").trim();
+  const deliveryMethodLabel =
+    String(payload.deliveryMethodLabel || "").trim() || null;
+  const deliveryDetails = String(payload.deliveryDetails || "").trim() || null;
+  const paymentMethodLabel =
+    String(payload.paymentMethodLabel || "").trim() || "Оплата карткою Mono";
+  const comment = String(payload.comment || "").trim() || null;
+  const clientRequestId =
+    String(
+      payload.checkoutRequestId ||
+        payload.clientRequestId ||
+        payload.requestId ||
+        "",
+    ).trim() || null;
+  const promoCode = String(payload.promoCode || "").trim();
   const promoDiscountRate = promoDiscountRates[promoCode.toLowerCase()] || 0;
 
-  if (paymentMethod !== 'mono-card') {
-    return jsonResponse({ error: 'Mono checkout only supports mono-card orders.' }, { status: 400 });
+  if (paymentMethod !== "mono-card") {
+    return jsonResponse(
+      { error: "Mono checkout only supports mono-card orders." },
+      { status: 400 },
+    );
   }
 
-  if (!customerName || !customerEmail || !customerPhone || !deliveryMethod || cart.length === 0) {
-    return jsonResponse({ error: 'Missing required checkout fields.' }, { status: 400 });
+  if (
+    !customerName ||
+    !customerEmail ||
+    !customerPhone ||
+    !deliveryMethod ||
+    cart.length === 0
+  ) {
+    return jsonResponse(
+      { error: "Missing required checkout fields." },
+      { status: 400 },
+    );
   }
 
   try {
     const admin = createSupabaseAdminClient();
-    const productIds = [...new Set(cart.map((item) => String(item.id || item.productId || '').trim()).filter(Boolean))];
+    const productIds = [
+      ...new Set(
+        cart
+          .map((item) => String(item.id || item.productId || "").trim())
+          .filter(Boolean),
+      ),
+    ];
 
     const { data: catalogRows, error: catalogError } = await admin
-      .from('product_catalog_public')
-      .select('product_id,name,category,price,weight,is_available,availability_status')
-      .in('product_id', productIds);
+      .from("product_catalog_public")
+      .select(
+        "product_id,name,category,price,base_price,weight,is_available,availability_status",
+      )
+      .in("product_id", productIds);
 
     if (catalogError) {
       throw new Error(catalogError.message);
@@ -125,9 +205,9 @@ Deno.serve(async (request) => {
     }
 
     const { data: catalogItemRows, error: catalogItemsError } = await admin
-      .from('product_catalog_items')
-      .select('product_id,raw_data')
-      .in('product_id', productIds);
+      .from("product_catalog_items")
+      .select("product_id,raw_data")
+      .in("product_id", productIds);
 
     if (catalogItemsError) {
       throw new Error(catalogItemsError.message);
@@ -139,10 +219,12 @@ Deno.serve(async (request) => {
     }
 
     const { data: priceOverrideRows, error: priceOverridesError } = await admin
-      .from('product_price_overrides')
-      .select('product_id,override_price_250g,override_price_1kg')
-      .eq('is_active', true)
-      .in('product_id', productIds);
+      .from("product_price_overrides")
+      .select(
+        "product_id,override_price,override_price_250g,override_price_1kg",
+      )
+      .eq("is_active", true)
+      .in("product_id", productIds);
 
     if (priceOverridesError) {
       throw new Error(priceOverridesError.message);
@@ -154,27 +236,43 @@ Deno.serve(async (request) => {
     }
 
     const normalizedItems = cart.map((item) => {
-      const productId = String(item.id || item.productId || '').trim();
+      const productId = String(item.id || item.productId || "").trim();
       const catalogItem = catalogMap.get(productId);
 
       if (!catalogItem) {
         throw new Error(`Unknown product: ${productId}`);
       }
 
-      if (catalogItem.is_available === false || catalogItem.availability_status === 'out_of_stock') {
+      if (
+        catalogItem.is_available === false ||
+        catalogItem.availability_status === "out_of_stock"
+      ) {
         throw new Error(`Product is unavailable: ${productId}`);
       }
 
-      const quantity = Math.max(1, Math.trunc(Number(item.quantity || 1)));
-      const volumeOption = String(item.volumeOption || '').trim();
-      const unitPrice = getCatalogUnitPrice(catalogItem, priceOverrideMap.get(productId), volumeOption);
+      const requestedQuantity = Number(item.quantity ?? item.qty ?? 1);
+      const quantity = Number.isFinite(requestedQuantity)
+        ? Math.max(1, Math.trunc(requestedQuantity))
+        : 1;
+      const volumeOption = String(item.volumeOption || "").trim();
+      const unitPrice = getCatalogUnitPrice(
+        catalogItem,
+        priceOverrideMap.get(productId),
+        volumeOption,
+      );
       const volumeLabel = getVolumeLabel(volumeOption);
       const productTitle = String(item.name || catalogItem.name || productId);
 
+      if (!Number.isFinite(unitPrice) || unitPrice <= 0) {
+        throw new Error(`Invalid price for product: ${productId}`);
+      }
+
       return {
         product_id: productId,
-        product_title: volumeLabel ? `${productTitle} (${volumeLabel})` : productTitle,
-        category: String(item.category || catalogItem.category || ''),
+        product_title: volumeLabel
+          ? `${productTitle} (${volumeLabel})`
+          : productTitle,
+        category: String(item.category || catalogItem.category || ""),
         quantity,
         unit_price: unitPrice,
         grind_method: item.grindMethod ?? null,
@@ -183,28 +281,43 @@ Deno.serve(async (request) => {
       };
     });
 
-    const computedSubtotal = normalizedItems.reduce((sum, item) => sum + item.unit_price * item.quantity, 0);
+    const computedSubtotal = normalizedItems.reduce(
+      (sum, item) => sum + item.unit_price * item.quantity,
+      0,
+    );
     const promoEligibleSubtotal = normalizedItems
       .filter((item) => !isPromoExcludedProduct(item.product_title))
       .reduce((sum, item) => sum + item.unit_price * item.quantity, 0);
-    const safeDiscount = promoDiscountRate > 0
-      ? Math.round(promoEligibleSubtotal * promoDiscountRate)
-      : 0;
+    const safeDiscount =
+      promoDiscountRate > 0
+        ? Math.round(promoEligibleSubtotal * promoDiscountRate)
+        : 0;
     const safeTotal = Math.max(0, computedSubtotal - safeDiscount);
     const orderItemsSummary = normalizedItems
       .map((item) => `${item.product_title} x${item.quantity}`)
-      .join(', ');
+      .join(", ");
     const baseUrl = extractBaseUrl(request);
     const supabaseBaseUrl = extractSupabaseBaseUrl();
-    const returnUrl = String(payload.returnUrl || `${baseUrl}/account.html?payment=mono-success`).trim();
+    const returnUrl = String(
+      payload.returnUrl || `${baseUrl}/account.html?payment=mono-success`,
+    ).trim();
 
-    let existingOrder: { id: string; order_number: number; payment_payload?: Record<string, unknown> | null; mono_invoice_payload?: Record<string, unknown> | null; payment_reference?: string | null; mono_invoice_id?: string | null; } | null = null;
+    let existingOrder: {
+      id: string;
+      order_number: number;
+      payment_payload?: Record<string, unknown> | null;
+      mono_invoice_payload?: Record<string, unknown> | null;
+      payment_reference?: string | null;
+      mono_invoice_id?: string | null;
+    } | null = null;
 
     if (clientRequestId) {
       const { data: existingOrderData, error: existingOrderError } = await admin
-        .from('orders')
-        .select('id, order_number, payment_payload, mono_invoice_payload, payment_reference, mono_invoice_id')
-        .eq('client_request_id', clientRequestId)
+        .from("orders")
+        .select(
+          "id, order_number, payment_payload, mono_invoice_payload, payment_reference, mono_invoice_id",
+        )
+        .eq("client_request_id", clientRequestId)
         .maybeSingle();
 
       if (existingOrderError) {
@@ -224,32 +337,37 @@ Deno.serve(async (request) => {
       orderNumber = Number(existingOrder.order_number);
 
       const existingPaymentPayload = existingOrder.payment_payload || {};
-      const existingMonoInvoicePayload = existingOrder.mono_invoice_payload || {};
+      const existingMonoInvoicePayload =
+        existingOrder.mono_invoice_payload || {};
       const existingPaymentUrl = String(
-        (existingPaymentPayload.response as Record<string, unknown> | undefined)?.pageUrl
-        || (existingMonoInvoicePayload as Record<string, unknown>)?.pageUrl
-        || '',
+        (existingPaymentPayload.response as Record<string, unknown> | undefined)
+          ?.pageUrl ||
+          (existingMonoInvoicePayload as Record<string, unknown>)?.pageUrl ||
+          "",
       ).trim();
 
       if (existingPaymentUrl) {
         return jsonResponse({
           orderId,
           orderNumber,
-          invoiceId: existingOrder.mono_invoice_id || existingOrder.payment_reference || null,
+          invoiceId:
+            existingOrder.mono_invoice_id ||
+            existingOrder.payment_reference ||
+            null,
           paymentUrl: existingPaymentUrl,
-          paymentStatus: 'pending',
+          paymentStatus: "pending",
         });
       }
     }
 
     if (!existingOrder) {
       const { data: order, error: orderError } = await admin
-        .from('orders')
+        .from("orders")
         .insert({
-          source: String(payload.source || 'website'),
-          status: 'new',
-          payment_provider: 'mono',
-          payment_status: 'pending',
+          source: String(payload.source || "website"),
+          status: "new",
+          payment_provider: "mono",
+          payment_status: "pending",
           client_request_id: clientRequestId,
           customer_name: customerName,
           customer_email: customerEmail,
@@ -261,7 +379,7 @@ Deno.serve(async (request) => {
           payment_method: paymentMethod,
           payment_method_label: paymentMethodLabel,
           comment,
-          currency: 'UAH',
+          currency: "UAH",
           subtotal_amount: computedSubtotal,
           discount_percent: promoDiscountRate * 100,
           discount_amount: safeDiscount,
@@ -269,42 +387,41 @@ Deno.serve(async (request) => {
           accumulation_amount: 0,
           items_summary: orderItemsSummary,
           raw_payload: payload,
-          payment_gateway: 'mono',
+          payment_gateway: "mono",
         })
-        .select('id, order_number')
+        .select("id, order_number")
         .single();
 
       if (orderError || !order) {
-        throw orderError ?? new Error('Failed to create order.');
+        throw orderError ?? new Error("Failed to create order.");
       }
 
       orderId = String(order.id);
       orderNumber = Number(order.order_number);
 
-      const { error: orderItemsError } = await admin
-        .from('order_items')
-        .insert(
-          normalizedItems.map((item) => ({
-            order_id: orderId,
-            product_id: item.product_id,
-            product_title: item.product_title,
-            category: item.category,
-            quantity: item.quantity,
-            unit_price: item.unit_price,
-            grind_method: item.grind_method,
-            grind_label: item.grind_label,
-            raw_item: item.raw_item,
-          })),
-        );
+      const { error: orderItemsError } = await admin.from("order_items").insert(
+        normalizedItems.map((item) => ({
+          order_id: orderId,
+          product_id: item.product_id,
+          product_title: item.product_title,
+          category: item.category,
+          quantity: item.quantity,
+          unit_price: item.unit_price,
+          grind_method: item.grind_method,
+          grind_label: item.grind_label,
+          raw_item: item.raw_item,
+        })),
+      );
 
       if (orderItemsError) {
         throw orderItemsError;
       }
     } else {
-      const { count: existingOrderItemsCount, error: orderItemsCountError } = await admin
-        .from('order_items')
-        .select('id', { count: 'exact', head: true })
-        .eq('order_id', orderId);
+      const { count: existingOrderItemsCount, error: orderItemsCountError } =
+        await admin
+          .from("order_items")
+          .select("id", { count: "exact", head: true })
+          .eq("order_id", orderId);
 
       if (orderItemsCountError) {
         throw orderItemsCountError;
@@ -312,7 +429,7 @@ Deno.serve(async (request) => {
 
       if (!existingOrderItemsCount) {
         const { error: orderItemsError } = await admin
-          .from('order_items')
+          .from("order_items")
           .insert(
             normalizedItems.map((item) => ({
               order_id: orderId,
@@ -350,18 +467,24 @@ Deno.serve(async (request) => {
       webHookUrl: `${supabaseBaseUrl}/functions/v1/mono-payment-webhook`,
     };
 
-    const monoResponse = await fetch('https://api.monobank.ua/api/merchant/invoice/create', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Token': monoToken,
+    const monoResponse = await fetch(
+      "https://api.monobank.ua/api/merchant/invoice/create",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Token": monoToken,
+        },
+        body: JSON.stringify(monoPayload),
       },
-      body: JSON.stringify(monoPayload),
-    });
+    );
 
-    const contentType = monoResponse.headers.get('content-type') || '';
-    const monoResult = contentType.includes('application/json')
-      ? await monoResponse.json().catch(() => ({})) as Record<string, unknown>
+    const contentType = monoResponse.headers.get("content-type") || "";
+    const monoResult = contentType.includes("application/json")
+      ? ((await monoResponse.json().catch(() => ({}))) as Record<
+          string,
+          unknown
+        >)
       : { rawText: await monoResponse.text() };
 
     const invoiceId = extractMonoInvoiceId(monoResult);
@@ -369,21 +492,21 @@ Deno.serve(async (request) => {
 
     if (!monoResponse.ok || !paymentUrl) {
       await admin
-        .from('orders')
+        .from("orders")
         .update({
-          payment_status: 'failed',
-          mono_invoice_status: 'failed',
+          payment_status: "failed",
+          mono_invoice_status: "failed",
           mono_invoice_payload: monoResult,
           payment_payload: {
             request: monoPayload,
             response: monoResult,
           },
         })
-        .eq('id', orderId);
+        .eq("id", orderId);
 
       return jsonResponse(
         {
-          error: 'Failed to create Mono invoice.',
+          error: "Failed to create Mono invoice.",
           status: monoResponse.status,
           statusText: monoResponse.statusText,
           details: monoResult,
@@ -394,30 +517,33 @@ Deno.serve(async (request) => {
     }
 
     await admin
-      .from('orders')
+      .from("orders")
       .update({
         payment_reference: invoiceId || `OCR-${orderNumber}`,
         mono_invoice_id: invoiceId || null,
-        mono_invoice_status: String(monoResult.status || 'created'),
+        mono_invoice_status: String(monoResult.status || "created"),
         mono_invoice_payload: monoResult,
         payment_payload: {
           request: monoPayload,
           response: monoResult,
         },
       })
-      .eq('id', orderId);
+      .eq("id", orderId);
 
     return jsonResponse({
       orderId,
       orderNumber,
       invoiceId,
       paymentUrl,
-      paymentStatus: 'pending',
+      paymentStatus: "pending",
     });
   } catch (error) {
     return jsonResponse(
       {
-        error: error instanceof Error ? error.message : 'Failed to create Mono invoice.',
+        error:
+          error instanceof Error
+            ? error.message
+            : "Failed to create Mono invoice.",
         details: error instanceof Error ? error.stack : null,
       },
       { status: 500 },

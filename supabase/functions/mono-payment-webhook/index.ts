@@ -82,7 +82,7 @@ Deno.serve(async (request) => {
     const { data: existingOrder, error: existingOrderError } = await admin
       .from("orders")
       .select(
-        "id,order_number,status,payment_status,customer_name,customer_phone,city,delivery_method_label,delivery_details,payment_method_label,total_amount,items_summary,comment",
+        "id,order_number,source,status,payment_status,customer_name,customer_email,customer_phone,city,delivery_method_label,delivery_details,payment_method_label,total_amount,items_summary,comment,placed_at,raw_payload",
       )
       .eq(column, value)
       .maybeSingle();
@@ -112,7 +112,7 @@ Deno.serve(async (request) => {
       .update(updates)
       .eq("id", existingOrder.id)
       .select(
-        "id,order_number,status,payment_status,customer_name,customer_phone,city,delivery_method_label,delivery_details,payment_method_label,total_amount,items_summary,comment",
+        "id,order_number,source,status,payment_status,customer_name,customer_email,customer_phone,city,delivery_method_label,delivery_details,payment_method_label,total_amount,items_summary,comment,placed_at,raw_payload",
       )
       .maybeSingle();
 

@@ -8,11 +8,13 @@ export default defineConfig({
       input: {
         index: resolve(__dirname, 'index.html'),
         account: resolve(__dirname, 'account.html'),
+        accessories: resolve(__dirname, 'accessories.html'),
         delivery: resolve(__dirname, 'delivery.html'),
         decaf: resolve(__dirname, 'decaf.html'),
         drips: resolve(__dirname, 'drips.html'),
         espresso: resolve(__dirname, 'espresso.html'),
         filter: resolve(__dirname, 'filter.html'),
+        merch: resolve(__dirname, 'merch.html'),
         priceRequest: resolve(__dirname, 'price-request.html'),
         product: resolve(__dirname, 'product.html'),
       },

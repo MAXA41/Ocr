@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="uk">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Аксесуари | Odesa Coffee Roasters</title>
+  <meta name="description" content="Аксесуари Odesa Coffee Roasters для заварювання, зберігання та щоденного кавового ритуалу.">
+  <link rel="canonical" href="https://oroasters.com.ua/accessories.html">
+  <meta property="og:title" content="Аксесуари | Odesa Coffee Roasters">
+  <meta property="og:description" content="Аксесуари для приготування та зберігання кави.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://oroasters.com.ua/accessories.html">
+  <meta property="og:locale" content="uk_UA">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Sora:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body class="page" data-page-category="accessories">
+  <div class="backdrop" aria-hidden="true"><span class="glow one"></span><span class="glow two"></span><span class="grain"></span></div>
+  <header class="site-header">
+    <div class="container header-inner">
+      <a class="logo" href="index.html#top"><img src="images/logo.png" alt="Odesa Coffee Roasters"></a>
+      <nav class="main-nav" aria-label="Основна навігація">
+        <a href="index.html#products">Товари</a>
+        <details class="nav-dropdown"><summary class="nav-dropdown-toggle">Каталог</summary><div class="nav-dropdown-menu" aria-label="Підкатегорії каталогу">
+          <a href="espresso.html">Еспресо</a><a href="filter.html">Фільтр</a><a href="drips.html">Дріпи</a><a href="decaf.html">Декаф</a><a href="accessories.html">Аксесуари</a><a href="merch.html">Мерч</a>
+        </div></details>
+        <a href="index.html#wholesale">Опт</a><a href="index.html#subscription">Підписка</a><a class="nav-account-link" href="account.html">Кабінет</a>
+      </nav>
+      <div class="header-actions"><button class="menu-toggle" type="button" aria-label="Відкрити меню">Меню</button><button class="cart-button" type="button" aria-label="Показати кошик">Кошик <span class="badge" id="cart-count">0</span></button><a class="btn ghost" href="account.html">Кабінет</a></div>
+    </div>
+  </header>
+  <main>
+    <section class="hero"><div class="container hero-grid"><div class="hero-copy"><p class="eyebrow">Каталог</p><h1>Аксесуари</h1><p class="lead">Інструменти та дрібниці, які роблять щоденне заварювання точнішим і приємнішим.</p><div class="hero-actions"><a class="btn primary" href="#accessory-products">Дивитися аксесуари</a><a class="btn ghost" href="index.html#catalog">Назад до каталогу</a></div></div><div class="hero-panel"><div class="panel-card accent"><p class="label">Для ритуалу</p><h3>Вдома, в офісі, в дорозі</h3><p>Позиції для приготування, подачі та зберігання кави.</p></div></div></div></section>
+    <section class="section products" id="accessory-products"><div class="container"><div class="section-head"><div><p class="eyebrow">Добірка</p><h2>Аксесуари</h2></div><p class="lead">Усі актуальні аксесуари O.Roasters.</p></div><div class="product-grid" id="category-grid" aria-live="polite"></div></div></section>
+  </main>
+  <footer class="site-footer" id="contact"><div class="container footer-grid"><div><a class="logo" href="index.html#top"><img src="images/logo.png" alt="Odesa Coffee Roasters"></a><p>Спешелті кава з Одеси для дому, офісу та бізнесу.</p></div><div><h3>Контакти</h3><p>+380 (93) 280 89 99</p><p>office@barista-box.com</p></div><div><h3>Соцмережі</h3><div class="footer-socials"><a class="btn light" href="https://www.instagram.com/o.roasterss/" target="_blank" rel="noopener noreferrer">Instagram</a><a class="btn light" href="https://www.facebook.com/odessa.coffee.roasters/" target="_blank" rel="noopener noreferrer">Facebook</a></div></div><div><h3>Доставка</h3><p>Нова Пошта 1-2 дні</p></div></div></footer>
+  <div class="cart-modal" id="cart-modal" role="dialog" aria-modal="true" aria-labelledby="cart-title"><div class="cart-modal-content"><h3 id="cart-title">Ваш кошик</h3><div class="cart-items" id="cart-items"></div><p id="cart-total">Разом: 0 грн</p><div class="cart-actions"><button class="btn ghost" id="clear-cart" type="button">Очистити кошик</button></div><form id="checkout-form"><h4>Оформлення замовлення</h4><div class="checkout-grid"><div class="checkout-section"><p class="checkout-section-title">Контакти</p><label>Ім'я<br><input type="text" name="name" autocomplete="name" required></label><label>Телефон<br><input type="tel" name="phone" autocomplete="tel" required></label><label>Email<br><input type="email" name="email" autocomplete="email" required></label></div><div class="checkout-section"><p class="checkout-section-title">Доставка</p><label>Спосіб доставки<br><select name="deliveryMethod" required><option value="">Оберіть спосіб доставки</option><option value="nova-branch">Нова Пошта: відділення</option><option value="nova-locker">Нова Пошта: поштомат</option><option value="courier">Адресна доставка</option><option value="pickup">Самовивіз з кав'ярні партнера</option></select></label><label data-field="city">Місто<br><input type="text" name="city" autocomplete="address-level2" data-list-id="partner-cities-list" required><datalist id="partner-cities-list"></datalist><small class="field-hint" data-field-hint="city"></small></label><label data-field="deliveryDetails">Відділення / адреса<br><textarea name="deliveryDetails" rows="3" required></textarea><input type="text" name="deliveryLocation" hidden disabled autocomplete="off"><select name="pickupLocation" hidden disabled></select><small class="field-hint" data-field-hint="pickup"></small><small class="field-hint" data-field-hint="np"></small></label></div><div class="checkout-section"><p class="checkout-section-title">Оплата і коментар</p><label>Промокод<br><input type="text" name="promoCode"></label><label>Спосіб оплати<br><select name="paymentMethod" required><option value="">Оберіть спосіб оплати</option><option value="mono-card">Оплата карткою</option><option value="bank-details">Оплата за реквізитами</option><option value="cod">Післяплата</option></select></label><label>Коментар до замовлення<br><textarea name="comment" rows="3"></textarea></label></div><div class="checkout-section checkout-section summary"><p class="checkout-section-title">Підсумок замовлення</p><div class="checkout-summary" id="checkout-summary"><p>Додайте товари в кошик, щоб побачити підсумок.</p></div></div></div><button class="btn primary" type="submit">Підтвердити замовлення</button><p class="form-status" id="checkout-status" aria-live="polite"></p></form><button class="cart-close" type="button" id="cart-close">Закрити</button></div></div>
+  <script src="/env.js?v=3"></script><script type="module" src="js/site.js?v=16"></script>
+</body>
+</html>

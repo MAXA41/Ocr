@@ -1743,6 +1743,57 @@ body[data-page-category="filter"] .hero .btn.ghost {
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
 }
 
+.catalog-admin-fieldset {
+  border: 1px solid rgba(31, 27, 22, 0.1);
+  border-radius: 16px;
+  padding: 14px;
+  margin: 0;
+  background: rgba(247, 242, 234, 0.5);
+}
+
+.catalog-admin-fieldset legend {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--olive);
+  padding: 0 8px;
+  margin-left: -8px;
+}
+
+.catalog-admin-colors-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.catalog-admin-color-item {
+  border: 1px solid rgba(31, 27, 22, 0.08);
+  border-radius: 12px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.6);
+}
+
+.catalog-admin-color-item .catalog-admin-text-grid {
+  gap: 10px;
+}
+
+.catalog-admin-color-item .remove-color {
+  width: 100%;
+  margin-top: 4px;
+  color: #d32f2f;
+  border: 1px solid rgba(211, 47, 47, 0.2);
+}
+
+.catalog-admin-color-item .remove-color:hover {
+  background: rgba(211, 47, 47, 0.1);
+}
+
+[data-catalog-add-color] {
+  margin-top: 8px;
+}
+
 .catalog-admin-field-wide {
   grid-column: 1 / -1;
 }
