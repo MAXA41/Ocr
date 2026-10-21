@@ -1,9 +1,6 @@
 import { supabase, isSupabaseConfigured } from './supabase-client.js?v=2';
 import { normalizeCatalogState } from './catalog-state.js?v=2';
 
-console.log('✅ Loading account.js module...');
-console.log('✅ Imported supabase and catalog-state');
-
 const menuToggle = document.querySelector('.menu-toggle');
 const mainNav = document.querySelector('.main-nav');
 const authForm = document.querySelector('#account-auth-form');
@@ -1862,41 +1859,6 @@ resendConfirmationButton?.addEventListener('click', async () => {
   setAuthStatus('Лист підтвердження повторно відправлено.', 'success');
 });
 
-// Initialize available images list for product form
-const initializeCatalogImageSuggestions = async () => {
-  console.log('🔍 initializeCatalogImageSuggestions called');
-  try {
-    console.log('🔄 Fetching /images-list.json...');
-    const response = await fetch('/images-list.json');
-    console.log('📦 Response received, status:', response.status);
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    
-    const data = await response.json();
-    console.log('📋 Data parsed, images count:', data.images ? data.images.length : 'undefined');
-    if (!Array.isArray(data.images)) throw new Error('Invalid images list format');
-
-    const imagesSuggestionsDatalist = document.querySelector('#catalog-image-suggestions');
-    if (!imagesSuggestionsDatalist) {
-      console.error('❌ Datalist #catalog-image-suggestions not found in DOM');
-      return;
-    }
-
-    // Clear existing options
-    imagesSuggestionsDatalist.innerHTML = '';
-
-    // Add all images as options
-    data.images.forEach((imagePath) => {
-      const option = document.createElement('option');
-      option.value = imagePath;
-      imagesSuggestionsDatalist.appendChild(option);
-    });
-
-    console.log(`✅ Loaded ${data.images.length} image suggestions for catalog admin form`);
-  } catch (error) {
-    console.error('Failed to load image suggestions:', error);
-  }
-};
-
 authForm?.addEventListener('submit', async (event) => {
   event.preventDefault();
   if (!supabase) return;
@@ -2186,7 +2148,3 @@ profileList?.addEventListener('submit', async (event) => {
 
 setAuthMode(getInitialAuthMode());
 init();
-
-// Initialize catalog image suggestions
-console.log('🚀 Account.js module loaded, initializing images list...');
-initializeCatalogImageSuggestions();

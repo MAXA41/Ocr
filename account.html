@@ -312,5 +312,32 @@
 
   <script src="/env.js?v=3"></script>
   <script type="module" src="js/account.js?v=99"></script>
+  
+  <!-- Initialize images list for catalog admin form -->
+  <script>
+    // Load images list and populate datalist before account.js runs
+    (async function initImages() {
+      try {
+        const response = await fetch('/images-list.json');
+        if (response.ok) {
+          const data = await response.json();
+          if (Array.isArray(data.images)) {
+            const datalist = document.getElementById('catalog-image-suggestions');
+            if (datalist) {
+              datalist.innerHTML = '';
+              data.images.forEach((imagePath) => {
+                const option = document.createElement('option');
+                option.value = imagePath;
+                datalist.appendChild(option);
+              });
+              console.log(`✅ Loaded ${data.images.length} images for catalog admin form`);
+            }
+          }
+        }
+      } catch (e) {
+        console.error('Failed to load images list:', e);
+      }
+    })();
+  </script>
 </body>
 </html>
