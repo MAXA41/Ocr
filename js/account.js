@@ -1252,14 +1252,18 @@ const createCatalogProduct = async (form) => {
     return;
   }
 
-  if (price250 === null && price1kg === null) {
-    setCatalogCreateStatus('Вкажіть хоча б одну ціну: 0.250 кг або 1 кг.', 'error');
+  // At least one pricing option must be provided
+  const hasBasePricing = price250 !== null || price1kg !== null;
+  const hasVariantPricing = priceMerch !== null || pricePiece !== null || (customUnit && priceCustom !== null);
+  
+  if (!hasBasePricing && !hasVariantPricing) {
+    setCatalogCreateStatus('Вкажіть хоча б одну ціну: 250г, 1кг, мерч, пакетик або кастомну міру.', 'error');
     return;
   }
 
   const weight = inferCatalogWeight({ category, price250, price1kg });
 
-  const basePrice = getDefaultCatalogPrice({ price250, price1kg });
+  const basePrice = getDefaultCatalogPrice({ price250, price1kg }) || priceMerch || pricePiece || priceCustom || 0;
   const volumePrices = {};
   if (price250 !== null) volumePrices['250g'] = price250;
   if (price1kg !== null) volumePrices['1kg'] = price1kg;
@@ -1299,7 +1303,7 @@ const createCatalogProduct = async (form) => {
     },
   };
 
-  const defaultVolume = price250 !== null ? '250g' : '1kg';
+  const defaultVolume = price250 !== null ? '250g' : (price1kg !== null ? '1kg' : (priceMerch !== null ? 'merch' : (pricePiece !== null ? 'piece' : 'custom')));
   const priceOverridePayload = {
     product_id: productId,
     is_active: Object.keys(volumePrices).length > 0 || customUnit !== null,
