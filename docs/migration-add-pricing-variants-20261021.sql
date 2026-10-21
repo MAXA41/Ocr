@@ -11,6 +11,7 @@ alter table if exists public.product_price_overrides
   add column if not exists custom_variants boolean not null default false;
 
 -- Create or update view to include new columns
+-- Note: Using "txt" alias instead of "to" because "to" is a reserved keyword in PostgreSQL
 drop view if exists public.product_catalog_public;
 
 create view public.product_catalog_public as
@@ -42,23 +43,23 @@ select
   pr.custom_variants,
   pr.currency,
   pr.is_active as price_overrides_active,
-  to.name_override,
-  to.description_override,
-  to.image_override,
-  to.origin_override,
-  to.processing_override,
-  to.alt_override,
-  to.taste_override,
-  to.cup_profile_override,
-  to.brew_guide_override,
-  to.audience_override,
-  to.is_active as text_overrides_active,
+  txt.name_override,
+  txt.description_override,
+  txt.image_override,
+  txt.origin_override,
+  txt.processing_override,
+  txt.alt_override,
+  txt.taste_override,
+  txt.cup_profile_override,
+  txt.brew_guide_override,
+  txt.audience_override,
+  txt.is_active as text_overrides_active,
   p.created_at,
   p.updated_at
 from public.product_catalog_items p
 left join public.product_catalog_state s on p.product_id = s.product_id
 left join public.product_price_overrides pr on p.product_id = pr.product_id
-left join public.product_text_overrides to on p.product_id = to.product_id
+left join public.product_text_overrides txt on p.product_id = txt.product_id
 order by p.featured desc, p.name asc;
 
 grant select on public.product_catalog_public to anon, authenticated;
