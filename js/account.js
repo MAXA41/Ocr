@@ -1263,6 +1263,9 @@ const createCatalogProduct = async (form) => {
   const volumePrices = {};
   if (price250 !== null) volumePrices['250g'] = price250;
   if (price1kg !== null) volumePrices['1kg'] = price1kg;
+  if (priceMerch !== null) volumePrices['merch'] = priceMerch;
+  if (pricePiece !== null) volumePrices['piece'] = pricePiece;
+  if (customUnit && priceCustom !== null) volumePrices['custom'] = priceCustom;
 
   const productPayload = {
     product_id: productId,
@@ -1299,17 +1302,17 @@ const createCatalogProduct = async (form) => {
   const defaultVolume = price250 !== null ? '250g' : '1kg';
   const priceOverridePayload = {
     product_id: productId,
-    is_active: Object.keys(volumePrices).length > 0 || priceMerch !== null || pricePiece !== null || priceCustom !== null,
+    is_active: Object.keys(volumePrices).length > 0 || customUnit !== null,
     updated_by: currentSession.user.id,
     currency: 'UAH',
     override_price: volumePrices[defaultVolume] ?? basePrice,
     override_price_250g: volumePrices['250g'] ?? null,
     override_price_1kg: volumePrices['1kg'] ?? null,
-    override_price_merch: priceMerch,
-    override_price_piece: pricePiece,
-    custom_unit: customUnit,
-    override_price_custom: priceCustom,
-    custom_variants: customUnit ? true : false,
+    override_price_merch: volumePrices['merch'] ?? null,
+    override_price_piece: volumePrices['piece'] ?? null,
+    custom_unit: customUnit || null,
+    override_price_custom: volumePrices['custom'] ?? null,
+    custom_variants: (priceMerch !== null || pricePiece !== null || (customUnit && priceCustom !== null)) ? true : false,
   };
 
   if (catalogAdminCreateSubmit instanceof HTMLButtonElement) {
