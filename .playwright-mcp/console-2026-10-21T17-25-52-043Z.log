@@ -1,0 +1,97 @@
+[     157ms] [WARNING] Ignoring Event: localhost @ https://plausible.io/js/pa-bK17fliYzqT2hNkJbpwj2.js:0
+[     744ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:5173/favicon.ico:0
+[    1486ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://sxxlotfbcblnjgcvxaqe.supabase.co/rest/v1/product_price_overrides?select=product_id%2Coverride_price%2Coverride_price_250g%2Coverride_price_1kg%2Ccustom_variants%2Ccolor_variants%2Ccurrency%2Cis_active%2Cupdated_at&is_active=eq.true:0
+[    1489ms] [ERROR] Failed to load product price overrides {code: 42703, details: null, hint: null, message: column product_price_overrides.custom_variants does not exist} @ http://localhost:5173/js/site.js?v=20:525
+[    1636ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://sxxlotfbcblnjgcvxaqe.supabase.co/rest/v1/product_price_overrides?select=product_id%2Coverride_price%2Coverride_price_250g%2Coverride_price_1kg%2Ccustom_variants%2Ccolor_variants%2Ccurrency%2Cis_active%2Cupdated_at&is_active=eq.true:0
+[    1637ms] [ERROR] Failed to load product price overrides {code: 42703, details: null, hint: null, message: column product_price_overrides.custom_variants does not exist} @ http://localhost:5173/js/site.js?v=20:525
+[   82857ms] [WARNING] Ignoring Event: localhost @ https://plausible.io/js/pa-bK17fliYzqT2hNkJbpwj2.js:0
+[   83171ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://sxxlotfbcblnjgcvxaqe.supabase.co/rest/v1/product_price_overrides?select=product_id%2Coverride_price%2Coverride_price_250g%2Coverride_price_1kg%2Ccustom_variants%2Ccolor_variants%2Ccurrency%2Cis_active%2Cupdated_at&is_active=eq.true:0
+[   83180ms] [ERROR] Failed to load product price overrides {code: 42703, details: null, hint: null, message: column product_price_overrides.custom_variants does not exist} @ http://localhost:5173/js/site.js?v=20:525
+[   83274ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://sxxlotfbcblnjgcvxaqe.supabase.co/rest/v1/product_price_overrides?select=product_id%2Coverride_price%2Coverride_price_250g%2Coverride_price_1kg%2Ccustom_variants%2Ccolor_variants%2Ccurrency%2Cis_active%2Cupdated_at&is_active=eq.true:0
+[   83275ms] [ERROR] Failed to load product price overrides {code: 42703, details: null, hint: null, message: column product_price_overrides.custom_variants does not exist} @ http://localhost:5173/js/site.js?v=20:525
+[ 1269642ms] [WARNING] Ignoring Event: localhost @ https://plausible.io/js/pa-bK17fliYzqT2hNkJbpwj2.js:0
+[ 1270273ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://sxxlotfbcblnjgcvxaqe.supabase.co/rest/v1/product_price_overrides?select=product_id%2Coverride_price%2Coverride_price_250g%2Coverride_price_1kg%2Ccustom_variants%2Ccolor_variants%2Ccurrency%2Cis_active%2Cupdated_at&is_active=eq.true:0
+[ 1270280ms] [ERROR] Failed to load product price overrides {code: 42703, details: null, hint: null, message: column product_price_overrides.custom_variants does not exist} @ http://localhost:5173/js/site.js?v=20:525
+[ 1270393ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://sxxlotfbcblnjgcvxaqe.supabase.co/rest/v1/product_price_overrides?select=product_id%2Coverride_price%2Coverride_price_250g%2Coverride_price_1kg%2Ccustom_variants%2Ccolor_variants%2Ccurrency%2Cis_active%2Cupdated_at&is_active=eq.true:0
+[ 1270394ms] [ERROR] Failed to load product price overrides {code: 42703, details: null, hint: null, message: column product_price_overrides.custom_variants does not exist} @ http://localhost:5173/js/site.js?v=20:525
+[ 1292772ms] [LOG] [vite] server connection lost. Polling for restart... @ http://localhost:5173/@vite/client:559
+[ 1292775ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5173/:0
+[ 1293778ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5173/:0
+[ 1294784ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5173/:0
+[ 1295786ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5173/:0
+[ 1296789ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5173/:0
+[ 1297792ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5173/:0
+[ 1298798ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5173/:0
+[ 1299804ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5173/:0
+[ 1300812ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5173/:0
+[ 1301816ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5173/:0
+[ 1302826ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5173/:0
+[ 1303831ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5173/:0
+[ 1304839ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5173/:0
+[ 1305842ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5173/:0
+[ 1306847ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5173/:0
+[ 1307850ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5173/:0
+[ 1308856ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5173/:0
+[ 1309861ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5173/:0
+[ 1310866ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5173/:0
+[ 1311872ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5173/:0
+[ 1312877ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5173/:0
+[ 1313881ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5173/:0
+[ 1314899ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5173/:0
+[ 1315904ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5173/:0
+[ 1316915ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5173/:0
+[ 1317929ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5173/:0
+[ 1318938ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5173/:0
+[ 1319956ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5173/:0
+[ 1320970ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5173/:0
+[ 1321976ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5173/:0
+[ 1322980ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5173/:0
+[ 1323984ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5173/:0
+[ 1324990ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5173/:0
+[ 1325997ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5173/:0
+[ 1327001ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5173/:0
+[ 1328004ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5173/:0
+[ 1329008ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5173/:0
+[ 1330014ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5173/:0
+[ 1331018ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5173/:0
+[ 1332032ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5173/:0
+[ 1333040ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5173/:0
+[ 1334045ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5173/:0
+[ 1335048ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5173/:0
+[ 1336054ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5173/:0
+[ 1337059ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5173/:0
+[ 1340954ms] [WARNING] Ignoring Event: localhost @ https://plausible.io/js/pa-bK17fliYzqT2hNkJbpwj2.js:0
+[ 1341874ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://sxxlotfbcblnjgcvxaqe.supabase.co/rest/v1/product_price_overrides?select=product_id%2Coverride_price%2Coverride_price_250g%2Coverride_price_1kg%2Ccustom_variants%2Ccolor_variants%2Ccurrency%2Cis_active%2Cupdated_at&is_active=eq.true:0
+[ 1341875ms] [ERROR] Failed to load product price overrides {code: 42703, details: null, hint: null, message: column product_price_overrides.custom_variants does not exist} @ http://localhost:5173/js/site.js?v=20:525
+[ 1342688ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://sxxlotfbcblnjgcvxaqe.supabase.co/rest/v1/product_price_overrides?select=product_id%2Coverride_price%2Coverride_price_250g%2Coverride_price_1kg%2Ccustom_variants%2Ccolor_variants%2Ccurrency%2Cis_active%2Cupdated_at&is_active=eq.true:0
+[ 1342690ms] [ERROR] Failed to load product price overrides {code: 42703, details: null, hint: null, message: column product_price_overrides.custom_variants does not exist} @ http://localhost:5173/js/site.js?v=20:525
+[ 1505010ms] [WARNING] Ignoring Event: localhost @ https://plausible.io/js/pa-bK17fliYzqT2hNkJbpwj2.js:0
+[ 1505458ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://sxxlotfbcblnjgcvxaqe.supabase.co/rest/v1/product_price_overrides?select=product_id%2Coverride_price%2Coverride_price_250g%2Coverride_price_1kg%2Ccustom_variants%2Ccolor_variants%2Ccurrency%2Cis_active%2Cupdated_at&is_active=eq.true:0
+[ 1505460ms] [ERROR] Failed to load product price overrides {code: 42703, details: null, hint: null, message: column product_price_overrides.custom_variants does not exist} @ http://localhost:5173/js/site.js?v=20:525
+[ 1505571ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://sxxlotfbcblnjgcvxaqe.supabase.co/rest/v1/product_price_overrides?select=product_id%2Coverride_price%2Coverride_price_250g%2Coverride_price_1kg%2Ccustom_variants%2Ccolor_variants%2Ccurrency%2Cis_active%2Cupdated_at&is_active=eq.true:0
+[ 1505572ms] [ERROR] Failed to load product price overrides {code: 42703, details: null, hint: null, message: column product_price_overrides.custom_variants does not exist} @ http://localhost:5173/js/site.js?v=20:525
+[ 1509633ms] [WARNING] Ignoring Event: localhost @ https://plausible.io/js/pa-bK17fliYzqT2hNkJbpwj2.js:0
+[ 1509859ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://sxxlotfbcblnjgcvxaqe.supabase.co/rest/v1/product_price_overrides?select=product_id%2Coverride_price%2Coverride_price_250g%2Coverride_price_1kg%2Ccustom_variants%2Ccolor_variants%2Ccurrency%2Cis_active%2Cupdated_at&is_active=eq.true:0
+[ 1509861ms] [ERROR] Failed to load product price overrides {code: 42703, details: null, hint: null, message: column product_price_overrides.custom_variants does not exist} @ http://localhost:5173/js/site.js?v=20:525
+[ 1509955ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://sxxlotfbcblnjgcvxaqe.supabase.co/rest/v1/product_price_overrides?select=product_id%2Coverride_price%2Coverride_price_250g%2Coverride_price_1kg%2Ccustom_variants%2Ccolor_variants%2Ccurrency%2Cis_active%2Cupdated_at&is_active=eq.true:0
+[ 1509959ms] [ERROR] Failed to load product price overrides {code: 42703, details: null, hint: null, message: column product_price_overrides.custom_variants does not exist} @ http://localhost:5173/js/site.js?v=20:525
+[ 1586090ms] [WARNING] Ignoring Event: localhost @ https://plausible.io/js/pa-bK17fliYzqT2hNkJbpwj2.js:0
+[ 1586319ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://sxxlotfbcblnjgcvxaqe.supabase.co/rest/v1/product_price_overrides?select=product_id%2Coverride_price%2Coverride_price_250g%2Coverride_price_1kg%2Ccustom_variants%2Ccolor_variants%2Ccurrency%2Cis_active%2Cupdated_at&is_active=eq.true:0
+[ 1586319ms] [ERROR] Failed to load product price overrides {code: 42703, details: null, hint: null, message: column product_price_overrides.custom_variants does not exist} @ http://localhost:5173/js/site.js?v=20:525
+[ 1586431ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://sxxlotfbcblnjgcvxaqe.supabase.co/rest/v1/product_price_overrides?select=product_id%2Coverride_price%2Coverride_price_250g%2Coverride_price_1kg%2Ccustom_variants%2Ccolor_variants%2Ccurrency%2Cis_active%2Cupdated_at&is_active=eq.true:0
+[ 1586432ms] [ERROR] Failed to load product price overrides {code: 42703, details: null, hint: null, message: column product_price_overrides.custom_variants does not exist} @ http://localhost:5173/js/site.js?v=20:525
+[ 1606972ms] [WARNING] Ignoring Event: localhost @ https://plausible.io/js/pa-bK17fliYzqT2hNkJbpwj2.js:0
+[ 1607146ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://sxxlotfbcblnjgcvxaqe.supabase.co/rest/v1/product_price_overrides?select=product_id%2Coverride_price%2Coverride_price_250g%2Coverride_price_1kg%2Ccustom_variants%2Ccolor_variants%2Ccurrency%2Cis_active%2Cupdated_at&is_active=eq.true:0
+[ 1607147ms] [ERROR] Failed to load product price overrides {code: 42703, details: null, hint: null, message: column product_price_overrides.custom_variants does not exist} @ http://localhost:5173/js/site.js?v=20:525
+[ 1607356ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://sxxlotfbcblnjgcvxaqe.supabase.co/rest/v1/product_price_overrides?select=product_id%2Coverride_price%2Coverride_price_250g%2Coverride_price_1kg%2Ccustom_variants%2Ccolor_variants%2Ccurrency%2Cis_active%2Cupdated_at&is_active=eq.true:0
+[ 1607357ms] [ERROR] Failed to load product price overrides {code: 42703, details: null, hint: null, message: column product_price_overrides.custom_variants does not exist} @ http://localhost:5173/js/site.js?v=20:525
+[ 1630886ms] [WARNING] Ignoring Event: localhost @ https://plausible.io/js/pa-bK17fliYzqT2hNkJbpwj2.js:0
+[ 1631131ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://sxxlotfbcblnjgcvxaqe.supabase.co/rest/v1/product_price_overrides?select=product_id%2Coverride_price%2Coverride_price_250g%2Coverride_price_1kg%2Ccustom_variants%2Ccolor_variants%2Ccurrency%2Cis_active%2Cupdated_at&is_active=eq.true:0
+[ 1631133ms] [ERROR] Failed to load product price overrides {code: 42703, details: null, hint: null, message: column product_price_overrides.custom_variants does not exist} @ http://localhost:5173/js/site.js?v=20:525
+[ 1631249ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://sxxlotfbcblnjgcvxaqe.supabase.co/rest/v1/product_price_overrides?select=product_id%2Coverride_price%2Coverride_price_250g%2Coverride_price_1kg%2Ccustom_variants%2Ccolor_variants%2Ccurrency%2Cis_active%2Cupdated_at&is_active=eq.true:0
+[ 1631252ms] [ERROR] Failed to load product price overrides {code: 42703, details: null, hint: null, message: column product_price_overrides.custom_variants does not exist} @ http://localhost:5173/js/site.js?v=20:525
+[ 1652347ms] [WARNING] Ignoring Event: localhost @ https://plausible.io/js/pa-bK17fliYzqT2hNkJbpwj2.js:0
+[ 1652478ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://sxxlotfbcblnjgcvxaqe.supabase.co/rest/v1/product_price_overrides?select=product_id%2Coverride_price%2Coverride_price_250g%2Coverride_price_1kg%2Ccustom_variants%2Ccolor_variants%2Ccurrency%2Cis_active%2Cupdated_at&is_active=eq.true:0
+[ 1652482ms] [ERROR] Failed to load product price overrides {code: 42703, details: null, hint: null, message: column product_price_overrides.custom_variants does not exist} @ http://localhost:5173/js/site.js?v=20:525
+[ 1652554ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://sxxlotfbcblnjgcvxaqe.supabase.co/rest/v1/product_price_overrides?select=product_id%2Coverride_price%2Coverride_price_250g%2Coverride_price_1kg%2Ccustom_variants%2Ccolor_variants%2Ccurrency%2Cis_active%2Cupdated_at&is_active=eq.true:0
+[ 1652555ms] [ERROR] Failed to load product price overrides {code: 42703, details: null, hint: null, message: column product_price_overrides.custom_variants does not exist} @ http://localhost:5173/js/site.js?v=20:525

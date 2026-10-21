@@ -3,8 +3,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
+    "dev": "npm run images:list && vite",
+    "build": "npm run images:list && vite build",
+    "images:list": "node scripts/generate-image-list.mjs",
     "public-env:build": "node scripts/build-public-env.mjs",
     "supabase:sync-products": "node scripts/sync-products-to-supabase.mjs",
     "supabase:functions:deploy:mono-create": "npx supabase functions deploy mono-create-invoice --no-verify-jwt",
