@@ -196,20 +196,22 @@
                 </label>
                 <label class="catalog-admin-field catalog-admin-field-wide">
                   <span>Фото товару</span>
-                  <input type="text" name="image" list="catalog-image-suggestions" required placeholder="images/your-photo.webp або https://...">
-                  <small class="catalog-admin-hint">Додайте файл у папку images і вкажіть шлях на кшталт images/lot-2026.webp, або вставте повний https:// URL картинки.</small>
+                  <div class="catalog-admin-image-selector">
+                    <div class="catalog-admin-image-folder-selector">
+                      <label>
+                        <span>Папка</span>
+                        <select id="catalog-image-folder" name="imageFolder">
+                          <option value="">📁 Усі фото</option>
+                        </select>
+                      </label>
+                    </div>
+                    <div class="catalog-admin-image-input">
+                      <input type="text" name="image" id="catalog-image-input" list="catalog-image-suggestions" required placeholder="images/your-photo.webp або https://...">
+                      <small class="catalog-admin-hint">Додайте файл у папку images і вкажіть шлях на кшталт images/lot-2026.webp, або вставте повний https:// URL картинки.</small>
+                    </div>
+                  </div>
                 </label>
                 <datalist id="catalog-image-suggestions">
-                  <option value="images/30dripbag.jpg"></option>
-                  <option value="images/Brazilia_Capadocia.webp"></option>
-                  <option value="images/burundi_baho.webp"></option>
-                  <option value="images/Colombia-Coocentral-Es.webp"></option>
-                  <option value="images/Colombia-Coocentral-Fl.webp"></option>
-                  <option value="images/Dona_Linda_es.webp"></option>
-                  <option value="images/Dona-Linda-Filter.webp"></option>
-                  <option value="images/Guatemala_Dona_Es.webp"></option>
-                  <option value="images/honduras_montecillos.webp"></option>
-                  <option value="images/Rwanda_Kivu.webp"></option>
                 </datalist>
                 <label class="catalog-admin-field catalog-admin-field-wide">
                   <span>Alt для фото</span>
@@ -340,22 +342,52 @@
   
   <!-- Initialize images list for catalog admin form -->
   <script>
-    // Load images list and populate datalist before account.js runs
+    // Load images list and populate datalist and folder selector
     (async function initImages() {
       try {
         const response = await fetch('/images-list.json');
         if (response.ok) {
           const data = await response.json();
-          if (Array.isArray(data.images)) {
+          if (Array.isArray(data.images) && typeof data.folders === 'object') {
             const datalist = document.getElementById('catalog-image-suggestions');
-            if (datalist) {
-              datalist.innerHTML = '';
-              data.images.forEach((imagePath) => {
+            const folderSelect = document.getElementById('catalog-image-folder');
+            const imageInput = document.getElementById('catalog-image-input');
+            
+            if (datalist && folderSelect) {
+              // Populate folder selector
+              Object.keys(data.folders).sort().forEach((folderName) => {
                 const option = document.createElement('option');
-                option.value = imagePath;
-                datalist.appendChild(option);
+                option.value = folderName;
+                option.textContent = `📁 ${folderName}/`;
+                folderSelect.appendChild(option);
               });
-              console.log(`✅ Loaded ${data.images.length} images for catalog admin form`);
+              
+              // Function to update datalist based on selected folder
+              function updateImageList() {
+                datalist.innerHTML = '';
+                const selectedFolder = folderSelect.value;
+                let imagesToShow = data.images;
+                
+                if (selectedFolder && data.folders[selectedFolder]) {
+                  imagesToShow = data.folders[selectedFolder];
+                }
+                
+                imagesToShow.forEach((imagePath) => {
+                  const option = document.createElement('option');
+                  option.value = imagePath;
+                  datalist.appendChild(option);
+                });
+                
+                console.log(`✅ Updated image list: ${imagesToShow.length} images from "${selectedFolder || 'all folders'}"`);
+              }
+              
+              // Update list when folder changes
+              folderSelect.addEventListener('change', updateImageList);
+              
+              // Initial population
+              updateImageList();
+              
+              console.log(`✅ Loaded ${data.images.length} images from ${Object.keys(data.folders).length} folders`);
             }
           }
         }

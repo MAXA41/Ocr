@@ -1,5 +1,5 @@
 {
-  "generated": "2026-10-21T18:55:24.067Z",
+  "generated": "2026-10-21T21:10:58.454Z",
   "totalCount": 112,
   "images": [
     "images/11-png-2-731x638.webp",
@@ -114,5 +114,36 @@
     "images/Банка06.jpg",
     "images/ПОДАРУНОК.png",
     "images/ПОДАРУНОК.webp"
-  ]
+  ],
+  "folders": {
+    "equipment": [
+      "images/equipment/1Z Grind/1zpresso-q-new-1000x1000.webp",
+      "images/equipment/1Z Grind/1zpresso-q2-air-purple-500x500-1000x1000.webp",
+      "images/equipment/1Z Grind/1zpresso-x-ultra-midnight-black-500x500-1000x1000.webp",
+      "images/equipment/1Z Grind/1zpresso-x-ultra-midnight2-500x500-1000x1000.webp",
+      "images/equipment/1Z Grind/1zpresso_k_ultra_front-1000x1000.webp",
+      "images/equipment/1Z Grind/КавомолкaSmartHario.webp",
+      "images/equipment/Comandante/GrindComandanteC40.webp",
+      "images/equipment/Comandante/GrindComandanteC40_DeepPurple.webp",
+      "images/equipment/Comandante/GrindComandanteC40_RacingGreen.webp",
+      "images/equipment/Comandante/GrindComandanteC40_Walnut.webp",
+      "images/equipment/Mocomaster/kbg-cherry-blossom-1000x1000.webp",
+      "images/equipment/Mocomaster/moccamaster-black-1-1000x1000.webp",
+      "images/equipment/Mocomaster/moccamaster-brushed-1-1000x1000.webp",
+      "images/equipment/Mocomaster/moccamaster-glass-jug-kgb-1-1000x1000.webp",
+      "images/equipment/Mocomaster/moccamaster-off-white-1-1000x1000.webp",
+      "images/equipment/Mocomaster/moccamaster-orange-1-1000x1000.webp",
+      "images/equipment/Mocomaster/moccamaster-red-1-1000x1000.webp",
+      "images/equipment/Mocomaster/moccamaster-white-1-1000x1000.webp",
+      "images/equipment/Mocomaster/moccamaster-yellow-pepper-1-1000x1000.webp"
+    ],
+    "himicals": [
+      "images/himicals/Detergent.png",
+      "images/himicals/MilkCleaner.png"
+    ],
+    "merch": [
+      "images/merch/1.png",
+      "images/merch/2.png"
+    ]
+  }
 }

@@ -1620,6 +1620,48 @@ body[data-page-category="filter"] .hero .btn.ghost {
   color: var(--olive);
 }
 
+.catalog-admin-image-selector {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.catalog-admin-image-folder-selector {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.catalog-admin-image-folder-selector label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.catalog-admin-image-folder-selector span {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ink);
+}
+
+.catalog-admin-image-folder-selector select {
+  padding: 10px 12px;
+  border: 1px solid var(--sand);
+  border-radius: 10px;
+  font-family: var(--font-body);
+  background: white;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.catalog-admin-image-input {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
 .catalog-admin-summary-side {
   display: grid;
   gap: 12px;
