@@ -1878,6 +1878,14 @@ body[data-page-category="filter"] .hero .btn.ghost {
   color: rgba(15, 15, 13, 0.62);
 }
 
+.catalog-admin-hint {
+  display: block;
+  font-size: 11px;
+  color: var(--olive);
+  margin-top: 4px;
+  opacity: 0.75;
+}
+
 .hero-list {
   display: grid;
   gap: 12px;

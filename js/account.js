@@ -1227,6 +1227,10 @@ const createCatalogProduct = async (form) => {
   const stockQuantity = parseOptionalIntegerInput(formData.get('stockQuantity'));
   const price250 = parseNonNegativePriceInput(formData.get('price250'));
   const price1kg = parseNonNegativePriceInput(formData.get('price1kg'));
+  const priceMerch = parseNonNegativePriceInput(formData.get('priceMerch'));
+  const pricePiece = parseNonNegativePriceInput(formData.get('pricePiece'));
+  const customUnit = normalizeOptionalText(formData.get('customUnit'));
+  const priceCustom = normalizeOptionalText(formData.get('priceCustom')) ? parseNonNegativePriceInput(formData.get('priceCustom')) : null;
 
   if (!productId || !name || !description || !image) {
     setCatalogCreateStatus('Заповніть ID або назву, опис і фото товару.', 'error');
@@ -1295,12 +1299,17 @@ const createCatalogProduct = async (form) => {
   const defaultVolume = price250 !== null ? '250g' : '1kg';
   const priceOverridePayload = {
     product_id: productId,
-    is_active: Object.keys(volumePrices).length > 0,
+    is_active: Object.keys(volumePrices).length > 0 || priceMerch !== null || pricePiece !== null || priceCustom !== null,
     updated_by: currentSession.user.id,
     currency: 'UAH',
     override_price: volumePrices[defaultVolume] ?? basePrice,
     override_price_250g: volumePrices['250g'] ?? null,
     override_price_1kg: volumePrices['1kg'] ?? null,
+    override_price_merch: priceMerch,
+    override_price_piece: pricePiece,
+    custom_unit: customUnit,
+    override_price_custom: priceCustom,
+    custom_variants: customUnit ? true : false,
   };
 
   if (catalogAdminCreateSubmit instanceof HTMLButtonElement) {
@@ -1558,6 +1567,10 @@ const saveCatalogRow = async (card) => {
     override_price: defaultVolumePrice,
     override_price_250g: Object.prototype.hasOwnProperty.call(nextPriceOverrides, '250g') ? nextPriceOverrides['250g'] : null,
     override_price_1kg: Object.prototype.hasOwnProperty.call(nextPriceOverrides, '1kg') ? nextPriceOverrides['1kg'] : null,
+    override_price_merch: Object.prototype.hasOwnProperty.call(nextPriceOverrides, 'merch') ? nextPriceOverrides['merch'] : null,
+    override_price_piece: Object.prototype.hasOwnProperty.call(nextPriceOverrides, 'piece') ? nextPriceOverrides['piece'] : null,
+    override_price_custom: Object.prototype.hasOwnProperty.call(nextPriceOverrides, 'custom') ? nextPriceOverrides['custom'] : null,
+    custom_unit: customUnit || null,
     custom_variants: customVariants.length > 0 ? JSON.stringify(customVariants) : null,
     color_variants: colorVariants.length > 0 ? JSON.stringify(colorVariants) : null,
   };

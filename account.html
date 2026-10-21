@@ -223,6 +223,29 @@
                   <span>Ціна 1 кг, грн</span>
                   <input type="number" name="price1kg" min="0" step="0.01" placeholder="Наприклад: 1290">
                 </label>
+                <fieldset class="catalog-admin-fieldset">
+                  <legend>Додаткові варіанти упаковки (опціонально)</legend>
+                  <label class="catalog-admin-field">
+                    <span>Ціна за штуку (мерч, без міри)</span>
+                    <input type="number" name="priceMerch" min="0" step="0.01" placeholder="Наприклад: 45">
+                    <small class="catalog-admin-hint">Для товарів без вимірювання (чашки, мерч тощо)</small>
+                  </label>
+                  <label class="catalog-admin-field">
+                    <span>Ціна за штуку (пакетик)</span>
+                    <input type="number" name="pricePiece" min="0" step="0.01" placeholder="Наприклад: 65">
+                    <small class="catalog-admin-hint">Для дріп-пакетів, фільтр-пакетів тощо</small>
+                  </label>
+                  <label class="catalog-admin-field">
+                    <span>Кастомна міра (наприклад: 50г)</span>
+                    <input type="text" name="customUnit" placeholder="Наприклад: 50g">
+                    <small class="catalog-admin-hint">Введіть довільну одиницю виміру</small>
+                  </label>
+                  <label class="catalog-admin-field">
+                    <span>Ціна за кастомну міру, грн</span>
+                    <input type="number" name="priceCustom" min="0" step="0.01" placeholder="Наприклад: 150">
+                    <small class="catalog-admin-hint">Активується тільки якщо заповнена кастомна міра</small>
+                  </label>
+                </fieldset>
                 <label class="catalog-admin-field">
                   <span>Походження</span>
                   <input type="text" name="origin" placeholder="Наприклад: South Kivu Province">
