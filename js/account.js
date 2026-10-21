@@ -1230,7 +1230,7 @@ const createCatalogProduct = async (form) => {
   const priceMerch = parseNonNegativePriceInput(formData.get('priceMerch'));
   const pricePiece = parseNonNegativePriceInput(formData.get('pricePiece'));
   const customUnit = normalizeOptionalText(formData.get('customUnit'));
-  const priceCustom = normalizeOptionalText(formData.get('priceCustom')) ? parseNonNegativePriceInput(formData.get('priceCustom')) : null;
+  const priceCustom = customUnit ? parseNonNegativePriceInput(formData.get('priceCustom')) : null;
 
   if (!productId || !name || !description || !image) {
     setCatalogCreateStatus('Заповніть ID або назву, опис і фото товару.', 'error');
