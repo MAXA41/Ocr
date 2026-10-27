@@ -69,9 +69,11 @@ const catalogCategoryLabels = {
   filter: 'Фільтр',
   drips: 'Дріпи',
   decaf: 'Декаф',
+  accessories: 'Аксесуари',
+  merch: 'Мерч',
 };
 
-const catalogCategoryOrder = ['espresso', 'filter', 'drips', 'decaf'];
+const catalogCategoryOrder = ['espresso', 'filter', 'drips', 'decaf', 'accessories', 'merch'];
 const catalogTextTemplates = {
   espresso: {
     taste: 'Шоколад, горіх, карамель і щільний солодкий aftertaste.',
@@ -96,6 +98,18 @@ const catalogTextTemplates = {
     cup_profile: 'Спокійна, збалансована чашка з м’яким тілом і чистим післясмаком.',
     brew_guide: 'Декаф: використовуйте трохи дрібніший помел і м’якший рецепт для стабільної солодкості.',
     audience: 'Підійде для вечора, чутливих до кофеїну гостей і тих, хто хоче каву без стимуляції.',
+  },
+  accessories: {
+    taste: '',
+    cup_profile: '',
+    brew_guide: '',
+    audience: 'Обладнання і аксесуари для приготування кави.',
+  },
+  merch: {
+    taste: '',
+    cup_profile: '',
+    brew_guide: '',
+    audience: 'Мерч і сувеніри Odesa Coffee Roasters.',
   },
 };
 
@@ -1044,7 +1058,7 @@ const renderCatalogAdminList = () => {
                       <label class="catalog-admin-field" data-catalog-field-wrapper data-catalog-field-label="Категорія" data-catalog-field-value="${escapeHtml(row.category || '')}">
                         <span>Категорія</span>
                         <select data-catalog-text-field="category">
-                          ${['espresso', 'filter', 'drips', 'decaf'].map((categoryValue) => `<option value="${categoryValue}" ${row.category === categoryValue ? 'selected' : ''}>${catalogCategoryLabels[categoryValue] || categoryValue}</option>`).join('')}
+                          ${catalogCategoryOrder.map((categoryValue) => `<option value="${categoryValue}" ${row.category === categoryValue ? 'selected' : ''}>${catalogCategoryLabels[categoryValue] || categoryValue}</option>`).join('')}
                         </select>
                       </label>
                       <label class="catalog-admin-field" data-catalog-field-wrapper data-catalog-field-label="Назва картки" data-catalog-field-value="${escapeHtml(row.name || '')}">
