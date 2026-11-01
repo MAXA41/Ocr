@@ -823,6 +823,18 @@ const buildCatalogAdminRows = (products, stateRows) => {
       }
     }
 
+    let gradationVariants = [];
+    if (priceOverrideRow?.gradation_variants) {
+      try {
+        const parsed = typeof priceOverrideRow.gradation_variants === 'string'
+          ? JSON.parse(priceOverrideRow.gradation_variants)
+          : priceOverrideRow.gradation_variants;
+        gradationVariants = Array.isArray(parsed) ? parsed : [];
+      } catch (e) {
+        console.warn('Failed to parse gradation_variants for product', product.id, e);
+      }
+    }
+
     let customUnit = '';
     if (customVariants.length > 0) {
       const customVariant = customVariants.find((v) => v.unit && v.unit !== 'merch' && v.unit !== 'piece');
@@ -843,6 +855,7 @@ const buildCatalogAdminRows = (products, stateRows) => {
       price1kg: resolvedPrice1kg,
       customVariants,
       colorVariants,
+      gradationVariants,
       customUnit,
     };
   });
@@ -1054,6 +1067,35 @@ const renderCatalogAdminList = () => {
                       </div>
                       <button type="button" class="btn ghost add-color" data-catalog-add-color>+ Додати колір</button>
                     </fieldset>
+                    <fieldset class="catalog-admin-fieldset" ${row.category !== 'accessories' ? 'hidden' : ''} data-catalog-accessories-section>
+                      <legend>Варіанти градацій (розміри/типи)</legend>
+                      <div class="catalog-admin-gradations-container" data-catalog-gradations-container>
+                        ${(row.gradationVariants || []).map((gradation, idx) => `
+                          <div class="catalog-admin-gradation-item" data-catalog-gradation-item="${idx}">
+                            <div class="catalog-admin-text-grid">
+                              <label class="catalog-admin-field">
+                                <span>Назва градації (розмір/тип)</span>
+                                <input type="text" class="catalog-gradation-name" value="${escapeHtml(gradation.name || '')}" placeholder="Наприклад: Чорна L">
+                              </label>
+                              <label class="catalog-admin-field">
+                                <span>Опис</span>
+                                <input type="text" class="catalog-gradation-description" value="${escapeHtml(gradation.description || '')}" placeholder="Наприклад: Великий розмір">
+                              </label>
+                              <label class="catalog-admin-field">
+                                <span>Ціна, грн</span>
+                                <input type="number" min="0" step="0.01" class="catalog-gradation-price" value="${escapeHtml(String(gradation.price || ''))}" placeholder="Наприклад: 150">
+                              </label>
+                              <label class="catalog-admin-field">
+                                <span>SKU (артикул)</span>
+                                <input type="text" class="catalog-gradation-sku" value="${escapeHtml(gradation.sku || '')}" placeholder="Наприклад: ACC-BLK-L-001">
+                              </label>
+                              <button type="button" class="btn ghost remove-gradation" title="Видалити цю градацію">✕ Видалити</button>
+                            </div>
+                          </div>
+                        `).join('')}
+                      </div>
+                      <button type="button" class="btn ghost add-gradation" data-catalog-add-gradation>+ Додати градацію</button>
+                    </fieldset>
                     <div class="catalog-admin-text-grid">
                       <label class="catalog-admin-field" data-catalog-field-wrapper data-catalog-field-label="Категорія" data-catalog-field-value="${escapeHtml(row.category || '')}">
                         <span>Категорія</span>
@@ -1169,7 +1211,7 @@ const loadCatalogAdmin = async (session) => {
       .eq('is_active', true),
     supabase
       .from('product_price_overrides')
-      .select('product_id, override_price, override_price_250g, override_price_1kg, currency, is_active, custom_variants, color_variants, updated_at')
+      .select('product_id, override_price, override_price_250g, override_price_1kg, currency, is_active, custom_variants, color_variants, gradation_variants, updated_at')
       .eq('is_active', true),
   ]);
 
@@ -1580,9 +1622,32 @@ const saveCatalogRow = async (card) => {
     });
   }
 
+  const gradationVariants = [];
+  const gradationContainer = card.querySelector('[data-catalog-gradations-container]');
+  if (gradationContainer) {
+    const gradationItems = gradationContainer.querySelectorAll('[data-catalog-gradation-item]');
+    gradationItems.forEach((item) => {
+      const nameInput = item.querySelector('.catalog-gradation-name');
+      const descInput = item.querySelector('.catalog-gradation-description');
+      const priceInput = item.querySelector('.catalog-gradation-price');
+      const skuInput = item.querySelector('.catalog-gradation-sku');
+      
+      if (nameInput instanceof HTMLInputElement && priceInput instanceof HTMLInputElement) {
+        const name = String(nameInput.value || '').trim();
+        const description = String(descInput instanceof HTMLInputElement ? descInput.value : '').trim();
+        const price = parseFloat(String(priceInput.value || '0'));
+        const sku = String(skuInput instanceof HTMLInputElement ? skuInput.value : '').trim();
+        
+        if (name && price > 0) {
+          gradationVariants.push({ name, description, price, sku });
+        }
+      }
+    });
+  }
+
   const priceOverridePayload = {
     product_id: productId,
-    is_active: hasAnyPriceOverride || customVariants.length > 0 || colorVariants.length > 0,
+    is_active: hasAnyPriceOverride || customVariants.length > 0 || colorVariants.length > 0 || gradationVariants.length > 0,
     updated_by: currentSession.user.id,
     currency: 'UAH',
     override_price: defaultVolumePrice,
@@ -1594,6 +1659,7 @@ const saveCatalogRow = async (card) => {
     custom_unit: customUnit || null,
     custom_variants: customVariants.length > 0 ? JSON.stringify(customVariants) : null,
     color_variants: colorVariants.length > 0 ? JSON.stringify(colorVariants) : null,
+    gradation_variants: gradationVariants.length > 0 ? JSON.stringify(gradationVariants) : null,
   };
 
   Object.entries(nextTextOverrides).forEach(([field, value]) => {
@@ -2118,6 +2184,56 @@ catalogAdminList?.addEventListener('click', (event) => {
     }
     return;
   }
+
+  const addGradationBtn = target.closest('[data-catalog-add-gradation]');
+  if (addGradationBtn instanceof HTMLButtonElement) {
+    event.preventDefault();
+    const card = addGradationBtn.closest('.catalog-admin-card');
+    if (!card) return;
+
+    const container = card.querySelector('[data-catalog-gradations-container]');
+    if (!container) return;
+
+    const nextIdx = container.querySelectorAll('[data-catalog-gradation-item]').length;
+    const gradationItem = document.createElement('div');
+    gradationItem.className = 'catalog-admin-gradation-item';
+    gradationItem.dataset.catalogGradationItem = String(nextIdx);
+    gradationItem.innerHTML = `
+      <div class="catalog-admin-text-grid">
+        <label class="catalog-admin-field">
+          <span>Назва градації (розмір/тип)</span>
+          <input type="text" class="catalog-gradation-name" placeholder="Наприклад: Чорна L">
+        </label>
+        <label class="catalog-admin-field">
+          <span>Опис</span>
+          <input type="text" class="catalog-gradation-description" placeholder="Наприклад: Великий розмір">
+        </label>
+        <label class="catalog-admin-field">
+          <span>Ціна, грн</span>
+          <input type="number" min="0" step="0.01" class="catalog-gradation-price" placeholder="Наприклад: 150">
+        </label>
+        <label class="catalog-admin-field">
+          <span>SKU (артикул)</span>
+          <input type="text" class="catalog-gradation-sku" placeholder="Наприклад: ACC-BLK-L-001">
+        </label>
+        <button type="button" class="btn ghost remove-gradation" title="Видалити цю градацію">✕ Видалити</button>
+      </div>
+    `;
+    container.appendChild(gradationItem);
+    catalogAdminHasUnsavedChanges = true;
+    return;
+  }
+
+  const removeGradationBtn = target.closest('.remove-gradation');
+  if (removeGradationBtn instanceof HTMLButtonElement) {
+    event.preventDefault();
+    const gradationItem = removeGradationBtn.closest('[data-catalog-gradation-item]');
+    if (gradationItem instanceof HTMLElement) {
+      gradationItem.remove();
+      catalogAdminHasUnsavedChanges = true;
+    }
+    return;
+  }
 });
 
 catalogAdminList?.addEventListener('input', (event) => {
@@ -2168,6 +2284,17 @@ catalogAdminList?.addEventListener('change', (event) => {
   const searchInput = card.querySelector('[data-catalog-field-search]');
   if (searchInput instanceof HTMLInputElement) {
     filterCatalogCardFields(card, searchInput.value);
+  }
+
+  if (target.getAttribute('data-catalog-text-field') === 'category') {
+    const accessoriesSection = card.querySelector('[data-catalog-accessories-section]');
+    if (accessoriesSection instanceof HTMLElement) {
+      if (target.value === 'accessories') {
+        accessoriesSection.hidden = false;
+      } else {
+        accessoriesSection.hidden = true;
+      }
+    }
   }
 
   catalogAdminHasUnsavedChanges = true;

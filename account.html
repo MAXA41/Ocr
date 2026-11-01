@@ -344,55 +344,77 @@
   <script>
     // Load images list and populate datalist and folder selector
     (async function initImages() {
+      console.log('🔄 Initializing images list...');
       try {
         const response = await fetch('/images-list.json');
-        if (response.ok) {
-          const data = await response.json();
-          if (Array.isArray(data.images) && typeof data.folders === 'object') {
-            const datalist = document.getElementById('catalog-image-suggestions');
-            const folderSelect = document.getElementById('catalog-image-folder');
-            const imageInput = document.getElementById('catalog-image-input');
-            
-            if (datalist && folderSelect) {
-              // Populate folder selector
-              Object.keys(data.folders).sort().forEach((folderName) => {
-                const option = document.createElement('option');
-                option.value = folderName;
-                option.textContent = `📁 ${folderName}/`;
-                folderSelect.appendChild(option);
-              });
-              
-              // Function to update datalist based on selected folder
-              function updateImageList() {
-                datalist.innerHTML = '';
-                const selectedFolder = folderSelect.value;
-                let imagesToShow = data.images;
-                
-                if (selectedFolder && data.folders[selectedFolder]) {
-                  imagesToShow = data.folders[selectedFolder];
-                }
-                
-                imagesToShow.forEach((imagePath) => {
-                  const option = document.createElement('option');
-                  option.value = imagePath;
-                  datalist.appendChild(option);
-                });
-                
-                console.log(`✅ Updated image list: ${imagesToShow.length} images from "${selectedFolder || 'all folders'}"`);
-              }
-              
-              // Update list when folder changes
-              folderSelect.addEventListener('change', updateImageList);
-              
-              // Initial population
-              updateImageList();
-              
-              console.log(`✅ Loaded ${data.images.length} images from ${Object.keys(data.folders).length} folders`);
-            }
-          }
+        if (!response.ok) {
+          console.error(`❌ Failed to fetch images-list.json: ${response.status} ${response.statusText}`);
+          return;
         }
+        
+        const data = await response.json();
+        console.log('📋 Loaded images-list.json:', { totalImages: data.images?.length, folders: Object.keys(data.folders || {}) });
+        
+        if (!Array.isArray(data.images) || typeof data.folders !== 'object') {
+          console.error('❌ Invalid images-list.json structure');
+          return;
+        }
+        
+        const datalist = document.getElementById('catalog-image-suggestions');
+        const folderSelect = document.getElementById('catalog-image-folder');
+        const imageInput = document.getElementById('catalog-image-input');
+        
+        if (!datalist) {
+          console.error('❌ datalist #catalog-image-suggestions not found');
+          return;
+        }
+        if (!folderSelect) {
+          console.error('❌ folderSelect #catalog-image-folder not found');
+          return;
+        }
+        
+        // Populate folder selector
+        Object.keys(data.folders).sort().forEach((folderName) => {
+          const option = document.createElement('option');
+          option.value = folderName;
+          option.textContent = `📁 ${folderName}/`;
+          folderSelect.appendChild(option);
+        });
+        console.log(`✅ Added ${Object.keys(data.folders).length} folders to selector`);
+        
+        // Function to update datalist based on selected folder
+        function updateImageList() {
+          datalist.innerHTML = '';
+          const selectedFolder = folderSelect.value;
+          let imagesToShow = data.images;
+          
+          if (selectedFolder && data.folders[selectedFolder]) {
+            imagesToShow = data.folders[selectedFolder];
+          }
+          
+          imagesToShow.forEach((imagePath) => {
+            const option = document.createElement('option');
+            option.value = imagePath;
+            datalist.appendChild(option);
+          });
+          
+          console.log(`✅ Updated datalist: ${imagesToShow.length} images in folder "${selectedFolder || 'all'}"`);
+        }
+        
+        // Update list when folder changes
+        folderSelect.addEventListener('change', updateImageList);
+        
+        // Also update when input field gets focus
+        if (imageInput) {
+          imageInput.addEventListener('focus', updateImageList);
+        }
+        
+        // Initial population
+        updateImageList();
+        
+        console.log(`✅ Images list initialized: ${data.images.length} total images`);
       } catch (e) {
-        console.error('Failed to load images list:', e);
+        console.error('❌ Failed to load images list:', e);
       }
     })();
   </script>

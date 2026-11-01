@@ -1334,7 +1334,24 @@ const normalizeCartItem = (item) => ({
 
 const normalizePromoCode = (value = '') => String(value || '').trim().toLowerCase();
 
-const calculateCartPricing = (items, promoCode = '') => {
+const getDiscountTierForAccumulation = (accumulationThreshold) => {
+  const tiers = [
+    { name: 'Black', threshold: 10000, discountPercent: 10 },
+    { name: 'Gold', threshold: 5000, discountPercent: 7 },
+    { name: 'Silver', threshold: 2000, discountPercent: 5 },
+    { name: 'Bronze', threshold: 500, discountPercent: 3 },
+    { name: 'Base', threshold: 0, discountPercent: 0 },
+  ];
+
+  for (const tier of tiers) {
+    if (accumulationThreshold >= tier.threshold) {
+      return tier;
+    }
+  }
+  return tiers[tiers.length - 1];
+};
+
+const calculateCartPricing = (items, promoCode = '', accumulationDiscount = 0) => {
   const subtotal = items.reduce((sum, item) => sum + item.price * item.qty, 0);
   const promoEligibleSubtotal = items
     .filter((item) => !isPromoExcludedProduct(item))
@@ -1342,12 +1359,18 @@ const calculateCartPricing = (items, promoCode = '') => {
   const normalizedPromoCode = normalizePromoCode(promoCode);
   const promoDiscountRate = promoDiscountRates[normalizedPromoCode] || 0;
   const isPromoApplied = promoEligibleSubtotal > 0 && promoDiscountRate > 0;
-  const discountAmount = isPromoApplied ? Math.round(promoEligibleSubtotal * promoDiscountRate) : 0;
-  const total = Math.max(subtotal - discountAmount, 0);
+  const promoDiscountAmount = isPromoApplied ? Math.round(promoEligibleSubtotal * promoDiscountRate) : 0;
+  
+  const accumulationDiscountAmount = Math.round(subtotal * (accumulationDiscount / 100));
+  const totalDiscountAmount = Math.max(promoDiscountAmount, accumulationDiscountAmount);
+  
+  const total = Math.max(subtotal - totalDiscountAmount, 0);
 
   return {
     subtotal,
-    discountAmount,
+    discountAmount: totalDiscountAmount,
+    discountType: accumulationDiscountAmount > promoDiscountAmount ? 'accumulation' : (isPromoApplied ? 'promo' : 'none'),
+    discountPercent: accumulationDiscountAmount > promoDiscountAmount ? accumulationDiscount : (isPromoApplied ? Math.round(promoDiscountRate * 100) : 0),
     total,
     promoCode: isPromoApplied ? String(promoCode).trim() : '',
     enteredPromoCode: String(promoCode || '').trim(),
@@ -2581,6 +2604,7 @@ const buildOrderPayload = ({
   promoCode,
   subtotal,
   discountAmount,
+  discountPercent,
   comment,
   cart,
   total,
@@ -2601,6 +2625,7 @@ const buildOrderPayload = ({
     subtotal,
     subtotalLabel: `${subtotal} грн`,
     discountAmount,
+    discountPercent: discountPercent || 0,
     discountLabel: `${discountAmount} грн`,
     comment,
     total,
@@ -3095,6 +3120,30 @@ if (checkoutForm) {
   syncDeliveryFields();
   renderCheckoutSummary();
 
+  const getCustomerAccumulationDiscount = async (customerId) => {
+    if (!customerId || !supabase) return 0;
+    
+    try {
+      const { data: orders, error } = await supabase
+        .from('orders')
+        .select('total')
+        .eq('customer_id', customerId)
+        .not('total', 'is', null);
+      
+      if (error) {
+        console.error('Error loading customer orders:', error);
+        return 0;
+      }
+      
+      const totalAccumulation = (orders || []).reduce((sum, order) => sum + (order.total || 0), 0);
+      const tier = getDiscountTierForAccumulation(totalAccumulation);
+      return tier.discountPercent;
+    } catch (e) {
+      console.error('Failed to calculate customer discount:', e);
+      return 0;
+    }
+  };
+
   checkoutForm.addEventListener('submit', async (event) => {
     event.preventDefault();
 
@@ -3128,12 +3177,17 @@ if (checkoutForm) {
       return;
     }
 
-    const pricing = calculateCartPricing(cart, promoCode);
     const submitButton = checkoutForm.querySelector('button[type="submit"]');
-
+    
     try {
       if (submitButton) submitButton.disabled = true;
       setCheckoutStatus('Відправляємо замовлення...', 'neutral');
+
+      const customerAccumulationDiscount = currentSupabaseSession?.user?.id
+        ? await getCustomerAccumulationDiscount(currentSupabaseSession.user.id)
+        : 0;
+
+      const pricing = calculateCartPricing(cart, promoCode, customerAccumulationDiscount);
 
       const submission = await submitOrder({
         name,
@@ -3146,6 +3200,7 @@ if (checkoutForm) {
         promoCode: pricing.promoCode,
         subtotal: pricing.subtotal,
         discountAmount: pricing.discountAmount,
+        discountPercent: pricing.discountPercent,
         comment,
         cart,
         total: pricing.total,
@@ -3167,6 +3222,7 @@ if (checkoutForm) {
         cart,
         subtotal: pricing.subtotal,
         discountAmount: pricing.discountAmount,
+        discountPercent: pricing.discountPercent,
         total: pricing.total,
         date: new Date().toISOString(),
       }));
