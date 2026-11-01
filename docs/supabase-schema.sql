@@ -440,6 +440,11 @@ alter table public.product_price_overrides
 
 comment on column public.product_price_overrides.color_variants is 'Array of color variant objects: [{name: "Black", image_url: "https://...", description: "Чорна обпалювання"}, {name: "Light", image_url: "https://...", description: "Світла обпалювання"}]';
 
+alter table public.product_price_overrides
+  add column if not exists gradation_variants jsonb default '[]'::jsonb;
+
+comment on column public.product_price_overrides.gradation_variants is 'Array of gradation/accessory variant objects: [{name: "Black L", description: "Large size", price: 150, sku: "ACC-BLK-L-001"}, {name: "Red M", description: "Medium size", price: 125, sku: "ACC-RED-M-001"}]';
+
 create index if not exists product_price_overrides_active_idx
   on public.product_price_overrides (is_active, updated_at desc);
 
