@@ -193,6 +193,45 @@ async function handleStats(chatId: number) {
   await sendTelegramMessage(chatId, text)
 }
 
+async function downloadTelegramPhoto(fileId: string): Promise<string | null> {
+  try {
+    // Get file info from Telegram
+    const fileInfoUrl = `https://api.telegram.org/bot${telegramBotToken}/getFile`
+    const fileInfoResponse = await fetch(fileInfoUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ file_id: fileId }),
+    })
+    
+    const fileInfo = await fileInfoResponse.json()
+    if (!fileInfo.ok || !fileInfo.result) {
+      console.error('Failed to get file info:', fileInfo)
+      return null
+    }
+
+    const filePath = fileInfo.result.file_path
+    const fileUrl = `https://api.telegram.org/file/bot${telegramBotToken}/${filePath}`
+    
+    // Download the file
+    const fileResponse = await fetch(fileUrl)
+    const fileBlob = await fileResponse.blob()
+    
+    // Convert to base64 for storage
+    const arrayBuffer = await fileBlob.arrayBuffer()
+    const bytes = new Uint8Array(arrayBuffer)
+    let binary = ''
+    for (let i = 0; i < bytes.byteLength; i++) {
+      binary += String.fromCharCode(bytes[i])
+    }
+    const base64 = btoa(binary)
+    
+    return `data:image/jpeg;base64,${base64}`
+  } catch (error) {
+    console.error('Error downloading photo:', error)
+    return null
+  }
+}
+
 async function handleProductInput(chatId: number, text: string) {
   const state = userStates.get(chatId)
   if (!state || state.action !== 'adding_product') {
@@ -232,21 +271,23 @@ async function handleProductInput(chatId: number, text: string) {
     }
     
     state.data.price = price
+    state.awaitingPhoto = true
     userStates.set(chatId, state)
     
-    // Ask for additional fields if category has them
+    // Ask for photo or additional fields
     if (fieldList.length > 0) {
-      const field = fieldList[0]
       await sendTelegramMessage(
         chatId,
-        `✅ Ціна: <b>${price} грн</b>\n\nТепер введіть: <b>${field.name_uk}</b>`
+        `✅ Ціна: <b>${price} грн</b>\n\n📸 Надішліть фото товару (або /skip для пропуску):`
       )
     } else {
-      // No additional fields, save product
-      await saveProductFromBot(chatId, state)
+      await sendTelegramMessage(
+        chatId,
+        `✅ Ціна: <b>${price} грн</b>\n\n📸 Надішліть фото товару (або /skip для пропуску):`
+      )
     }
   } else if (inputCount >= 3) {
-    // Additional dynamic fields
+    // Additional dynamic fields (after photo is handled)
     state.data[`field_${inputCount - 3}`] = text
     userStates.set(chatId, state)
     
@@ -257,9 +298,55 @@ async function handleProductInput(chatId: number, text: string) {
         `✅ Записано.\n\nТепер введіть: <b>${nextField.name_uk}</b>`
       )
     } else {
-      // All fields complete
+      // All fields complete, ask for photo again if not provided
+      await sendTelegramMessage(
+        chatId,
+        `✅ Все основні дані введені!\n\n📸 Надішліть фото товару (або /skip для пропуску):`
+      )
+    }
+  }
+}
+
+async function handlePhotoInput(chatId: number, photoFileId: string) {
+  const state = userStates.get(chatId)
+  if (!state || state.action !== 'adding_product') {
+    return
+  }
+
+  try {
+    await sendTelegramMessage(chatId, '⏳ Завантажую фото...')
+    
+    // Download and process photo
+    const photoData = await downloadTelegramPhoto(photoFileId)
+    
+    if (!photoData) {
+      await sendTelegramMessage(chatId, '❌ Не вдалось завантажити фото. Спробуйте ще раз.')
+      return
+    }
+
+    state.data.photo = photoData
+    state.awaitingPhoto = false
+    userStates.set(chatId, state)
+    
+    await sendTelegramMessage(chatId, '✅ Фото завантажено!')
+    
+    // Check if we need additional fields
+    const fields = await getCategoryFields(state.category)
+    const fieldList = fields?.fields || []
+    
+    if (fieldList.length > 0 && !state.data.field_0) {
+      const field = fieldList[0]
+      await sendTelegramMessage(
+        chatId,
+        `Тепер введіть: <b>${field.name_uk}</b>`
+      )
+    } else {
+      // Save product
       await saveProductFromBot(chatId, state)
     }
+  } catch (error) {
+    console.error('Error handling photo:', error)
+    await sendTelegramMessage(chatId, '❌ Помилка при обробці фото. Спробуйте ще раз.')
   }
 }
 
@@ -309,6 +396,7 @@ Deno.serve(async (req: Request) => {
     if (message) {
       const chatId = message.chat.id
       const text = message.text
+      const photo = message.photo
 
       if (text === '/start') {
         await handleStart(chatId)
@@ -318,6 +406,26 @@ Deno.serve(async (req: Request) => {
         await handleStats(chatId)
       } else if (text === '/add') {
         await handleAddProduct(chatId)
+      } else if (text === '/skip') {
+        // Handle skip photo
+        const state = userStates.get(chatId)
+        if (state && state.awaitingPhoto) {
+          state.awaitingPhoto = false
+          userStates.set(chatId, state)
+          await saveProductFromBot(chatId, state)
+        }
+      } else if (photo && userStates.has(chatId)) {
+        // Handle photo upload
+        const state = userStates.get(chatId)
+        if (state && state.awaitingPhoto) {
+          // Get the largest photo size
+          const largestPhoto = photo[photo.length - 1]
+          await handlePhotoInput(chatId, largestPhoto.file_id)
+        } else if (state && state.action === 'adding_product') {
+          // Photo when not expecting it - queue it for saving
+          const largestPhoto = photo[photo.length - 1]
+          await handlePhotoInput(chatId, largestPhoto.file_id)
+        }
       } else if (userStates.has(chatId)) {
         // User is in the middle of adding a product
         await handleProductInput(chatId, text)
