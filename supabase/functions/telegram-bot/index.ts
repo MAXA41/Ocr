@@ -251,7 +251,10 @@ async function handleProductInput(chatId: number, text: string) {
     
     await sendTelegramMessage(
       chatId,
-      `✅ Назва: <b>${text}</b>\n\nТепер введіть опис товару:`
+      `✅ <b>Назва збережена:</b> "${text}"\n\n` +
+      `📝 <b>ДАЛІ:</b> Введіть <b>детальний опис товару</b>\n` +
+      `Наприклад: "Солодкий апельсин, цветочні ноти, висока кислотність"` +
+      `\n\nЧекаю вашого опису...`
     )
   } else if (inputCount === 1) {
     // Second input is description
@@ -260,13 +263,23 @@ async function handleProductInput(chatId: number, text: string) {
     
     await sendTelegramMessage(
       chatId,
-      `✅ Опис збережено.\n\nТепер введіть ціну (в гривнях):`
+      `✅ <b>Опис збережено!</b>\n\n` +
+      `📝 <b>ДАЛІ:</b> Введіть <b>ціну товару в гривнях</b>\n` +
+      `⚠️ <b>ВАЖЛИВО:</b> Тільки число без "грн", без пробілів!\n` +
+      `Наприклад: 250\n\n` +
+      `Чекаю вашої цени...`
     )
   } else if (inputCount === 2) {
     // Third input is price
     const price = parseInt(text)
     if (isNaN(price) || price < 0) {
-      await sendTelegramMessage(chatId, '❌ Ціна повинна бути числом!')
+      await sendTelegramMessage(
+        chatId, 
+        `❌ <b>Помилка!</b> Ціна повинна бути тільки <b>число</b>!\n\n` +
+        `❌ Неправильно: "250 грн", "two hundred", "250.5"\n` +
+        `✅ Правильно: 250\n\n` +
+        `Спробуйте ще раз. Введіть ціну числом:`
+      )
       return
     }
     
@@ -274,18 +287,18 @@ async function handleProductInput(chatId: number, text: string) {
     state.awaitingPhoto = true
     userStates.set(chatId, state)
     
-    // Ask for photo or additional fields
-    if (fieldList.length > 0) {
-      await sendTelegramMessage(
-        chatId,
-        `✅ Ціна: <b>${price} грн</b>\n\n📸 Надішліть фото товару (або /skip для пропуску):`
-      )
-    } else {
-      await sendTelegramMessage(
-        chatId,
-        `✅ Ціна: <b>${price} грн</b>\n\n📸 Надішліть фото товару (або /skip для пропуску):`
-      )
-    }
+    await sendTelegramMessage(
+      chatId,
+      `✅ <b>Ціна збережена:</b> ${price} грн\n\n` +
+      `📸 <b>ДАЛІ:</b> Надішліть <b>фото товару</b> у Telegram\n` +
+      `• Натисніть 📎 (скріпка)\n` +
+      `• Виберіть "Фото"\n` +
+      `• Виберіть файл з вашого комп'ютера\n\n` +
+      `⚠️ <b>Формати:</b> JPG, PNG, WebP\n` +
+      `⚠️ <b>Розмір:</b> до 10 МБ\n\n` +
+      `💡 <b>Або:</b> Напишіть /skip щоб пропустити фото\n\n` +
+      `Чекаю фото або /skip...`
+    )
   } else if (inputCount >= 3) {
     // Additional dynamic fields (after photo is handled)
     state.data[`field_${inputCount - 3}`] = text
@@ -295,13 +308,17 @@ async function handleProductInput(chatId: number, text: string) {
       const nextField = fieldList[inputCount - 3]
       await sendTelegramMessage(
         chatId,
-        `✅ Записано.\n\nТепер введіть: <b>${nextField.name_uk}</b>`
+        `✅ <b>Записано!</b>\n\n` +
+        `📝 <b>ДАЛІ:</b> Введіть: <b>${nextField.name_uk}</b>`
       )
     } else {
       // All fields complete, ask for photo again if not provided
       await sendTelegramMessage(
         chatId,
-        `✅ Все основні дані введені!\n\n📸 Надішліть фото товару (або /skip для пропуску):`
+        `✅ <b>Всі дані введені!</b>\n\n` +
+        `📸 <b>ДАЛІ:</b> Надішліть <b>фото товару</b>\n` +
+        `(або /skip для пропуску)\n\n` +
+        `Чекаю фото або /skip...`
       )
     }
   }
