@@ -729,11 +729,17 @@
         console.log('Saving product:', productData);
 
         // 1. Save product to product_catalog_items
+        const authHeader = 'Bearer ' + SUPABASE_KEY;
+        console.log('Authorization header length:', authHeader.length);
+        console.log('Header starts with:', authHeader.substring(0, 30));
+        console.log('Key itself length:', SUPABASE_KEY.length);
+        console.log('SUPABASE_URL:', SUPABASE_URL);
+        
         const productResponse = await fetch(`${SUPABASE_URL}/rest/v1/product_catalog_items`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'apikey': SUPABASE_KEY,
+            'Authorization': authHeader,
             'Prefer': 'return=representation',
           },
           body: JSON.stringify(productData),
@@ -805,7 +811,7 @@
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              'apikey': SUPABASE_KEY,
+              'Authorization': 'Bearer ' + SUPABASE_KEY,
               'Prefer': 'return=representation',
             },
             body: JSON.stringify(variants),
@@ -844,4 +850,5 @@
   </script>
 </body>
 </html>
+
 
