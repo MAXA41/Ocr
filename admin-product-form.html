@@ -599,9 +599,36 @@
             <input type="number" class="variant-field" data-variant="${variantId}" data-field="stock" min="0" value="0">
           </div>
         </div>
-        <button type="button" class="btn-danger" onclick="document.getElementById('variant_${variantId}').remove()">🗑️ Видалити</button>
+
+        <!-- Variant Image Upload -->
+        <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #ddd;">
+          <label style="display: block; margin-bottom: 8px; font-weight: 500;">📸 Фото варіанту</label>
+          <input type="file" class="variant-image-input" data-variant="${variantId}" accept="image/jpeg,image/png,image/webp" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
+          <p style="font-size: 12px; color: #666; margin-top: 4px;">JPG, PNG, WebP (макс 5 МБ)</p>
+          <div id="preview_variant_${variantId}" style="margin-top: 10px; display: none;">
+            <img style="max-width: 100%; max-height: 120px; border-radius: 4px;">
+            <p style="font-size: 12px; color: #26de81; margin-top: 5px;">✅ Файл завантажено</p>
+          </div>
+        </div>
+
+        <button type="button" class="btn-danger" onclick="document.getElementById('variant_${variantId}').remove()" style="margin-top: 15px; width: 100%;">🗑️ Видалити варіант</button>
       `;
       container.appendChild(card);
+
+      // Add image preview handler for this variant
+      const imageInput = card.querySelector('.variant-image-input');
+      imageInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = (event) => {
+            const previewDiv = document.getElementById(`preview_variant_${variantId}`);
+            previewDiv.querySelector('img').src = event.target.result;
+            previewDiv.style.display = 'block';
+          };
+          reader.readAsDataURL(file);
+        }
+      });
     }
 
     function showError(message) {
@@ -744,12 +771,30 @@
               }
             });
 
+            // Handle variant image
+            const imageInput = card.querySelector('.variant-image-input');
+            let variantImageUrl = null;
+            if (imageInput && imageInput.files && imageInput.files[0]) {
+              const file = imageInput.files[0];
+              try {
+                // Create a synchronous base64 converter (using FileReader result)
+                const reader = new FileReader();
+                reader.onload = () => {
+                  variantImageUrl = reader.result;
+                };
+                reader.readAsDataURL(file);
+              } catch (e) {
+                console.warn('Could not read variant image:', e);
+              }
+            }
+
             variants.push({
               product_id: productId,
               variant_values: variantValues,
               price: price,
               stock_quantity: stock,
               is_active: true,
+              image_url: variantImageUrl,
               sku: `${productData.category.toUpperCase()}-${Object.values(variantValues).join('-').toUpperCase()}`,
             });
           });
