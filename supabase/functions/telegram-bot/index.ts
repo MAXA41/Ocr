@@ -1,11 +1,17 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3'
 
 const telegramBotToken = Deno.env.get('TELEGRAM_BOT_TOKEN')
-const supabaseUrl = Deno.env.get('SUPABASE_URL')
-const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY')
+const supabaseUrl = Deno.env.get('SB_URL')
+const supabaseKey = Deno.env.get('SB_ANON_KEY')
 
 if (!telegramBotToken) {
   console.error('Missing TELEGRAM_BOT_TOKEN')
+}
+if (!supabaseUrl) {
+  console.error('Missing SB_URL')
+}
+if (!supabaseKey) {
+  console.error('Missing SB_ANON_KEY')
 }
 
 const supabase = createClient(supabaseUrl || '', supabaseKey || '')
@@ -443,7 +449,7 @@ Deno.serve(async (req: Request) => {
           const largestPhoto = photo[photo.length - 1]
           await handlePhotoInput(chatId, largestPhoto.file_id)
         }
-      } else if (userStates.has(chatId)) {
+      } else if (text && userStates.has(chatId)) {
         // User is in the middle of adding a product
         await handleProductInput(chatId, text)
       }
