@@ -1,0 +1,8 @@
+[      44ms] [VERBOSE] [DOM] Input elements should have autocomplete attributes (suggested: "new-password"): (More info: https://goo.gl/9p2vKq) %o @ http://localhost:5175/admin-product-form.html:0
+[   15685ms] [LOG] [vite] server connection lost. Polling for restart... @ http://localhost:5175/@vite/client:559
+[   15691ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5175/:0
+[   16695ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5175/:0
+[   17699ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5175/:0
+[   18704ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5175/:0
+[   19709ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5175/:0
+[   21226ms] [VERBOSE] [DOM] Input elements should have autocomplete attributes (suggested: "new-password"): (More info: https://goo.gl/9p2vKq) %o @ http://localhost:5175/admin-product-form.html:0

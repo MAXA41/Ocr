@@ -1,0 +1,57 @@
+- generic [ref=f6e2]:
+  - generic [ref=f6e3]:
+    - heading "🛍️ Додавання Товару" [level=1] [ref=f6e4]
+    - paragraph [ref=f6e5]: Адмін панель O.Roasters - динамічна форма
+  - generic [ref=f6e7]:
+    - generic [ref=f6e8]:
+      - generic [ref=f6e9]: 📂 Категорія Товару *
+      - combobox "📂 Категорія Товару *" [ref=f6e10]:
+        - option "-- Виберіть категорію --"
+        - option "Еспресо" [selected]
+        - option "Фільтр"
+        - option "Дріпи"
+        - option "Декаф"
+        - option "Аксесуари"
+        - option "Мерч"
+      - paragraph [ref=f6e11]: Виберіть категорію, щоб появилися спеціальні поля
+    - generic [ref=f6e12]:
+      - generic [ref=f6e13]: Назва Товару *
+      - textbox "Назва Товару *" [ref=f6e14]:
+        - /placeholder: "Наприклад: Кофемашина Pro"
+        - text: Test Product
+    - generic [ref=f6e15]:
+      - generic [ref=f6e16]: Опис *
+      - textbox "Опис *" [ref=f6e17]:
+        - /placeholder: Детальний опис товару...
+        - text: Test Description
+    - generic [ref=f6e18]:
+      - generic [ref=f6e19]: Базова Ціна (грн) *
+      - spinbutton "Базова Ціна (грн) *" [ref=f6e20]: "300"
+    - generic [ref=f6e21]:
+      - generic [ref=f6e22]: 📸 Фото Товару
+      - button "📸 Фото Товару" [ref=f6e23]
+      - paragraph [ref=f6e24]: "Підтримані формати: JPG, PNG, WebP. Макс 5 МБ"
+    - generic [ref=f6e25]:
+      - generic [ref=f6e30]:
+        - generic [ref=f6e31]: Вага *
+        - combobox [active] [ref=f6e32]:
+          - option "-- Виберіть --" [selected]
+          - option "250 г"
+          - option "500 г"
+          - option "1 кг"
+      - generic [ref=f6e33]:
+        - generic [ref=f6e34]: Походження
+        - textbox "Походження" [ref=f6e35]
+      - generic [ref=f6e36]:
+        - generic [ref=f6e37]: Смакові ноти
+        - textbox "Смакові ноти" [ref=f6e38]
+      - generic [ref=f6e39]:
+        - generic [ref=f6e40]: Рівень обжарки *
+        - combobox [ref=f6e41]:
+          - option "-- Виберіть --" [selected]
+          - option "Світла"
+          - option "Середня"
+          - option "Темна"
+    - generic [ref=f6e27]:
+      - button "✅ Додати Товар" [ref=f6e28] [cursor=pointer]
+      - button "↻ Очистити" [ref=f6e29] [cursor=pointer]

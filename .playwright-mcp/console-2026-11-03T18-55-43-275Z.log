@@ -1,0 +1,7 @@
+[      38ms] [VERBOSE] [DOM] Input elements should have autocomplete attributes (suggested: "new-password"): (More info: https://goo.gl/9p2vKq) %o @ http://localhost:5175/admin-product-form.html:0
+[   15558ms] [LOG] Saving product: {name: Тестовий Еспресо, description: Це тестовий товар, category: espresso, price: 250, is_available: true} @ http://localhost:5175/admin-product-form.html:730
+[   15675ms] [ERROR] Failed to load resource: the server responded with a status of 401 () @ https://sxxlotfbcblnjgcvxaqe.supabase.co/rest/v1/product_catalog_items:0
+[   15675ms] [ERROR] Error: Error: Invalid API key
+    at HTMLFormElement.<anonymous> (http://localhost:5175/admin-product-form.html:746:17) @ http://localhost:5175/admin-product-form.html:838
+[   66825ms] [VERBOSE] [DOM] Input elements should have autocomplete attributes (suggested: "new-password"): (More info: https://goo.gl/9p2vKq) %o @ http://localhost:5175/admin-product-form.html:0
+[   70492ms] [VERBOSE] [DOM] Input elements should have autocomplete attributes (suggested: "new-password"): (More info: https://goo.gl/9p2vKq) %o @ http://localhost:5175/admin-product-form.html:0

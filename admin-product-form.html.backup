@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Адмін Панель - Додавання Товарів</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    /* Login Screen Styles */
+    .login-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+    }
+
+    .login-overlay.hidden {
+      display: none;
+    }
+
+    .login-container {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      padding: 40px;
+      max-width: 400px;
+      width: 90%;
+    }
+
+    .login-container h2 {
+      color: #333;
+      margin-bottom: 10px;
+      font-size: 24px;
+      text-align: center;
+    }
+
+    .login-container p {
+      color: #666;
+      text-align: center;
+      margin-bottom: 30px;
+      font-size: 14px;
+    }
+
+    .login-form {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    .login-form input {
+      padding: 12px;
+      border: 2px solid #e0e0e0;
+      border-radius: 6px;
+      font-size: 14px;
+      font-family: inherit;
+      transition: all 0.3s ease;
+    }
+
+    .login-form input:focus {
+      outline: none;
+      border-color: #667eea;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+
+    .login-form button {
+      padding: 12px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .login-form button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+    }
+
+    .login-error {
+      color: #c41e3a;
+      text-align: center;
+      font-size: 13px;
+      display: none;
+      padding: 10px;
+      background: #ffe0e0;
+      border-radius: 6px;
+    }
+
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      overflow: hidden;
+    }
+
+    .header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 30px;
+      text-align: center;
+    }
+
+    .header h1 {
+      font-size: 28px;
+      margin-bottom: 10px;
+    }
+
+    .header p {
+      opacity: 0.9;
+      font-size: 14px;
+    }
+
+    .content {
+      padding: 30px;
+    }
+
+    .form-group {
+      margin-bottom: 25px;
+    }
+
+    label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: #333;
+      font-size: 14px;
+    }
+
+    select,
+    input[type="text"],
+    input[type="number"],
+    textarea {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid #e0e0e0;
+      border-radius: 6px;
+      font-size: 14px;
+      font-family: inherit;
+      transition: all 0.3s ease;
+    }
+
+    select:focus,
+    input:focus,
+    textarea:focus {
+      outline: none;
+      border-color: #667eea;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 100px;
+    }
+
+    .fields-container {
+      background: #f8f9fa;
+      border-radius: 8px;
+      padding: 20px;
+      margin-top: 20px;
+    }
+
+    .field-input-group {
+      margin-bottom: 15px;
+      padding: 15px;
+      background: white;
+      border-radius: 6px;
+      border-left: 4px solid #667eea;
+    }
+
+    .field-input-group:last-child {
+      margin-bottom: 0;
+    }
+
+    .field-label {
+      display: block;
+      font-weight: 500;
+      margin-bottom: 6px;
+      color: #333;
+      font-size: 13px;
+    }
+
+    .field-input-group input,
+    .field-input-group select,
+    .field-input-group textarea {
+      margin-top: 6px;
+    }
+
+    .variants-section {
+      margin-top: 30px;
+      padding-top: 30px;
+      border-top: 2px solid #e0e0e0;
+    }
+
+    .variants-section h3 {
+      margin-bottom: 20px;
+      color: #333;
+    }
+
+    .variant-card {
+      background: #f8f9fa;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      padding: 15px;
+      margin-bottom: 15px;
+    }
+
+    .variant-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+      margin-bottom: 15px;
+    }
+
+    .btn-group {
+      display: flex;
+      gap: 10px;
+      margin-top: 15px;
+    }
+
+    button {
+      padding: 12px 24px;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      flex: 1;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+    }
+
+    .btn-secondary {
+      background: #e0e0e0;
+      color: #333;
+    }
+
+    .btn-secondary:hover {
+      background: #d0d0d0;
+    }
+
+    .btn-danger {
+      background: #ff6b6b;
+      color: white;
+      padding: 8px 16px;
+      font-size: 13px;
+    }
+
+    .btn-danger:hover {
+      background: #ff5252;
+    }
+
+    .btn-add-variant {
+      background: #26de81;
+      color: white;
+    }
+
+    .btn-add-variant:hover {
+      background: #20c271;
+    }
+
+    .loading {
+      display: none;
+      text-align: center;
+      padding: 20px;
+      color: #667eea;
+    }
+
+    .error {
+      background: #ffe0e0;
+      border: 1px solid #ff6b6b;
+      color: #c41e3a;
+      padding: 12px;
+      border-radius: 6px;
+      margin-bottom: 20px;
+      display: none;
+    }
+
+    .success {
+      background: #e0ffe0;
+      border: 1px solid #26de81;
+      color: #207c27;
+      padding: 12px;
+      border-radius: 6px;
+      margin-bottom: 20px;
+      display: none;
+    }
+
+    .info-text {
+      font-size: 12px;
+      color: #666;
+      margin-top: 4px;
+    }
+  </style>
+</head>
+<body>
+  <!-- Login Screen -->
+  <div class="login-overlay" id="loginOverlay">
+    <div class="login-container">
+      <h2>🔐 Адмін Панель</h2>
+      <p>Введіть пароль для доступу</p>
+      <div class="login-error" id="loginError">❌ Неправильний пароль!</div>
+      <form class="login-form" id="loginForm">
+        <input type="password" id="passwordInput" placeholder="Введіть пароль" required autofocus>
+        <button type="submit">Увійти</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="header">
+      <h1>🛍️ Додавання Товару</h1>
+      <p>Адмін панель O.Roasters - динамічна форма</p>
+    </div>
+
+    <div class="content">
+      <div class="error" id="errorMessage"></div>
+      <div class="success" id="successMessage"></div>
+
+      <form id="productForm">
+        <!-- Category Selection -->
+        <div class="form-group">
+          <label for="category">📂 Категорія Товару *</label>
+          <select id="category" required>
+            <option value="">-- Виберіть категорію --</option>
+          </select>
+          <p class="info-text">Виберіть категорію, щоб появилися спеціальні поля</p>
+        </div>
+
+        <!-- Product Name -->
+        <div class="form-group">
+          <label for="productName">Назва Товару *</label>
+          <input type="text" id="productName" required placeholder="Наприклад: Кофемашина Pro">
+        </div>
+
+        <!-- Product Description -->
+        <div class="form-group">
+          <label for="productDesc">Опис *</label>
+          <textarea id="productDesc" required placeholder="Детальний опис товару..."></textarea>
+        </div>
+
+        <!-- Base Price -->
+        <div class="form-group">
+          <label for="basePrice">Базова Ціна (грн) *</label>
+          <input type="number" id="basePrice" required min="0" step="1" placeholder="1000">
+        </div>
+
+        <!-- Dynamic Fields -->
+        <div class="fields-container" id="dynamicFields">
+          <p class="info-text">⬆️ Спочатку виберіть категорію</p>
+        </div>
+
+        <!-- Variants Section -->
+        <div class="variants-section" id="variantsSection" style="display: none;">
+          <h3>🎨 Варіанти Товару (Кольори, Розміри)</h3>
+          <p class="info-text">Додайте варіанти для різних кольорів або розмірів</p>
+          <div id="variantsContainer"></div>
+          <button type="button" class="btn-add-variant" id="addVariantBtn">+ Додати Варіант</button>
+        </div>
+
+        <!-- Submit -->
+        <div class="btn-group">
+          <button type="submit" class="btn-primary">✅ Додати Товар</button>
+          <button type="reset" class="btn-secondary">↻ Очистити</button>
+        </div>
+      </form>
+
+      <div class="loading" id="loading">
+        ⏳ Обробка...
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const SUPABASE_URL = 'https://sxxlotfbcblnjgcvxaqe.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN4eGxvdGZiY2JsbmpnY3Z4YXFlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mjk0ODc4NDUsImV4cCI6MjA0NTA2Mzg0NX0.p6D51UJBCLPnKYVb0CEMvwC6UzV5H8e8rQwJPzJh5t8';
+
+    let selectedCategory = null;
+    let variantCount = 0;
+
+    async function loadCategories() {
+      try {
+        const response = await fetch(
+          `${SUPABASE_URL}/functions/v1/get-categories`,
+          { headers: { 'Content-Type': 'application/json' } }
+        );
+        const categories = await response.json();
+
+        const select = document.getElementById('category');
+        categories.forEach(cat => {
+          const option = document.createElement('option');
+          option.value = cat.id;
+          option.textContent = cat.name_uk;
+          select.appendChild(option);
+        });
+      } catch (error) {
+        showError('Помилка завантаження категорій: ' + error.message);
+      }
+    }
+
+    async function loadCategoryFields(categoryId) {
+      try {
+        const response = await fetch(
+          `${SUPABASE_URL}/functions/v1/get-categories?id=${categoryId}`,
+          { headers: { 'Content-Type': 'application/json' } }
+        );
+        const category = await response.json();
+
+        selectedCategory = category;
+        renderDynamicFields(category);
+
+        if (category.variant_options && category.variant_options.length > 0) {
+          document.getElementById('variantsSection').style.display = 'block';
+          renderVariantForm(category.variant_options);
+        } else {
+          document.getElementById('variantsSection').style.display = 'none';
+        }
+      } catch (error) {
+        showError('Помилка завантаження полів категорії: ' + error.message);
+      }
+    }
+
+    function renderDynamicFields(category) {
+      const container = document.getElementById('dynamicFields');
+      container.innerHTML = '';
+
+      if (!category.fields || category.fields.length === 0) {
+        container.innerHTML = '<p class="info-text">Немає додаткових полів для цієї категорії</p>';
+        return;
+      }
+
+      category.fields.forEach(field => {
+        const fieldHTML = createFieldInput(field);
+        container.innerHTML += fieldHTML;
+      });
+    }
+
+    function createFieldInput(field) {
+      const required = field.required ? ' *' : '';
+      let input = '';
+
+      if (field.type === 'textarea') {
+        input = `<textarea id="field_${field.id}" placeholder="${field.name_uk}" ${field.required ? 'required' : ''}></textarea>`;
+      } else if (field.type === 'select') {
+        input = `<select id="field_${field.id}" ${field.required ? 'required' : ''}>
+          <option value="">-- Виберіть --</option>
+          ${field.options.map(opt => `<option value="${opt}">${opt}</option>`).join('')}
+        </select>`;
+      } else if (field.type === 'number') {
+        input = `<input type="number" id="field_${field.id}" placeholder="${field.name_uk}" ${field.required ? 'required' : ''}>`;
+      } else {
+        input = `<input type="text" id="field_${field.id}" placeholder="${field.name_uk}" ${field.required ? 'required' : ''}>`;
+      }
+
+      return `
+        <div class="field-input-group">
+          <label class="field-label">${field.name_uk}${required}</label>
+          ${input}
+        </div>
+      `;
+    }
+
+    function renderVariantForm(variantOptions) {
+      const container = document.getElementById('variantsContainer');
+      container.innerHTML = '';
+      variantCount = 0;
+
+      const addBtn = document.getElementById('addVariantBtn');
+      addBtn.onclick = () => addVariantCard(variantOptions);
+    }
+
+    function addVariantCard(variantOptions) {
+      const container = document.getElementById('variantsContainer');
+      const variantId = variantCount++;
+
+      let fieldsHTML = '';
+      variantOptions.forEach(option => {
+        if (option.type === 'color') {
+          fieldsHTML += `
+            <div>
+              <label>${option.name_uk}</label>
+              <input type="color" class="variant-field" data-variant="${variantId}" data-field="${option.id}" value="#000000">
+            </div>
+          `;
+        } else if (option.type === 'select') {
+          fieldsHTML += `
+            <div>
+              <label>${option.name_uk}</label>
+              <select class="variant-field" data-variant="${variantId}" data-field="${option.id}">
+                <option value="">-- Виберіть --</option>
+                ${option.options.map(opt => `<option value="${opt}">${opt}</option>`).join('')}
+              </select>
+            </div>
+          `;
+        }
+      });
+
+      const card = document.createElement('div');
+      card.className = 'variant-card';
+      card.id = `variant_${variantId}`;
+      card.innerHTML = `
+        <div class="variant-grid">
+          ${fieldsHTML}
+          <div>
+            <label>Ціна (грн)</label>
+            <input type="number" class="variant-field" data-variant="${variantId}" data-field="price" min="0" step="1">
+          </div>
+          <div>
+            <label>Кількість на складі</label>
+            <input type="number" class="variant-field" data-variant="${variantId}" data-field="stock" min="0" value="0">
+          </div>
+        </div>
+        <button type="button" class="btn-danger" onclick="document.getElementById('variant_${variantId}').remove()">🗑️ Видалити</button>
+      `;
+      container.appendChild(card);
+    }
+
+    function showError(message) {
+      const error = document.getElementById('errorMessage');
+      error.textContent = message;
+      error.style.display = 'block';
+      setTimeout(() => error.style.display = 'none', 5000);
+    }
+
+    function showSuccess(message) {
+      const success = document.getElementById('successMessage');
+      success.textContent = message;
+      success.style.display = 'block';
+      setTimeout(() => success.style.display = 'none', 5000);
+    }
+
+    document.getElementById('category').addEventListener('change', (e) => {
+      if (e.target.value) {
+        loadCategoryFields(e.target.value);
+      }
+    });
+
+    document.getElementById('productForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const loading = document.getElementById('loading');
+      loading.style.display = 'block';
+
+      try {
+        // Gather form data
+        const productData = {
+          name: document.getElementById('productName').value,
+          description: document.getElementById('productDesc').value,
+          category: document.getElementById('category').value,
+          price: parseInt(document.getElementById('basePrice').value),
+          is_available: true,
+        };
+
+        // Gather dynamic fields
+        const dynamicFields = {};
+        document.querySelectorAll('#dynamicFields [id^="field_"]').forEach(input => {
+          const fieldId = input.id.replace('field_', '');
+          dynamicFields[fieldId] = input.value;
+        });
+        productData.extra_data = dynamicFields;
+
+        console.log('Saving product:', productData);
+
+        // 1. Save product to product_catalog_items
+        const productResponse = await fetch(`${SUPABASE_URL}/rest/v1/product_catalog_items`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': SUPABASE_KEY,
+            'Prefer': 'return=representation',
+          },
+          body: JSON.stringify(productData),
+        });
+
+        if (!productResponse.ok) {
+          const error = await productResponse.json();
+          throw new Error(error.message || 'Помилка при збереженні товару');
+        }
+
+        const savedProduct = await productResponse.json();
+        const productId = savedProduct[0].id;
+
+        console.log('Product saved with ID:', productId);
+
+        // 2. Save variants if exist
+        const variantCards = document.querySelectorAll('.variant-card');
+        if (variantCards.length > 0) {
+          const variants = [];
+          
+          variantCards.forEach(card => {
+            const variantValues = {};
+            const fields = card.querySelectorAll('.variant-field');
+            let price = null;
+            let stock = 0;
+
+            fields.forEach(field => {
+              const fieldName = field.getAttribute('data-field');
+              if (fieldName === 'price') {
+                price = parseInt(field.value) || productData.price;
+              } else if (fieldName === 'stock') {
+                stock = parseInt(field.value) || 0;
+              } else {
+                variantValues[fieldName] = field.value;
+              }
+            });
+
+            variants.push({
+              product_id: productId,
+              variant_values: variantValues,
+              price: price,
+              stock_quantity: stock,
+              is_active: true,
+              sku: `${productData.category.toUpperCase()}-${Object.values(variantValues).join('-').toUpperCase()}`,
+            });
+          });
+
+          console.log('Saving variants:', variants);
+
+          const variantResponse = await fetch(`${SUPABASE_URL}/rest/v1/product_variants`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'apikey': SUPABASE_KEY,
+              'Prefer': 'return=representation',
+            },
+            body: JSON.stringify(variants),
+          });
+
+          if (!variantResponse.ok) {
+            const error = await variantResponse.json();
+            throw new Error('Помилка при збереженні варіантів: ' + error.message);
+          }
+
+          const savedVariants = await variantResponse.json();
+          console.log('Variants saved:', savedVariants);
+        }
+
+        loading.style.display = 'none';
+        showSuccess(`✅ Товар "${productData.name}" успішно додано! (ID: ${productId})`);
+        
+        // Reset form
+        setTimeout(() => {
+          document.getElementById('productForm').reset();
+          document.getElementById('dynamicFields').innerHTML = '';
+          document.getElementById('variantsContainer').innerHTML = '';
+          document.getElementById('variantsSection').style.display = 'none';
+          variantCount = 0;
+        }, 2000);
+
+      } catch (error) {
+        loading.style.display = 'none';
+        console.error('Error:', error);
+        showError('❌ ' + error.message);
+      }
+    });
+
+    // Initialize
+    loadCategories();
+  </script>
+</body>
+</html>

@@ -1,0 +1,29 @@
+- generic [ref=f7e2]:
+  - generic [ref=f7e3]:
+    - heading "🛍️ Додавання Товару" [level=1] [ref=f7e4]
+    - paragraph [ref=f7e5]: Адмін панель O.Roasters - динамічна форма
+  - generic [ref=f7e7]:
+    - generic [ref=f7e8]:
+      - generic [ref=f7e9]: 📂 Категорія Товару *
+      - combobox "📂 Категорія Товару *" [ref=f7e10]:
+        - option "-- Виберіть категорію --" [selected]
+      - paragraph [ref=f7e11]: Виберіть категорію, щоб появилися спеціальні поля
+    - generic [ref=f7e12]:
+      - generic [ref=f7e13]: Назва Товару *
+      - textbox "Назва Товару *" [ref=f7e14]:
+        - /placeholder: "Наприклад: Кофемашина Pro"
+    - generic [ref=f7e15]:
+      - generic [ref=f7e16]: Опис *
+      - textbox "Опис *" [ref=f7e17]:
+        - /placeholder: Детальний опис товару...
+    - generic [ref=f7e18]:
+      - generic [ref=f7e19]: Базова Ціна (грн) *
+      - spinbutton "Базова Ціна (грн) *" [ref=f7e20]
+    - generic [ref=f7e21]:
+      - generic [ref=f7e22]: 📸 Фото Товару
+      - button "📸 Фото Товару" [ref=f7e23]
+      - paragraph [ref=f7e24]: "Підтримані формати: JPG, PNG, WebP. Макс 5 МБ"
+    - paragraph [ref=f7e26]: ⬆️ Спочатку виберіть категорію
+    - generic [ref=f7e27]:
+      - button "✅ Додати Товар" [ref=f7e28] [cursor=pointer]
+      - button "↻ Очистити" [ref=f7e29] [cursor=pointer]

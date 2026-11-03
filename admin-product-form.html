@@ -728,106 +728,55 @@
 
         console.log('Saving product:', productData);
 
-        // 1. Save product to product_catalog_items
-        const authHeader = 'Bearer ' + SUPABASE_KEY;
-        console.log('Authorization header length:', authHeader.length);
-        console.log('Header starts with:', authHeader.substring(0, 30));
-        console.log('Key itself length:', SUPABASE_KEY.length);
-        console.log('SUPABASE_URL:', SUPABASE_URL);
+        // 1. Collect variants data
+        const variantCards = document.querySelectorAll('.variant-card');
+        const variants = [];
         
-        const productResponse = await fetch(`${SUPABASE_URL}/rest/v1/product_catalog_items`, {
+        for (const card of variantCards) {
+          const variantName = card.querySelector('.variant-name')?.value?.trim();
+          const variantPrice = parseInt(card.querySelector('.variant-price')?.value || '0');
+          const variantImage = card.querySelector('.variant-image-display')?.src || '';
+          
+          if (variantName) {
+            variants.push({
+              name: variantName,
+              sku: `${productData.category}-${variantName.toUpperCase().replace(/\s+/g, '-')}`,
+              price_modifier: variantPrice - productData.price,
+              image_url: variantImage,
+            });
+          }
+        }
+
+        // 2. Save product and variants via Edge Function
+        console.log('Saving product via Edge Function...');
+        const productResponse = await fetch(`${SUPABASE_URL}/functions/v1/add-product`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': authHeader,
-            'Prefer': 'return=representation',
           },
-          body: JSON.stringify(productData),
+          body: JSON.stringify({
+            product: productData,
+            variants: variants,
+          }),
         });
 
         if (!productResponse.ok) {
           const error = await productResponse.json();
-          throw new Error(error.message || 'Помилка при збереженні товару');
+          throw new Error(error.error || error.message || 'Помилка при збереженні товару');
         }
 
-        const savedProduct = await productResponse.json();
-        const productId = savedProduct[0].id;
+        const result = await productResponse.json();
+        
+        if (!result.success || !result.product) {
+          throw new Error('Товар не було збережено');
+        }
 
+        const productId = result.product.id;
         console.log('Product saved with ID:', productId);
-
-        // 2. Save variants if exist
-        const variantCards = document.querySelectorAll('.variant-card');
-        if (variantCards.length > 0) {
-          const variants = [];
-          
-          variantCards.forEach(card => {
-            const variantValues = {};
-            const fields = card.querySelectorAll('.variant-field');
-            let price = null;
-            let stock = 0;
-
-            fields.forEach(field => {
-              const fieldName = field.getAttribute('data-field');
-              if (fieldName === 'price') {
-                price = parseInt(field.value) || productData.price;
-              } else if (fieldName === 'stock') {
-                stock = parseInt(field.value) || 0;
-              } else {
-                variantValues[fieldName] = field.value;
-              }
-            });
-
-            // Handle variant image
-            const imageInput = card.querySelector('.variant-image-input');
-            let variantImageUrl = null;
-            if (imageInput && imageInput.files && imageInput.files[0]) {
-              const file = imageInput.files[0];
-              try {
-                // Create a synchronous base64 converter (using FileReader result)
-                const reader = new FileReader();
-                reader.onload = () => {
-                  variantImageUrl = reader.result;
-                };
-                reader.readAsDataURL(file);
-              } catch (e) {
-                console.warn('Could not read variant image:', e);
-              }
-            }
-
-            variants.push({
-              product_id: productId,
-              variant_values: variantValues,
-              price: price,
-              stock_quantity: stock,
-              is_active: true,
-              image_url: variantImageUrl,
-              sku: `${productData.category.toUpperCase()}-${Object.values(variantValues).join('-').toUpperCase()}`,
-            });
-          });
-
-          console.log('Saving variants:', variants);
-
-          const variantResponse = await fetch(`${SUPABASE_URL}/rest/v1/product_variants`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': 'Bearer ' + SUPABASE_KEY,
-              'Prefer': 'return=representation',
-            },
-            body: JSON.stringify(variants),
-          });
-
-          if (!variantResponse.ok) {
-            const error = await variantResponse.json();
-            throw new Error('Помилка при збереженні варіантів: ' + error.message);
-          }
-
-          const savedVariants = await variantResponse.json();
-          console.log('Variants saved:', savedVariants);
-        }
+        console.log('Variants saved:', result.variantsCount);
 
         loading.style.display = 'none';
-        showSuccess(`✅ Товар "${productData.name}" успішно додано! (ID: ${productId})`);
+        showSuccess(`✅ Товар "${productData.name}" успішно додано! (ID: ${productId})${result.variantsCount > 0 ? ` з ${result.variantsCount} варіантами` : ''}`);
         
         // Reset form
         setTimeout(() => {

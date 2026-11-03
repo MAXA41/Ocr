@@ -1,0 +1,59 @@
+- generic [ref=f4e2]:
+  - generic [ref=f4e3]:
+    - heading "🛍️ Додавання Товару" [level=1] [ref=f4e4]
+    - paragraph [ref=f4e5]: Адмін панель O.Roasters - динамічна форма
+  - generic [ref=f4e6]:
+    - generic [ref=f4e42]: ❌ No API key found in request
+    - generic [ref=f4e7]:
+      - generic [ref=f4e8]:
+        - generic [ref=f4e9]: 📂 Категорія Товару *
+        - combobox "📂 Категорія Товару *" [ref=f4e10]:
+          - option "-- Виберіть категорію --"
+          - option "Еспресо" [selected]
+          - option "Фільтр"
+          - option "Дріпи"
+          - option "Декаф"
+          - option "Аксесуари"
+          - option "Мерч"
+        - paragraph [ref=f4e11]: Виберіть категорію, щоб появилися спеціальні поля
+      - generic [ref=f4e12]:
+        - generic [ref=f4e13]: Назва Товару *
+        - textbox "Назва Товару *" [ref=f4e14]:
+          - /placeholder: "Наприклад: Кофемашина Pro"
+          - text: Тестовий Еспресо №2
+      - generic [ref=f4e15]:
+        - generic [ref=f4e16]: Опис *
+        - textbox "Опис *" [ref=f4e17]:
+          - /placeholder: Детальний опис товару...
+          - text: Це другий тестовий товар
+      - generic [ref=f4e18]:
+        - generic [ref=f4e19]: Базова Ціна (грн) *
+        - spinbutton "Базова Ціна (грн) *" [ref=f4e20]: "350"
+      - generic [ref=f4e21]:
+        - generic [ref=f4e22]: 📸 Фото Товару
+        - button "📸 Фото Товару" [ref=f4e23]
+        - paragraph [ref=f4e24]: "Підтримані формати: JPG, PNG, WebP. Макс 5 МБ"
+      - generic [ref=f4e25]:
+        - generic [ref=f4e30]:
+          - generic [ref=f4e31]: Вага *
+          - combobox [ref=f4e32]:
+            - option "-- Виберіть --"
+            - option "250 г"
+            - option "500 г" [selected]
+            - option "1 кг"
+        - generic [ref=f4e33]:
+          - generic [ref=f4e34]: Походження
+          - textbox "Походження" [ref=f4e35]
+        - generic [ref=f4e36]:
+          - generic [ref=f4e37]: Смакові ноти
+          - textbox "Смакові ноти" [ref=f4e38]
+        - generic [ref=f4e39]:
+          - generic [ref=f4e40]: Рівень обжарки *
+          - combobox [ref=f4e41]:
+            - option "-- Виберіть --"
+            - option "Світла"
+            - option "Середня" [selected]
+            - option "Темна"
+      - generic [ref=f4e27]:
+        - button "✅ Додати Товар" [active] [ref=f4e28] [cursor=pointer]
+        - button "↻ Очистити" [ref=f4e29] [cursor=pointer]

@@ -1,0 +1,10 @@
+[      93ms] [VERBOSE] [DOM] Input elements should have autocomplete attributes (suggested: "new-password"): (More info: https://goo.gl/9p2vKq) %o @ http://localhost:5175/admin-product-form.html:0
+[     103ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:5175/favicon.ico:0
+[   16746ms] [LOG] Saving product: {name: ✅ Тестовий Товар - УСПІХ, description: Це повинна бути перша успішна спроба!, category: espresso, price: 777, is_available: true} @ http://localhost:5175/admin-product-form.html:730
+[   16746ms] [LOG] Authorization header length: 215 @ http://localhost:5175/admin-product-form.html:734
+[   16746ms] [LOG] Header starts with: Bearer eyJhbGciOiJIUzI1NiIsInR @ http://localhost:5175/admin-product-form.html:735
+[   16746ms] [LOG] Key itself length: 208 @ http://localhost:5175/admin-product-form.html:736
+[   16746ms] [LOG] SUPABASE_URL: https://sxxlotfbcblnjgcvxaqe.supabase.co @ http://localhost:5175/admin-product-form.html:737
+[   16829ms] [ERROR] Failed to load resource: the server responded with a status of 401 () @ https://sxxlotfbcblnjgcvxaqe.supabase.co/rest/v1/product_catalog_items:0
+[   16830ms] [ERROR] Error: Error: No API key found in request
+    at HTMLFormElement.<anonymous> (http://localhost:5175/admin-product-form.html:752:17) @ http://localhost:5175/admin-product-form.html:844
