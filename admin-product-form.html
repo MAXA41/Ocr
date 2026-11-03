@@ -18,6 +18,95 @@
       padding: 20px;
     }
 
+    /* Login Screen Styles */
+    .login-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+    }
+
+    .login-overlay.hidden {
+      display: none;
+    }
+
+    .login-container {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      padding: 40px;
+      max-width: 400px;
+      width: 90%;
+    }
+
+    .login-container h2 {
+      color: #333;
+      margin-bottom: 10px;
+      font-size: 24px;
+      text-align: center;
+    }
+
+    .login-container p {
+      color: #666;
+      text-align: center;
+      margin-bottom: 30px;
+      font-size: 14px;
+    }
+
+    .login-form {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    .login-form input {
+      padding: 12px;
+      border: 2px solid #e0e0e0;
+      border-radius: 6px;
+      font-size: 14px;
+      font-family: inherit;
+      transition: all 0.3s ease;
+    }
+
+    .login-form input:focus {
+      outline: none;
+      border-color: #667eea;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+
+    .login-form button {
+      padding: 12px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .login-form button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+    }
+
+    .login-error {
+      color: #c41e3a;
+      text-align: center;
+      font-size: 13px;
+      display: none;
+      padding: 10px;
+      background: #ffe0e0;
+      border-radius: 6px;
+    }
+
     .container {
       max-width: 800px;
       margin: 0 auto;
@@ -236,6 +325,19 @@
   </style>
 </head>
 <body>
+  <!-- Login Screen -->
+  <div class="login-overlay" id="loginOverlay">
+    <div class="login-container">
+      <h2>🔐 Адмін Панель</h2>
+      <p>Введіть пароль для доступу</p>
+      <div class="login-error" id="loginError">❌ Неправильний пароль!</div>
+      <form class="login-form" id="loginForm">
+        <input type="password" id="passwordInput" placeholder="Введіть пароль" required autofocus>
+        <button type="submit">Увійти</button>
+      </form>
+    </div>
+  </div>
+
   <div class="container">
     <div class="header">
       <h1>🛍️ Додавання Товару</h1>
@@ -301,6 +403,51 @@
   </div>
 
   <script>
+    // Valid passwords
+    const VALID_PASSWORDS = [
+      'aDQtzcRqN6no0Id8',
+      'SHs16b4xrW!jAudw',
+      'sdT$2ap%#A!I@8DZ',
+      'L@vWd9cJ5tSy$2k4',
+      'aK4%VJTlEFPHsSC0'
+    ];
+
+    // Check if password is already entered
+    function checkPasswordAccess() {
+      const sessionPassword = sessionStorage.getItem('adminPanelPassword');
+      if (sessionPassword && VALID_PASSWORDS.includes(sessionPassword)) {
+        document.getElementById('loginOverlay').classList.add('hidden');
+        return true;
+      }
+      return false;
+    }
+
+    // Handle login form
+    if (document.getElementById('loginForm')) {
+      document.getElementById('loginForm').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const password = document.getElementById('passwordInput').value;
+        const errorMsg = document.getElementById('loginError');
+
+        if (VALID_PASSWORDS.includes(password)) {
+          sessionStorage.setItem('adminPanelPassword', password);
+          document.getElementById('loginOverlay').classList.add('hidden');
+          document.getElementById('passwordInput').value = '';
+        } else {
+          errorMsg.style.display = 'block';
+          document.getElementById('passwordInput').value = '';
+          document.getElementById('passwordInput').focus();
+          setTimeout(() => errorMsg.style.display = 'none', 3000);
+        }
+      });
+    }
+
+    // Check password on page load
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', checkPasswordAccess);
+    } else {
+      checkPasswordAccess();
+    }
     const SUPABASE_URL = 'https://sxxlotfbcblnjgcvxaqe.supabase.co';
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN4eGxvdGZiY2JsbmpnY3Z4YXFlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mjk0ODc4NDUsImV4cCI6MjA0NTA2Mzg0NX0.p6D51UJBCLPnKYVb0CEMvwC6UzV5H8e8rQwJPzJh5t8';
 
@@ -588,3 +735,4 @@
   </script>
 </body>
 </html>
+
