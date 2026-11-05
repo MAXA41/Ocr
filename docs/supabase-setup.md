@@ -99,6 +99,8 @@ VITE_AUTH_REDIRECT_URL=http://localhost:5173/account.html
 
 И что view `product_catalog_public` тоже доступен.
 
+Для аксесуарів і мерчу (бренд, підкатегорія, характеристики, варіанти з фото, ціною та залишком) потрібна колонка `product_catalog_items.details` і оновлений view. Вони додаються міграцією [supabase/migrations/20261107000000_add_catalog_item_details.sql](../supabase/migrations/20261107000000_add_catalog_item_details.sql): `npx supabase db push --linked`.
+
 ### 6. Синхронизировать каталог в Supabase
 
 После SQL нужно один раз залить `products.json` в таблицу `product_catalog_items`.

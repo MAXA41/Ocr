@@ -1,6 +1,7 @@
 import { supabase, isSupabaseConfigured } from './supabase-client.js';
 
 const integerOrNull = (value) => {
+  if (value === null || value === undefined || value === '') return null;
   const parsed = Number(value);
   if (!Number.isFinite(parsed)) return null;
   return Math.max(0, Math.floor(parsed));
@@ -28,6 +29,18 @@ export const normalizeCatalogState = (record = {}) => {
 };
 
 export const getProductCatalogState = (product = {}) => normalizeCatalogState(product.catalogState || {});
+
+export const getVariantAvailable = (variant) => {
+  const value = variant?.available ?? variant?.stock;
+  if (value === null || value === undefined || value === '') return null;
+  const number = Number(value);
+  return Number.isFinite(number) ? Math.max(number, 0) : null;
+};
+
+const areAllVariantsSoldOut = (product = {}) => {
+  const variants = Array.isArray(product.details?.variants) ? product.details.variants : [];
+  return variants.length > 0 && variants.every((variant) => getVariantAvailable(variant) === 0);
+};
 
 export const isProductAvailableForPurchase = (product = {}) => {
   return getProductCatalogState(product).availabilityStatus === 'available';
@@ -98,8 +111,13 @@ export const fetchCatalogStateMap = async (productIds = []) => {
 };
 
 export const mergeProductsWithCatalogState = (products = [], stateMap = new Map()) => {
-  return products.map((product) => ({
-    ...product,
-    catalogState: stateMap.get(product.id) || normalizeCatalogState(product.catalogState || { product_id: product.id }),
-  }));
+  return products.map((product) => {
+    const state = stateMap.get(product.id) || normalizeCatalogState(product.catalogState || { product_id: product.id });
+    // A product whose variants are all sold out cannot be ordered even when the product itself has no stock limit.
+    const catalogState = state.availabilityStatus === 'available' && areAllVariantsSoldOut(product)
+      ? { ...state, availabilityStatus: 'out_of_stock' }
+      : state;
+
+    return { ...product, catalogState };
+  });
 };

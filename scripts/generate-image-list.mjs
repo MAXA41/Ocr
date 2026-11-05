@@ -45,9 +45,7 @@ function scanDirectory(dir, relativePath = '') {
   return images;
 }
 
-function scanFolders(dir, relativePath = '') {
-  const folders = {};
-  
+function scanFolders(dir, relativePath = '', folders = {}) {
   try {
     const files = fs.readdirSync(dir);
     
@@ -57,11 +55,12 @@ function scanFolders(dir, relativePath = '') {
       
       if (stat.isDirectory()) {
         const relPath = relativePath ? `${relativePath}/${file}` : file;
-        // Get images in this folder
+        // Every folder (including nested ones) lists all images below it
         const images = scanDirectory(fullPath, relPath);
         if (images.length > 0) {
           folders[relPath] = images.sort();
         }
+        scanFolders(fullPath, relPath, folders);
       }
     }
   } catch (error) {

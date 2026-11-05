@@ -3,9 +3,10 @@ import {
   fetchCatalogStateMap,
   getAvailabilityPresentation,
   getProductCatalogState,
+  getVariantAvailable,
   isProductAvailableForPurchase,
   mergeProductsWithCatalogState,
-} from './catalog-state.js?v=2';
+} from './catalog-state.js?v=3';
 
 // Mobile menu toggle
 const viteEnv = import.meta.env || {};
@@ -161,11 +162,21 @@ const brewGuides = {
   },
 };
 
+const getNonCoffeeKindLabel = (product) => product?.details?.subcategory || product?.details?.productType || '';
+
+const escapeHtml = (value = '') => String(value)
+  .replace(/&/g, '&amp;')
+  .replace(/</g, '&lt;')
+  .replace(/>/g, '&gt;')
+  .replace(/"/g, '&quot;')
+  .replace(/'/g, '&#39;');
+
 const buildMetaItems = (product, showCategory = false) => {
   const items = [
     showCategory ? categoryLabels[product.category] || product.category : null,
-    product.origin,
-    product.processing,
+    ...(isNonCoffeeProduct(product)
+      ? [product.details?.brand, getNonCoffeeKindLabel(product)].map((item) => (item ? escapeHtml(item) : item))
+      : [product.origin, product.processing]),
   ]
     .filter(Boolean)
     .map((item) => `<span>${item}</span>`)
@@ -191,7 +202,38 @@ const isQuarterKgWeight = (value = '') => {
     || normalized.includes('0.25kg');
 };
 
+const getCatalogVariants = (product) => (Array.isArray(product?.details?.variants) ? product.details.variants : []);
+
+const getVariantOptionValue = (variant) => `variant-${variant.id}`;
+
+const getVariantSelectionOptions = (product) => {
+  const basePrice = Number(product.price || 0);
+  const options = getCatalogVariants(product).map((variant) => {
+    const variantPrice = Number(variant.price);
+    return {
+      value: getVariantOptionValue(variant),
+      label: variant.label,
+      weightLabel: variant.label,
+      price: Number.isFinite(variantPrice) && variant.price !== null ? variantPrice : basePrice,
+      image: variant.image || '',
+      available: getVariantAvailable(variant),
+      isSelectable: true,
+    };
+  });
+
+  // Sellable variants go first so the default selection is always orderable.
+  return [
+    ...options.filter((option) => option.available !== 0),
+    ...options.filter((option) => option.available === 0),
+  ];
+};
+
 const getVolumeSelectionConfig = (product) => {
+  const variantOptions = getVariantSelectionOptions(product);
+  if (variantOptions.length > 0) {
+    return variantOptions;
+  }
+
   const resolvedWeight = String(product?.weight || baseProductWeightsById.get(product?.id) || '').trim();
   const basePrice = Number(product.price || 0);
   const explicit250 = Number(product?.volumePrices?.['250g']);
@@ -343,20 +385,24 @@ const getVolumeSelectionConfig = (product) => {
 const getProductVolumeMarkup = (product) => {
   const volumeConfig = getVolumeSelectionConfig(product);
   const selectedOption = volumeConfig[0];
+  const isVariantProduct = getCatalogVariants(product).length > 0;
+  const fieldLabel = isVariantProduct ? 'Варіант' : 'Об\'єм';
 
   if (volumeConfig.length <= 1) {
     return `
       <div class="product-volume-inline" data-product-id="${product.id}">
-        <span>Об'єм:</span>
-        <strong>${selectedOption.label}</strong>
+        <span>${fieldLabel}:</span>
+        <strong>${isVariantProduct ? escapeHtml(selectedOption.label) : selectedOption.label}</strong>
       </div>`;
   }
 
   return `
     <label class="product-volume-field" for="volume-select-${product.id}">
-      <span>Об'єм</span>
-      <select class="product-volume-select" id="volume-select-${product.id}" data-product-id="${product.id}" aria-label="Об'єм для ${product.name}">
-        ${volumeConfig.map((option, index) => `<option value="${option.value}"${index === 0 ? ' selected' : ''}>${option.label} — ${option.price} грн</option>`).join('')}
+      <span>${fieldLabel}</span>
+      <select class="product-volume-select" id="volume-select-${product.id}" data-product-id="${product.id}" aria-label="${fieldLabel} для ${product.name}">
+        ${volumeConfig.map((option, index) => option.available === 0
+          ? `<option value="${option.value}" disabled>${escapeHtml(option.label)} — немає в наявності</option>`
+          : `<option value="${option.value}"${index === 0 ? ' selected' : ''}>${escapeHtml(option.label)} — ${option.price} грн</option>`).join('')}
       </select>
     </label>`;
 };
@@ -740,6 +786,8 @@ const normalizeRemoteCatalogProduct = (row = {}) => {
   const productId = String(row.product_id || '').trim();
   if (!productId) return null;
 
+  const details = row.details && typeof row.details === 'object' && !Array.isArray(row.details) ? row.details : null;
+
   return {
     id: productId,
     name: String(row.name || '').trim(),
@@ -760,6 +808,7 @@ const normalizeRemoteCatalogProduct = (row = {}) => {
     featured: Boolean(row.featured),
     giftImage: row.gift_image || null,
     giftAlt: row.gift_alt || null,
+    ...(details && Object.keys(details).length > 0 ? { details } : {}),
     catalogState: {
       product_id: productId,
       is_available: row.is_available,
@@ -830,7 +879,7 @@ const fetchCatalogProducts = async () => {
     ({ data, error } = await resolveCatalogRequest(
       supabase
         .from('product_catalog_public')
-        .select('product_id, name, description, image, alt, category, base_price, weight, country, region, origin, processing, farm, variety, altitude, score, featured, gift_image, gift_alt, is_available, available_quantity, availability_status, updated_at')
+        .select('product_id, name, description, image, alt, category, base_price, weight, country, region, origin, processing, farm, variety, altitude, score, featured, gift_image, gift_alt, details, is_available, available_quantity, availability_status, updated_at')
         .order('updated_at', { ascending: false }),
       { data: null, error: { code: 'CATALOG_TIMEOUT', message: 'Catalog request timed out' } }
     ));
@@ -876,6 +925,22 @@ const getProductFormatLabel = (product) => {
 };
 
 const buildProductSpecs = (product, copy) => {
+  if (isNonCoffeeProduct(product)) {
+    const details = product.details || {};
+    const kindLabel = getNonCoffeeKindLabel(product);
+
+    return [
+      ['Категорія', copy.categoryLabel],
+      details.brand ? ['Бренд', details.brand] : null,
+      kindLabel ? [product.category === 'merch' ? 'Тип виробу' : 'Підкатегорія', kindLabel] : null,
+      details.material ? ['Матеріал', details.material] : null,
+      details.sku ? ['Артикул', details.sku] : null,
+      ...(Array.isArray(details.specs) ? details.specs.map((spec) => [spec.label, spec.value]) : []),
+    ]
+      .filter(Boolean)
+      .map(([label, value]) => [escapeHtml(label), escapeHtml(value)]);
+  }
+
   const country = inferProductCountry(product);
   const region = product.region || (!country && product.origin ? '' : product.origin || '');
   const specs = [
@@ -903,6 +968,14 @@ const renderProductDetail = (product, allProducts) => {
   const productCode = formatProductCode(product);
   const tasteNotes = copy.tasteNotes;
   const specs = buildProductSpecs(product, copy);
+  const isNonCoffee = isNonCoffeeProduct(product);
+  const galleryImages = isNonCoffee && Array.isArray(product.details?.gallery) ? product.details.gallery : [];
+  const galleryMarkup = galleryImages.length > 0
+    ? `<div class="product-gallery">${[product.image, ...galleryImages].map((source, index) => `
+        <button class="product-gallery-thumb" type="button" data-gallery-src="${escapeHtml(source)}" aria-label="Фото ${index + 1}">
+          <img src="${escapeHtml(source)}" alt="" loading="lazy">
+        </button>`).join('')}</div>`
+    : '';
   document.title = `${product.name} | Odesa Coffee Roasters`;
 
   const metaDescription = document.querySelector('meta[name="description"]');
@@ -927,12 +1000,49 @@ const renderProductDetail = (product, allProducts) => {
           <img src="${product.image}" alt="${product.alt}">
         </div>`;
 
+  const productFootMarkup = isNonCoffee
+    ? ''
+    : `
+            <div class="product-taste-line">
+              <span>Смак:</span>
+              <p>${tasteNotes}</p>
+            </div>`;
+
+  const productInfoMarkup = isNonCoffee
+    ? `
+        <article class="coffee-card product-info-card">
+          <p class="eyebrow">Про товар</p>
+          <h2>${product.name}</h2>
+          <p>${product.description}</p>
+        </article>`
+    : `
+        <article class="coffee-card product-info-card">
+          <p class="eyebrow">Що в чашці</p>
+          <h2>Смаковий профіль</h2>
+          <p>${copy.cupProfile}</p>
+        </article>
+        <article class="coffee-card product-info-card">
+          <p class="eyebrow">Походження</p>
+          <h2>${product.origin || 'Лот у процесі оновлення'}</h2>
+          <p>Спосіб обробки: ${product.processing || 'уточнюємо найближчим оновленням каталогу'}.</p>
+        </article>
+        <article class="coffee-card product-info-card">
+          <p class="eyebrow">Як заварювати</p>
+          <h2>${copy.guideTitle}</h2>
+          <p>${copy.brewGuideText}</p>
+        </article>
+        <article class="coffee-card product-info-card">
+          <p class="eyebrow">Кому підійде</p>
+          <h2>Для щоденного меню</h2>
+          <p>${copy.audienceText}</p>
+        </article>`;
+
   productDetailRoot.innerHTML = `
     <section class="hero product-hero">
       <div class="container">
         <article class="product-showcase-card">
           <div class="product-detail-grid">
-            <div class="product-showcase-media">${productMediaMarkup}</div>
+            <div class="product-showcase-media">${productMediaMarkup}${galleryMarkup}</div>
             <div class="hero-copy product-detail-copy product-showcase-copy">
               <div class="product-showcase-head">
                 <p class="product-code">Код товару: ${productCode}</p>
@@ -958,11 +1068,7 @@ const renderProductDetail = (product, allProducts) => {
               </div>
             </div>
           </div>
-          <div class="product-showcase-foot">
-            <div class="product-taste-line">
-              <span>Смак:</span>
-              <p>${tasteNotes}</p>
-            </div>
+          <div class="product-showcase-foot">${productFootMarkup}
             <div class="product-showcase-side">
               <p class="product-availability product-availability-${availability.tone}">${availability.detail}</p>
               <div class="hero-actions product-showcase-links">
@@ -975,29 +1081,16 @@ const renderProductDetail = (product, allProducts) => {
       </div>
     </section>
     <section class="section">
-      <div class="container product-info-grid">
-        <article class="coffee-card product-info-card">
-          <p class="eyebrow">Що в чашці</p>
-          <h2>Смаковий профіль</h2>
-          <p>${copy.cupProfile}</p>
-        </article>
-        <article class="coffee-card product-info-card">
-          <p class="eyebrow">Походження</p>
-          <h2>${product.origin || 'Лот у процесі оновлення'}</h2>
-          <p>Спосіб обробки: ${product.processing || 'уточнюємо найближчим оновленням каталогу'}.</p>
-        </article>
-        <article class="coffee-card product-info-card">
-          <p class="eyebrow">Як заварювати</p>
-          <h2>${copy.guideTitle}</h2>
-          <p>${copy.brewGuideText}</p>
-        </article>
-        <article class="coffee-card product-info-card">
-          <p class="eyebrow">Кому підійде</p>
-          <h2>Для щоденного меню</h2>
-          <p>${copy.audienceText}</p>
-        </article>
+      <div class="container product-info-grid">${productInfoMarkup}
       </div>
     </section>`;
+
+  productDetailRoot.querySelectorAll('[data-gallery-src]').forEach((thumb) => {
+    thumb.addEventListener('click', () => {
+      const mainImage = productDetailRoot.querySelector('.product-detail-media img');
+      if (mainImage) mainImage.setAttribute('src', thumb.dataset.gallerySrc || '');
+    });
+  });
 
   if (relatedGrid) {
     const relatedProducts = allProducts
@@ -1077,12 +1170,27 @@ const reconcileCartWithCatalogState = (notify = false) => {
 
     let nextItem = item;
 
+    if (String(item.volumeOption || '').startsWith('variant-')) {
+      const variantOption = getVolumeSelectionConfig(catalogProduct).find((option) => option.value === item.volumeOption);
+      if (!variantOption || variantOption.available === 0) {
+        changed = true;
+        notices.push(`${item.title} (${item.volumeLabel || 'варіант'}) прибрано з кошика, бо позиція зараз недоступна.`);
+        return [];
+      }
+
+      if (variantOption.available !== null && item.qty > variantOption.available) {
+        changed = true;
+        notices.push(`${item.title} (${variantOption.label}) доступний у обмеженій кількості.`);
+        nextItem = { ...nextItem, qty: variantOption.available };
+      }
+    }
+
     const expectedPrice = getPriceForVolumeOption(catalogProduct, item.volumeOption);
 
     if (Number(item.price) !== Number(expectedPrice)) {
       changed = true;
       priceChanged = true;
-      nextItem = { ...item, price: Number(expectedPrice) };
+      nextItem = { ...nextItem, price: Number(expectedPrice) };
     }
 
     const state = getProductCatalogState(catalogProduct);
@@ -1125,7 +1233,18 @@ const reconcileCartWithCatalogState = (notify = false) => {
 };
 
 const attachBuyHandlers = () => {
-  const syncProductContextPrice = (context, productId, requestedVolumeOption) => {
+  const syncProductContextImage = (context, selectedVolume) => {
+    const root = context.closest('.product-card, .product-detail-grid');
+    const image = root?.querySelector('.product-media img, .product-detail-media img');
+    if (!(image instanceof HTMLImageElement)) return;
+
+    if (!image.dataset.defaultSrc) {
+      image.dataset.defaultSrc = image.getAttribute('src') || '';
+    }
+    image.setAttribute('src', selectedVolume.image || image.dataset.defaultSrc);
+  };
+
+  const syncProductContextPrice = (context, productId, requestedVolumeOption, swapImage = false) => {
     if (!(context instanceof HTMLElement) || !productId) return;
 
     const catalogProduct = getCatalogProductById(productId);
@@ -1145,6 +1264,10 @@ const attachBuyHandlers = () => {
       buyButton.dataset.price = String(selectedVolume.price);
       buyButton.dataset.weight = selectedVolume.weightLabel || buyButton.dataset.weight || '';
     }
+
+    if (swapImage) {
+      syncProductContextImage(context, selectedVolume);
+    }
   };
 
   const volumeSelectors = document.querySelectorAll('.product-volume-select');
@@ -1157,7 +1280,7 @@ const attachBuyHandlers = () => {
     syncProductContextPrice(context, select.dataset.productId, select.value);
 
     select.addEventListener('change', () => {
-      syncProductContextPrice(context, select.dataset.productId, select.value);
+      syncProductContextPrice(context, select.dataset.productId, select.value, true);
     });
   });
 
@@ -1410,6 +1533,10 @@ const getGrindOptionsMarkup = (item) => {
 };
 
 const getVolumeLabel = (item) => {
+  if (String(item.volumeOption || '').startsWith('variant-')) {
+    return item.volumeLabel || 'Варіант';
+  }
+
   if (item.category === 'drips' || isNonCoffeeProduct(item)) {
     return 'Фіксований об\'єм';
   }
@@ -1441,7 +1568,7 @@ const renderCart = () => {
             </select>
           </div>
           <div class="cart-item-volume">
-            <span class="cart-item-field-label">Об\'єм</span>
+            <span class="cart-item-field-label">${String(item.volumeOption || '').startsWith('variant-') ? 'Варіант' : 'Об\'єм'}</span>
             <span class="cart-item-field-value">${getVolumeLabel(item)}</span>
           </div>
         </div>
@@ -1476,6 +1603,19 @@ const addToCart = (product) => {
   const targetVolumeOption = product.volumeOption || inferVolumeOptionFromItem(product);
   const existing = items.find((i) => i.id === product.id && i.volumeOption === targetVolumeOption);
   const nextQty = (existing?.qty || 0) + 1;
+
+  const selectedVariant = catalogProduct
+    ? getVolumeSelectionConfig(catalogProduct).find((option) => option.value === targetVolumeOption && option.value.startsWith('variant-'))
+    : null;
+  if (selectedVariant && selectedVariant.available !== null && nextQty > selectedVariant.available) {
+    showToast(
+      selectedVariant.available === 0
+        ? `${product.title} (${selectedVariant.label}) більше немає в наявності.`
+        : `${product.title} (${selectedVariant.label}) доступний у обмеженій кількості.`,
+      'error'
+    );
+    return false;
+  }
 
   if (catalogState?.availableQuantity !== null && nextQty > catalogState.availableQuantity) {
     showToast(formatAvailabilityLimitMessage(catalogProduct || product, catalogState.availableQuantity), 'error');
@@ -2495,7 +2635,7 @@ const renderCheckoutSummary = () => {
           <div class="checkout-summary-item-copy">
             <span class="checkout-summary-item-title">${item.title} x${item.qty}</span>
             <span class="checkout-summary-item-grind">Помел: ${getGrindLabel(item)}</span>
-            <span class="checkout-summary-item-volume">Об\'єм: ${getVolumeLabel(item)}</span>
+            <span class="checkout-summary-item-volume">${String(item.volumeOption || '').startsWith('variant-') ? 'Варіант' : 'Об\'єм'}: ${getVolumeLabel(item)}</span>
           </div>
           <strong>${item.price * item.qty} грн</strong>
         </div>

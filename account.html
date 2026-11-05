@@ -194,29 +194,29 @@
                   <span>Опис</span>
                   <textarea name="description" rows="3" required placeholder="Короткий опис лоту для картки"></textarea>
                 </label>
-                <label class="catalog-admin-field catalog-admin-field-wide">
+                <div class="catalog-admin-field catalog-admin-field-wide">
                   <span>Фото товару</span>
-                  <div class="catalog-admin-image-selector">
-                    <div class="catalog-admin-image-folder-selector">
-                      <label>
-                        <span>Папка</span>
-                        <select id="catalog-image-folder" name="imageFolder">
-                          <option value="">📁 Усі фото</option>
-                        </select>
-                      </label>
+                  <div class="image-picker" data-image-picker>
+                    <div class="image-picker-selects">
+                      <select class="image-picker-folder" data-image-folder aria-label="Папка з фото">
+                        <option value="">📁 Усі фото</option>
+                      </select>
+                      <select class="image-picker-file" data-image-file aria-label="Фото з папки">
+                        <option value="">— обрати фото —</option>
+                      </select>
                     </div>
-                    <div class="catalog-admin-image-input">
-                      <input type="text" name="image" id="catalog-image-input" list="catalog-image-suggestions" required placeholder="images/your-photo.webp або https://...">
-                      <small class="catalog-admin-hint">Додайте файл у папку images і вкажіть шлях на кшталт images/lot-2026.webp, або вставте повний https:// URL картинки.</small>
+                    <div class="image-picker-main">
+                      <input type="text" class="image-picker-input" data-image-input name="image" required placeholder="images/... або https://...">
+                      <img class="image-picker-preview" data-image-preview alt="" hidden>
                     </div>
                   </div>
-                </label>
-                <datalist id="catalog-image-suggestions">
-                </datalist>
+                  <small class="catalog-admin-hint">Оберіть папку і фото зі списку, або вставте шлях images/lot-2026.webp чи повний https:// URL.</small>
+                </div>
                 <label class="catalog-admin-field catalog-admin-field-wide">
                   <span>Alt для фото</span>
                   <input type="text" name="alt" placeholder="Опис фото для картки товару">
                 </label>
+                <div class="catalog-admin-category-group" data-category-group="coffee">
                 <label class="catalog-admin-field">
                   <span>Ціна 0.250 кг, грн (опціонально)</span>
                   <input type="number" name="price250" min="0" step="0.01" placeholder="Наприклад: 360">
@@ -266,9 +266,28 @@
                   <span>Регіон</span>
                   <input type="text" name="region" placeholder="Наприклад: South Kivu Province">
                 </label>
+                </div>
+                <div class="catalog-admin-noncoffee-slot" data-noncoffee-slot hidden></div>
+                <datalist id="catalog-accessory-subcategories">
+                  <option value="Кавомашини"></option>
+                  <option value="Кавомолки"></option>
+                  <option value="Чайники"></option>
+                  <option value="Ваги"></option>
+                  <option value="Дриппери та фільтри"></option>
+                  <option value="Для молока"></option>
+                  <option value="Аксесуари для бариста"></option>
+                </datalist>
+                <datalist id="catalog-merch-types">
+                  <option value="Футболка"></option>
+                  <option value="Худі"></option>
+                  <option value="Чашка"></option>
+                  <option value="Шопер"></option>
+                  <option value="Кепка"></option>
+                </datalist>
                 <label class="catalog-admin-field">
                   <span>Заведено на склад, шт.</span>
                   <input type="number" name="stockQuantity" min="0" step="1" placeholder="Порожньо = без ліміту">
+                  <small class="catalog-admin-hint" data-stock-hint hidden>Якщо в варіантів вказано залишок, цей загальний залишок не використовується.</small>
                 </label>
                 <label class="catalog-admin-toggle">
                   <input type="checkbox" name="isAvailable" checked>
@@ -338,85 +357,6 @@
   </footer>
 
   <script src="/env.js?v=3"></script>
-  <script type="module" src="js/account.js?v=99"></script>
-  
-  <!-- Initialize images list for catalog admin form -->
-  <script>
-    // Load images list and populate datalist and folder selector
-    (async function initImages() {
-      console.log('🔄 Initializing images list...');
-      try {
-        const response = await fetch('/images-list.json');
-        if (!response.ok) {
-          console.error(`❌ Failed to fetch images-list.json: ${response.status} ${response.statusText}`);
-          return;
-        }
-        
-        const data = await response.json();
-        console.log('📋 Loaded images-list.json:', { totalImages: data.images?.length, folders: Object.keys(data.folders || {}) });
-        
-        if (!Array.isArray(data.images) || typeof data.folders !== 'object') {
-          console.error('❌ Invalid images-list.json structure');
-          return;
-        }
-        
-        const datalist = document.getElementById('catalog-image-suggestions');
-        const folderSelect = document.getElementById('catalog-image-folder');
-        const imageInput = document.getElementById('catalog-image-input');
-        
-        if (!datalist) {
-          console.error('❌ datalist #catalog-image-suggestions not found');
-          return;
-        }
-        if (!folderSelect) {
-          console.error('❌ folderSelect #catalog-image-folder not found');
-          return;
-        }
-        
-        // Populate folder selector
-        Object.keys(data.folders).sort().forEach((folderName) => {
-          const option = document.createElement('option');
-          option.value = folderName;
-          option.textContent = `📁 ${folderName}/`;
-          folderSelect.appendChild(option);
-        });
-        console.log(`✅ Added ${Object.keys(data.folders).length} folders to selector`);
-        
-        // Function to update datalist based on selected folder
-        function updateImageList() {
-          datalist.innerHTML = '';
-          const selectedFolder = folderSelect.value;
-          let imagesToShow = data.images;
-          
-          if (selectedFolder && data.folders[selectedFolder]) {
-            imagesToShow = data.folders[selectedFolder];
-          }
-          
-          imagesToShow.forEach((imagePath) => {
-            const option = document.createElement('option');
-            option.value = imagePath;
-            datalist.appendChild(option);
-          });
-          
-          console.log(`✅ Updated datalist: ${imagesToShow.length} images in folder "${selectedFolder || 'all'}"`);
-        }
-        
-        // Update list when folder changes
-        folderSelect.addEventListener('change', updateImageList);
-        
-        // Also update when input field gets focus
-        if (imageInput) {
-          imageInput.addEventListener('focus', updateImageList);
-        }
-        
-        // Initial population
-        updateImageList();
-        
-        console.log(`✅ Images list initialized: ${data.images.length} total images`);
-      } catch (e) {
-        console.error('❌ Failed to load images list:', e);
-      }
-    })();
-  </script>
+  <script type="module" src="js/account.js?v=102"></script>
 </body>
 </html>

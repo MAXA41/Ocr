@@ -1,5 +1,6 @@
 import { supabase, isSupabaseConfigured } from './supabase-client.js?v=2';
-import { normalizeCatalogState } from './catalog-state.js?v=2';
+import { normalizeCatalogState } from './catalog-state.js?v=3';
+import { buildImagePickerMarkup, hydrateImagePickers, syncImagePickers } from './image-picker.js?v=1';
 
 const menuToggle = document.querySelector('.menu-toggle');
 const mainNav = document.querySelector('.main-nav');
@@ -315,6 +316,7 @@ const normalizeRemoteCatalogProduct = (row = {}) => {
     featured: Boolean(row.featured),
     giftImage: normalizeOptionalText(row.gift_image),
     giftAlt: normalizeOptionalText(row.gift_alt),
+    details: row.details && typeof row.details === 'object' && !Array.isArray(row.details) ? row.details : null,
   };
 };
 
@@ -351,7 +353,7 @@ const fetchCatalogProductsForAdmin = async () => {
 
   const { data, error } = await supabase
     .from('product_catalog_public')
-    .select('product_id, name, description, image, alt, category, base_price, weight, country, region, origin, processing, farm, variety, altitude, score, featured, gift_image, gift_alt')
+    .select('product_id, name, description, image, alt, category, base_price, weight, country, region, origin, processing, farm, variety, altitude, score, featured, gift_image, gift_alt, details')
     .order('updated_at', { ascending: false });
 
   if (error) {
@@ -387,6 +389,391 @@ const inferCatalogWeight = ({ category, price250, price1kg }) => {
 
 const getDefaultCatalogPrice = ({ price250, price1kg }) => {
   return price250 ?? price1kg ?? 0;
+};
+
+const nonCoffeeCreateCategories = ['accessories', 'merch'];
+const standardMerchSizes = ['S', 'M', 'L', 'XL'];
+
+const isNonCoffeeCategory = (category) => nonCoffeeCreateCategories.includes(category);
+
+const getCreateFormGroup = (category) => (isNonCoffeeCategory(category) ? category : 'coffee');
+
+const toInputValue = (value) => escapeHtml(value === null || value === undefined ? '' : String(value));
+
+const buildNonCoffeeRowMarkup = (kind, group, values = {}) => {
+  const imageField = (label, value) => `
+    <div class="catalog-admin-field catalog-admin-field-image">
+      <span>${label}</span>
+      ${buildImagePickerMarkup({ value: value || '', inputAttrs: 'data-row-field="image"' })}
+    </div>`;
+  const removeButton = '<button type="button" class="btn ghost" data-row-remove title="Видалити рядок">✕</button>';
+
+  if (kind === 'spec') {
+    return `
+      <label class="catalog-admin-field">
+        <span>Назва</span>
+        <input type="text" data-row-field="label" value="${toInputValue(values.label)}" placeholder="Потужність">
+      </label>
+      <label class="catalog-admin-field">
+        <span>Значення</span>
+        <input type="text" data-row-field="value" value="${toInputValue(values.value)}" placeholder="1520 Вт">
+      </label>
+      ${removeButton}`;
+  }
+
+  if (kind === 'gallery') {
+    return `${imageField('Фото', values.image)}${removeButton}`;
+  }
+
+  const sizeField = group === 'merch'
+    ? `
+      <label class="catalog-admin-field">
+        <span>Розмір</span>
+        <input type="text" data-row-field="size" value="${toInputValue(values.size)}" placeholder="M">
+      </label>`
+    : '';
+  const soldNote = Number(values.sold) > 0
+    ? `<small class="catalog-admin-hint">Продано / в обробці: ${Number(values.sold)} шт.${values.available === null || values.available === undefined ? '' : `, доступно: ${Number(values.available)}`}</small>`
+    : '';
+
+  return `
+    <label class="catalog-admin-field">
+      <span>${group === 'merch' ? 'Колір' : 'Колір / модель'}</span>
+      <input type="text" data-row-field="color" value="${toInputValue(values.color)}" placeholder="${group === 'merch' ? 'Чорний' : 'Off-white'}">
+    </label>
+    ${sizeField}
+    ${imageField('Фото варіанта', values.image)}
+    <label class="catalog-admin-field">
+      <span>Ціна, грн</span>
+      <input type="number" data-row-field="price" min="0" step="0.01" value="${toInputValue(values.price)}" placeholder="як базова">
+    </label>
+    <label class="catalog-admin-field">
+      <span>Заведено, шт.</span>
+      <input type="number" data-row-field="stock" min="0" step="1" value="${toInputValue(values.stock)}" placeholder="без ліміту">
+      ${soldNote}
+    </label>
+    ${removeButton}`;
+};
+
+const addNonCoffeeRow = (root, kind, values = {}) => {
+  const containerKey = kind === 'spec' ? 'specs' : kind === 'gallery' ? 'gallery' : 'variants';
+  const container = root.querySelector(`[data-rows="${containerKey}"]`);
+  if (!container) return null;
+
+  const row = document.createElement('div');
+  row.className = 'catalog-admin-row';
+  row.dataset.rowKind = kind;
+  if (values.id) row.dataset.variantId = values.id;
+  if (Number(values.sold) > 0) row.dataset.sold = String(Number(values.sold));
+  if (values.available !== null && values.available !== undefined) row.dataset.available = String(values.available);
+  row.innerHTML = buildNonCoffeeRowMarkup(kind, root.dataset.noncoffeeGroup, values);
+  container.append(row);
+  hydrateImagePickers(row);
+  return row;
+};
+
+const buildNonCoffeeFieldsMarkup = (group, draft = {}) => {
+  const textField = (field, label, placeholder, listId = '') => `
+    <label class="catalog-admin-field">
+      <span>${label}</span>
+      <input type="text" data-nc-field="${field}"${listId ? ` list="${listId}"` : ''} value="${toInputValue(draft[field])}" placeholder="${placeholder}">
+    </label>`;
+
+  const priceField = `
+    <label class="catalog-admin-field">
+      <span>Ціна, грн</span>
+      <input type="number" data-nc-field="price" min="0" step="0.01" value="${toInputValue(draft.price)}" placeholder="${group === 'merch' ? 'Наприклад: 650' : 'Наприклад: 18500'}">
+      <small class="catalog-admin-hint">Базова ціна. Якщо в варіанта своя ціна, вона замінить цю.</small>
+    </label>`;
+
+  const variantsFieldset = group === 'merch'
+    ? `
+      <fieldset class="catalog-admin-fieldset catalog-admin-fieldset-wide">
+        <legend>Варіанти: розмір і колір</legend>
+        <div class="catalog-admin-rows" data-rows="variants"></div>
+        <div class="catalog-admin-row-actions">
+          <button type="button" class="btn ghost" data-add-row="variant">+ Додати варіант</button>
+          <button type="button" class="btn ghost" data-add-sizes>Додати розміри S–XL</button>
+        </div>
+        <small class="catalog-admin-hint">Один рядок = одна комбінація (наприклад, «Чорний / M»). У кожного рядка своє фото, а ціну і залишок можна не вказувати.</small>
+      </fieldset>`
+    : `
+      <fieldset class="catalog-admin-fieldset catalog-admin-fieldset-wide">
+        <legend>Варіанти (колір / модель)</legend>
+        <div class="catalog-admin-rows" data-rows="variants"></div>
+        <button type="button" class="btn ghost" data-add-row="variant">+ Додати варіант</button>
+        <small class="catalog-admin-hint">Кожен варіант має своє фото, а ціну і залишок можна не вказувати: тоді діє базова ціна і загальний залишок.</small>
+      </fieldset>`;
+
+  const fields = group === 'merch'
+    ? `
+      ${priceField}
+      ${textField('productType', 'Тип виробу', 'Наприклад: Футболка', 'catalog-merch-types')}
+      ${textField('material', 'Матеріал', 'Наприклад: 100% бавовна')}
+      ${textField('sku', 'Артикул (SKU)', 'Наприклад: OR-TEE-001')}
+      <fieldset class="catalog-admin-fieldset catalog-admin-fieldset-wide">
+        <legend>Додаткові фото (галерея)</legend>
+        <div class="catalog-admin-rows" data-rows="gallery"></div>
+        <button type="button" class="btn ghost" data-add-row="gallery">+ Додати фото</button>
+      </fieldset>
+      ${variantsFieldset}`
+    : `
+      ${priceField}
+      ${textField('brand', 'Бренд / виробник', 'Наприклад: Technivorm Moccamaster')}
+      ${textField('subcategory', 'Підкатегорія', 'Наприклад: Кавомашини', 'catalog-accessory-subcategories')}
+      <fieldset class="catalog-admin-fieldset catalog-admin-fieldset-wide">
+        <legend>Характеристики</legend>
+        <div class="catalog-admin-rows" data-rows="specs"></div>
+        <button type="button" class="btn ghost" data-add-row="spec">+ Додати характеристику</button>
+        <small class="catalog-admin-hint">Наприклад: «Потужність» — «1520 Вт», «Об'єм» — «1,25 л».</small>
+      </fieldset>
+      ${variantsFieldset}`;
+
+  return `<div class="catalog-admin-text-grid" data-noncoffee-fields data-noncoffee-group="${group}">${fields}</div>`;
+};
+
+const getMaxVariantSeq = (variants = []) => variants.reduce((max, variant) => {
+  const match = /^v(\d+)$/.exec(String(variant?.id || ''));
+  return match ? Math.max(max, Number(match[1])) : max;
+}, 0);
+
+const mountNonCoffeeFields = (slot, group, draft = {}) => {
+  if (!(slot instanceof HTMLElement)) return null;
+
+  slot.innerHTML = buildNonCoffeeFieldsMarkup(group, draft);
+  slot.hidden = false;
+  const root = slot.querySelector('[data-noncoffee-fields]');
+  if (!(root instanceof HTMLElement)) return null;
+  root.nonCoffeeExtras = draft;
+  const variants = Array.isArray(draft.variants) ? draft.variants : [];
+  // New variant ids continue after every id ever seen on this product so removed ids are never reused.
+  root.dataset.variantSeq = String(Math.max(Number(draft.variantSeq) || 0, getMaxVariantSeq(variants)));
+
+  const specs = Array.isArray(draft.specs) ? draft.specs : [];
+  specs.forEach((spec) => addNonCoffeeRow(root, 'spec', spec));
+  if (group === 'accessories' && specs.length === 0) addNonCoffeeRow(root, 'spec');
+  if (group === 'merch') {
+    (Array.isArray(draft.gallery) ? draft.gallery : []).forEach((image) => addNonCoffeeRow(root, 'gallery', { image }));
+  }
+  variants.forEach((variant) => addNonCoffeeRow(root, 'variant', variant));
+
+  hydrateImagePickers(root);
+  return root;
+};
+
+const readRowField = (row, field) => String(row.querySelector(`[data-row-field="${field}"]`)?.value ?? '').trim();
+
+const normalizeCatalogImagePath = (value) => String(value || '').trim().replace(/\\/g, '/');
+
+// Raw (unvalidated) state of the accessories/merch fields, used to build details and to keep input when the category changes.
+const collectNonCoffeeDraft = (root) => {
+  // Fields that exist only in the other category group stay in the draft so switching back and forth loses nothing.
+  const extras = root.nonCoffeeExtras || {};
+  const field = (name) => {
+    const element = root.querySelector(`[data-nc-field="${name}"]`);
+    return element ? String(element.value ?? '').trim() : String(extras[name] ?? '');
+  };
+  const rowsOf = (key) => [...root.querySelectorAll(`[data-rows="${key}"] .catalog-admin-row`)];
+  const hasRows = (key) => Boolean(root.querySelector(`[data-rows="${key}"]`));
+
+  return {
+    price: field('price'),
+    brand: field('brand'),
+    subcategory: field('subcategory'),
+    productType: field('productType'),
+    material: field('material'),
+    sku: field('sku'),
+    specs: hasRows('specs')
+      ? rowsOf('specs').map((row) => ({ label: readRowField(row, 'label'), value: readRowField(row, 'value') }))
+      : (extras.specs || []),
+    gallery: hasRows('gallery')
+      ? rowsOf('gallery').map((row) => readRowField(row, 'image'))
+      : (extras.gallery || []),
+    variants: rowsOf('variants').map((row) => ({
+      id: row.dataset.variantId || '',
+      color: readRowField(row, 'color'),
+      size: readRowField(row, 'size'),
+      image: readRowField(row, 'image'),
+      price: readRowField(row, 'price'),
+      stock: readRowField(row, 'stock'),
+      sold: Number(row.dataset.sold) || 0,
+      available: row.dataset.available === undefined ? null : Number(row.dataset.available),
+    })),
+    variantSeq: Number(root.dataset.variantSeq) || 0,
+  };
+};
+
+const detailsToDraft = (row) => {
+  const details = row.details && typeof row.details === 'object' ? row.details : {};
+  const variants = Array.isArray(details.variants) ? details.variants : [];
+
+  return {
+    price: row.price ?? '',
+    brand: details.brand || '',
+    subcategory: details.subcategory || '',
+    productType: details.productType || '',
+    material: details.material || '',
+    sku: details.sku || '',
+    specs: Array.isArray(details.specs) ? details.specs : [],
+    gallery: Array.isArray(details.gallery) ? details.gallery : [],
+    variants: variants.map((variant) => ({
+      id: variant.id || '',
+      color: variant.color || '',
+      size: variant.size || '',
+      image: variant.image || '',
+      price: variant.price ?? '',
+      stock: variant.stock ?? '',
+      sold: variant.sold || 0,
+      available: variant.available ?? null,
+    })),
+  };
+};
+
+const buildNonCoffeeDetails = (draft, group) => {
+  const details = {};
+
+  const textKeys = group === 'merch' ? ['productType', 'material', 'sku'] : ['brand', 'subcategory'];
+  textKeys.forEach((key) => {
+    const value = normalizeOptionalText(draft[key]);
+    if (value) details[key] = value;
+  });
+
+  if (group === 'accessories') {
+    const specs = [];
+    for (const spec of draft.specs || []) {
+      if (!spec.label && !spec.value) continue;
+      if (!spec.label || !spec.value) {
+        return { error: 'У кожної характеристики має бути і назва, і значення.' };
+      }
+      specs.push({ label: spec.label, value: spec.value });
+    }
+    if (specs.length > 0) details.specs = specs;
+  }
+
+  if (group === 'merch') {
+    const gallery = [];
+    for (const rawImage of draft.gallery || []) {
+      const image = normalizeCatalogImagePath(rawImage);
+      if (!image) continue;
+      if (!isValidCatalogImageValue(image)) {
+        return { error: `Додаткове фото «${image}» має бути у форматі images/your-file.webp або повний https:// URL.` };
+      }
+      gallery.push(image);
+    }
+    if (gallery.length > 0) details.gallery = gallery;
+  }
+
+  const variants = [];
+  const seenLabels = new Set();
+  let variantSeq = Number(draft.variantSeq) || 0;
+  for (const item of draft.variants || []) {
+    const image = normalizeCatalogImagePath(item.image);
+    if (!item.color && !item.size && !image && !item.price && !item.stock) continue;
+
+    const label = [item.color, item.size].filter(Boolean).join(' / ');
+    if (!label) {
+      return { error: 'У кожного варіанта має бути назва: колір, модель або розмір.' };
+    }
+    if (seenLabels.has(label.toLowerCase())) {
+      return { error: `Варіант «${label}» вказано двічі.` };
+    }
+    seenLabels.add(label.toLowerCase());
+
+    if (image && !isValidCatalogImageValue(image)) {
+      return { error: `Фото варіанта «${label}» має бути у форматі images/your-file.webp або повний https:// URL.` };
+    }
+
+    const price = parseNonNegativePriceInput(item.price);
+    if (Number.isNaN(price)) {
+      return { error: `Ціна варіанта «${label}» має бути числом 0 або більше.` };
+    }
+
+    const stock = parseOptionalIntegerInput(item.stock);
+    if (Number.isNaN(stock)) {
+      return { error: `Залишок варіанта «${label}» має бути цілим числом 0 або більше.` };
+    }
+
+    variantSeq += item.id ? 0 : 1;
+    variants.push({
+      id: item.id || `v${variantSeq}`,
+      ...(item.color ? { color: item.color } : {}),
+      ...(item.size ? { size: item.size } : {}),
+      label,
+      ...(image ? { image } : {}),
+      price,
+      stock,
+    });
+  }
+  if (variants.length > 0) details.variants = variants;
+
+  return { details };
+};
+
+const applyCreateFormCategory = (form) => {
+  const category = String(new FormData(form).get('category') || '');
+  const activeGroup = getCreateFormGroup(category);
+
+  const coffeeSection = form.querySelector('[data-category-group="coffee"]');
+  if (coffeeSection instanceof HTMLElement) {
+    const isCoffee = activeGroup === 'coffee';
+    coffeeSection.hidden = !isCoffee;
+    coffeeSection.querySelectorAll('input, select, textarea').forEach((field) => {
+      field.disabled = !isCoffee;
+    });
+  }
+
+  const slot = form.querySelector('[data-noncoffee-slot]');
+  if (slot instanceof HTMLElement) {
+    const currentRoot = slot.querySelector('[data-noncoffee-fields]');
+    if (activeGroup === 'coffee') {
+      slot.innerHTML = '';
+      slot.hidden = true;
+    } else if (!currentRoot || currentRoot.dataset.noncoffeeGroup !== activeGroup) {
+      mountNonCoffeeFields(slot, activeGroup, currentRoot instanceof HTMLElement ? collectNonCoffeeDraft(currentRoot) : {});
+    }
+  }
+
+  const stockHint = form.querySelector('[data-stock-hint]');
+  if (stockHint) stockHint.hidden = activeGroup === 'coffee';
+};
+
+const resetCreateForm = (form) => {
+  form.reset();
+  const slot = form.querySelector('[data-noncoffee-slot]');
+  if (slot instanceof HTMLElement) slot.innerHTML = '';
+  applyCreateFormCategory(form);
+  syncImagePickers(form);
+};
+
+const handleNonCoffeeRowClick = (event) => {
+  const target = event.target;
+  if (!(target instanceof HTMLElement)) return;
+
+  const root = target.closest('[data-noncoffee-fields]');
+  if (!(root instanceof HTMLElement)) return;
+
+  const addButton = target.closest('[data-add-row]');
+  if (addButton instanceof HTMLElement) {
+    addNonCoffeeRow(root, addButton.dataset.addRow || '');
+    catalogAdminHasUnsavedChanges = true;
+    return;
+  }
+
+  if (target.closest('[data-add-sizes]')) {
+    const presentSizes = new Set([...root.querySelectorAll('[data-rows="variants"] .catalog-admin-row')]
+      .map((row) => readRowField(row, 'size').toLowerCase()));
+    standardMerchSizes
+      .filter((size) => !presentSizes.has(size.toLowerCase()))
+      .forEach((size) => addNonCoffeeRow(root, 'variant', { size }));
+    catalogAdminHasUnsavedChanges = true;
+    return;
+  }
+
+  const removeButton = target.closest('[data-row-remove]');
+  if (removeButton instanceof HTMLElement) {
+    removeButton.closest('.catalog-admin-row')?.remove();
+    catalogAdminHasUnsavedChanges = true;
+  }
 };
 
 const runtimeEnv = globalThis.__OCR_ENV__ || {};
@@ -861,6 +1248,107 @@ const buildCatalogAdminRows = (products, stateRows) => {
   });
 };
 
+const renderCatalogCardSummary = (row, { tone, stateLabel, stockLabel, availableLabel }) => {
+  const metaItems = isNonCoffeeCategory(row.category)
+    ? [row.details?.brand, row.details?.subcategory || row.details?.productType]
+    : [row.origin, row.processing];
+
+  return `
+    <summary class="catalog-admin-card-summary">
+      <div class="catalog-admin-summary">
+        <div class="catalog-admin-media">
+          <img src="${escapeHtml(row.image)}" alt="${escapeHtml(row.alt)}">
+        </div>
+        <div class="catalog-admin-copy">
+          <p class="eyebrow">${escapeHtml(row.category || 'Каталог')}</p>
+          <h3>${escapeHtml(row.name)}</h3>
+          <p>${escapeHtml(row.description)}</p>
+          <div class="product-meta">
+            ${metaItems.filter(Boolean).map((item) => `<span>${escapeHtml(item)}</span>`).join('')}
+          </div>
+          <p class="catalog-admin-card-hint">Натисніть, щоб розкрити редагування.</p>
+        </div>
+      </div>
+      <div class="catalog-admin-summary-side">
+        <span class="catalog-admin-pill catalog-admin-pill-${tone}">${stateLabel}</span>
+        <div class="catalog-admin-metrics compact">
+          <div class="catalog-admin-metric">
+            <span>Заведено</span>
+            <strong>${stockLabel}</strong>
+          </div>
+          <div class="catalog-admin-metric">
+            <span>Доступно</span>
+            <strong>${availableLabel}</strong>
+          </div>
+        </div>
+      </div>
+    </summary>`;
+};
+
+const renderNonCoffeeCard = (row, { tone, stateLabel, stockLabel, availableLabel, stockValue }) => `
+  <details class="catalog-admin-card" data-product-id="${escapeHtml(row.id)}" data-tone="${tone}">
+    ${renderCatalogCardSummary(row, { tone, stateLabel, stockLabel, availableLabel })}
+    <div class="catalog-admin-card-body">
+      <div class="catalog-admin-metrics">
+        <div class="catalog-admin-metric">
+          <span>Продано / в обробці</span>
+          <strong>${row.state.soldQuantity} шт.</strong>
+        </div>
+        <div class="catalog-admin-metric">
+          <span>Доступно зараз</span>
+          <strong>${availableLabel}</strong>
+        </div>
+      </div>
+      <div class="catalog-admin-controls" data-noncoffee-card>
+        <label class="catalog-admin-toggle">
+          <input type="checkbox" data-catalog-availability ${row.state.isAvailable ? 'checked' : ''}>
+          <span>Показувати в продажу</span>
+        </label>
+        <label class="catalog-admin-toggle">
+          <input type="checkbox" data-card-field="featured" ${row.featured ? 'checked' : ''}>
+          <span>Показувати в хітах продажу</span>
+        </label>
+        <label class="catalog-admin-field">
+          <span>Заведено на склад, шт.</span>
+          <input type="number" min="0" step="1" value="${stockValue}" data-catalog-stock placeholder="Порожньо = без ліміту">
+          <small class="catalog-admin-hint">Якщо в варіантів вказано залишок, цей загальний залишок не використовується.</small>
+        </label>
+        <div class="catalog-admin-text-grid">
+          <label class="catalog-admin-field">
+            <span>Категорія</span>
+            <select data-card-field="category">
+              ${nonCoffeeCreateCategories.map((categoryValue) => `<option value="${categoryValue}" ${row.category === categoryValue ? 'selected' : ''}>${catalogCategoryLabels[categoryValue]}</option>`).join('')}
+            </select>
+          </label>
+          <label class="catalog-admin-field">
+            <span>Назва товару</span>
+            <input type="text" data-card-field="name" value="${escapeHtml(row.name || '')}">
+          </label>
+          <label class="catalog-admin-field catalog-admin-field-wide">
+            <span>Опис</span>
+            <textarea rows="3" data-card-field="description">${escapeHtml(row.description || '')}</textarea>
+          </label>
+          <div class="catalog-admin-field catalog-admin-field-wide">
+            <span>Фото товару</span>
+            ${buildImagePickerMarkup({ value: row.image || '', inputAttrs: 'data-card-field="image"' })}
+          </div>
+          <label class="catalog-admin-field catalog-admin-field-wide">
+            <span>Alt для фото</span>
+            <input type="text" data-card-field="alt" value="${escapeHtml(row.alt || '')}">
+          </label>
+        </div>
+        <div class="catalog-admin-noncoffee-slot" data-noncoffee-slot hidden></div>
+        <div class="catalog-admin-card-actions">
+          <button class="btn light" type="button" data-catalog-save>Зберегти</button>
+          ${row.catalogSource === 'remote'
+    ? '<button class="btn danger" type="button" data-catalog-delete>Видалити позицію</button>'
+    : '<p class="catalog-admin-delete-note">Локальна позиція: для повного видалення приберіть її з products.json.</p>'}
+        </div>
+      </div>
+      <p class="form-status" data-catalog-row-status></p>
+    </div>
+  </details>`;
+
 const renderCatalogAdminList = () => {
   if (!catalogAdminList) return;
 
@@ -939,38 +1427,13 @@ const renderCatalogAdminList = () => {
             const price250Value = row.price250 === null || row.price250 === undefined ? '' : row.price250;
             const price1kgValue = row.price1kg === null || row.price1kg === undefined ? '' : row.price1kg;
 
+            if (isNonCoffeeCategory(row.category)) {
+              return renderNonCoffeeCard(row, { tone, stateLabel, stockLabel, availableLabel, stockValue });
+            }
+
             return `
               <details class="catalog-admin-card" data-product-id="${row.id}" data-tone="${tone}">
-                <summary class="catalog-admin-card-summary">
-                  <div class="catalog-admin-summary">
-                    <div class="catalog-admin-media">
-                      <img src="${row.image}" alt="${row.alt}">
-                    </div>
-                    <div class="catalog-admin-copy">
-                      <p class="eyebrow">${row.category || 'Каталог'}</p>
-                      <h3>${row.name}</h3>
-                      <p>${row.description}</p>
-                      <div class="product-meta">
-                        ${row.origin ? `<span>${row.origin}</span>` : ''}
-                        ${row.processing ? `<span>${row.processing}</span>` : ''}
-                      </div>
-                      <p class="catalog-admin-card-hint">Натисніть, щоб розкрити редагування.</p>
-                    </div>
-                  </div>
-                  <div class="catalog-admin-summary-side">
-                    <span class="catalog-admin-pill catalog-admin-pill-${tone}">${stateLabel}</span>
-                    <div class="catalog-admin-metrics compact">
-                      <div class="catalog-admin-metric">
-                        <span>Заведено</span>
-                        <strong>${stockLabel}</strong>
-                      </div>
-                      <div class="catalog-admin-metric">
-                        <span>Доступно</span>
-                        <strong>${availableLabel}</strong>
-                      </div>
-                    </div>
-                  </div>
-                </summary>
+                ${renderCatalogCardSummary(row, { tone, stateLabel, stockLabel, availableLabel })}
                 <div class="catalog-admin-card-body">
                   <div class="catalog-admin-metrics">
                     <div class="catalog-admin-metric">
@@ -1056,10 +1519,10 @@ const renderCatalogAdminList = () => {
                                 <span>Опис кольору</span>
                                 <input type="text" class="catalog-color-description" value="${escapeHtml(color.description || '')}" placeholder="Наприклад: Темна, інтенсивна">
                               </label>
-                              <label class="catalog-admin-field catalog-admin-field-wide">
-                                <span>URL фото</span>
-                                <input type="text" class="catalog-color-image" value="${escapeHtml(color.image_url || '')}" placeholder="images/... або https://...">
-                              </label>
+                              <div class="catalog-admin-field catalog-admin-field-wide">
+                                <span>Фото кольору</span>
+                                ${buildImagePickerMarkup({ value: color.image_url || '', inputAttrs: 'class="catalog-color-image"' })}
+                              </div>
                               <button type="button" class="btn ghost remove-color" title="Видалити цей колір">✕ Видалити</button>
                             </div>
                           </div>
@@ -1100,7 +1563,7 @@ const renderCatalogAdminList = () => {
                       <label class="catalog-admin-field" data-catalog-field-wrapper data-catalog-field-label="Категорія" data-catalog-field-value="${escapeHtml(row.category || '')}">
                         <span>Категорія</span>
                         <select data-catalog-text-field="category">
-                          ${catalogCategoryOrder.map((categoryValue) => `<option value="${categoryValue}" ${row.category === categoryValue ? 'selected' : ''}>${catalogCategoryLabels[categoryValue] || categoryValue}</option>`).join('')}
+                          ${catalogCategoryOrder.filter((categoryValue) => !isNonCoffeeCategory(categoryValue)).map((categoryValue) => `<option value="${categoryValue}" ${row.category === categoryValue ? 'selected' : ''}>${catalogCategoryLabels[categoryValue] || categoryValue}</option>`).join('')}
                         </select>
                       </label>
                       <label class="catalog-admin-field" data-catalog-field-wrapper data-catalog-field-label="Назва картки" data-catalog-field-value="${escapeHtml(row.name || '')}">
@@ -1111,10 +1574,10 @@ const renderCatalogAdminList = () => {
                         <span>Опис картки</span>
                         <textarea rows="3" data-catalog-text-field="description">${escapeHtml(row.description || '')}</textarea>
                       </label>
-                      <label class="catalog-admin-field catalog-admin-field-wide" data-catalog-field-wrapper data-catalog-field-label="Фото" data-catalog-field-value="${escapeHtml(row.image || '')}">
-                        <span>Фото (images/... або https://...)</span>
-                        <input type="text" data-catalog-text-field="image" list="catalog-image-suggestions" value="${escapeHtml(row.image || '')}" placeholder="images/products/example.webp">
-                      </label>
+                      <div class="catalog-admin-field catalog-admin-field-wide" data-catalog-field-wrapper data-catalog-field-label="Фото" data-catalog-field-value="${escapeHtml(row.image || '')}">
+                        <span>Фото</span>
+                        ${buildImagePickerMarkup({ value: row.image || '', inputAttrs: 'data-catalog-text-field="image"' })}
+                      </div>
                       <label class="catalog-admin-field catalog-admin-field-wide" data-catalog-field-wrapper data-catalog-field-label="Смак" data-catalog-field-value="${escapeHtml(flavorHint)}">
                         <span>Смак</span>
                         <textarea rows="2" data-catalog-text-field="taste" placeholder="Що відчувається в ароматиці та післясмаку">${escapeHtml(flavorHint)}</textarea>
@@ -1168,6 +1631,15 @@ const renderCatalogAdminList = () => {
     const card = input.closest('.catalog-admin-card');
     filterCatalogCardFields(card, input.value);
   });
+
+  catalogAdminList.querySelectorAll('[data-noncoffee-card]').forEach((controls) => {
+    const card = controls.closest('.catalog-admin-card');
+    const row = catalogAdminRows.find((item) => item.id === card?.dataset.productId);
+    if (!row) return;
+    mountNonCoffeeFields(controls.querySelector('[data-noncoffee-slot]'), row.category, detailsToDraft(row));
+  });
+
+  hydrateImagePickers(catalogAdminList);
 };
 
 const loadCatalogAdmin = async (session) => {
@@ -1287,6 +1759,10 @@ const createCatalogProduct = async (form) => {
   const pricePiece = parseNonNegativePriceInput(formData.get('pricePiece'));
   const customUnit = normalizeOptionalText(formData.get('customUnit'));
   const priceCustom = customUnit ? parseNonNegativePriceInput(formData.get('priceCustom')) : null;
+  const isNonCoffee = isNonCoffeeCategory(category);
+  const nonCoffeeRoot = isNonCoffee ? form.querySelector('[data-noncoffee-fields]') : null;
+  const nonCoffeeDraft = nonCoffeeRoot instanceof HTMLElement ? collectNonCoffeeDraft(nonCoffeeRoot) : null;
+  const priceBase = nonCoffeeDraft ? parseNonNegativePriceInput(nonCoffeeDraft.price) : null;
 
   if (!productId || !name || !description || !image) {
     setCatalogCreateStatus('Заповніть ID або назву, опис і фото товару.', 'error');
@@ -1303,23 +1779,43 @@ const createCatalogProduct = async (form) => {
     return;
   }
 
-  if (Number.isNaN(price250) || Number.isNaN(price1kg)) {
-    setCatalogCreateStatus('Ціни повинні бути числами 0 або більше.', 'error');
-    return;
+  let details = null;
+  if (isNonCoffee) {
+    if (priceBase === null || Number.isNaN(priceBase)) {
+      setCatalogCreateStatus('Вкажіть ціну товару: число 0 або більше.', 'error');
+      return;
+    }
+
+    const detailsResult = buildNonCoffeeDetails(nonCoffeeDraft || {}, category);
+    if (detailsResult.error) {
+      setCatalogCreateStatus(detailsResult.error, 'error');
+      return;
+    }
+    details = detailsResult.details;
+  } else {
+    if (Number.isNaN(price250) || Number.isNaN(price1kg)) {
+      setCatalogCreateStatus('Ціни повинні бути числами 0 або більше.', 'error');
+      return;
+    }
+
+    // At least one pricing option must be provided
+    const hasBasePricing = price250 !== null || price1kg !== null;
+    const hasVariantPricing = priceMerch !== null || pricePiece !== null || (customUnit && priceCustom !== null);
+
+    if (!hasBasePricing && !hasVariantPricing) {
+      setCatalogCreateStatus('Вкажіть хоча б одну ціну: 250г, 1кг, мерч, пакетик або кастомну міру.', 'error');
+      return;
+    }
   }
 
-  // At least one pricing option must be provided
-  const hasBasePricing = price250 !== null || price1kg !== null;
-  const hasVariantPricing = priceMerch !== null || pricePiece !== null || (customUnit && priceCustom !== null);
-  
-  if (!hasBasePricing && !hasVariantPricing) {
-    setCatalogCreateStatus('Вкажіть хоча б одну ціну: 250г, 1кг, мерч, пакетик або кастомну міру.', 'error');
-    return;
-  }
+  const hasVariantStock = Boolean(details?.variants?.some((variant) => variant.stock !== null));
+  const effectiveStockQuantity = hasVariantStock ? null : stockQuantity;
 
-  const weight = inferCatalogWeight({ category, price250, price1kg });
+  const weight = isNonCoffee ? null : inferCatalogWeight({ category, price250, price1kg });
 
-  const basePrice = getDefaultCatalogPrice({ price250, price1kg }) || priceMerch || pricePiece || priceCustom || 0;
+  const basePrice = isNonCoffee
+    ? priceBase
+    : (getDefaultCatalogPrice({ price250, price1kg }) || priceMerch || pricePiece || priceCustom || 0);
   const volumePrices = {};
   if (price250 !== null) volumePrices['250g'] = price250;
   if (price1kg !== null) volumePrices['1kg'] = price1kg;
@@ -1341,6 +1837,7 @@ const createCatalogProduct = async (form) => {
     origin,
     processing,
     featured,
+    ...(details ? { details } : {}),
     raw_data: {
       id: productId,
       name,
@@ -1356,6 +1853,7 @@ const createCatalogProduct = async (form) => {
       ...(region ? { region } : {}),
       ...(featured ? { featured: true } : {}),
       ...(Object.keys(volumePrices).length > 0 ? { volumePrices } : {}),
+      ...(details ? { details } : {}),
     },
   };
 
@@ -1389,12 +1887,15 @@ const createCatalogProduct = async (form) => {
       .upsert({
         product_id: productId,
         is_available: isAvailable,
-        stock_quantity: stockQuantity,
+        stock_quantity: effectiveStockQuantity,
         updated_by: currentSession.user.id,
       }, { onConflict: 'product_id' }),
-    supabase
-      .from('product_price_overrides')
-      .upsert(priceOverridePayload, { onConflict: 'product_id' }),
+    // Accessories and merch keep their prices (base and per variant) in details, not in price overrides.
+    isNonCoffee
+      ? Promise.resolve({ error: null })
+      : supabase
+        .from('product_price_overrides')
+        .upsert(priceOverridePayload, { onConflict: 'product_id' }),
   ]);
 
   if (catalogAdminCreateSubmit instanceof HTMLButtonElement) {
@@ -1423,10 +1924,136 @@ const createCatalogProduct = async (form) => {
     return;
   }
 
-  form.reset();
+  resetCreateForm(form);
   catalogAdminHasUnsavedChanges = false;
   setCatalogCreateStatus(`Товар ${name} створено.`, 'success');
   await loadCatalogAdmin(currentSession);
+};
+
+const saveNonCoffeeCatalogRow = async (card, row) => {
+  const rowStatus = card.querySelector('[data-catalog-row-status]');
+  const saveButton = card.querySelector('[data-catalog-save]');
+  const availabilityField = card.querySelector('[data-catalog-availability]');
+  const stockField = card.querySelector('[data-catalog-stock]');
+  const fieldsRoot = card.querySelector('[data-noncoffee-fields]');
+  const readCardField = (name) => card.querySelector(`[data-card-field="${name}"]`);
+
+  const finish = (message, tone) => {
+    if (rowStatus) {
+      rowStatus.textContent = message;
+      rowStatus.dataset.tone = tone;
+    }
+    if (saveButton instanceof HTMLButtonElement) saveButton.disabled = false;
+  };
+
+  if (!(availabilityField instanceof HTMLInputElement) || !(stockField instanceof HTMLInputElement) || !(fieldsRoot instanceof HTMLElement)) {
+    return;
+  }
+
+  const category = String(readCardField('category')?.value || row.category);
+  const name = String(readCardField('name')?.value || '').trim();
+  const description = String(readCardField('description')?.value || '').trim();
+  const image = normalizeCatalogImagePath(readCardField('image')?.value);
+  const alt = String(readCardField('alt')?.value || '').trim();
+  const featured = readCardField('featured') instanceof HTMLInputElement && readCardField('featured').checked;
+  const stockQuantity = parseOptionalIntegerInput(stockField.value);
+
+  if (!name || !description || !image) {
+    finish('Заповніть назву, опис і фото товару.', 'error');
+    return;
+  }
+
+  if (!isValidCatalogImageValue(image)) {
+    finish('Фото має бути у форматі images/your-file.webp або повний https:// URL з розширенням зображення.', 'error');
+    return;
+  }
+
+  if (Number.isNaN(stockQuantity)) {
+    finish('Залишок має бути цілим числом 0 або більше.', 'error');
+    return;
+  }
+
+  const draft = collectNonCoffeeDraft(fieldsRoot);
+  const price = parseNonNegativePriceInput(draft.price);
+  if (price === null || Number.isNaN(price)) {
+    finish('Вкажіть ціну товару: число 0 або більше.', 'error');
+    return;
+  }
+
+  const detailsResult = buildNonCoffeeDetails(draft, category);
+  if (detailsResult.error) {
+    finish(detailsResult.error, 'error');
+    return;
+  }
+
+  const details = detailsResult.details;
+  const hasVariantStock = Boolean(details.variants?.some((variant) => variant.stock !== null));
+
+  if (saveButton instanceof HTMLButtonElement) saveButton.disabled = true;
+  if (rowStatus) {
+    rowStatus.textContent = 'Зберігаємо зміни...';
+    rowStatus.dataset.tone = 'neutral';
+  }
+
+  const { data: updatedItems, error: itemError } = await supabase
+    .from('product_catalog_items')
+    .update({
+      name,
+      description,
+      image,
+      alt: alt || name,
+      category,
+      price,
+      featured,
+      details,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('product_id', row.id)
+    .select('product_id');
+
+  if (itemError) {
+    console.error('Failed to update catalog product', itemError);
+    finish(isCatalogRlsAccessError(itemError)
+      ? 'Немає прав на редагування товару (RLS). Додайте email адміністратора в таблицю catalog_admins у Supabase.'
+      : (itemError.message || 'Не вдалося зберегти товар.'), 'error');
+    return;
+  }
+
+  if (!updatedItems || updatedItems.length === 0) {
+    finish('Товар не оновлено: немає прав або позицію не знайдено в каталозі Supabase.', 'error');
+    return;
+  }
+
+  const { error: stateError } = await supabase
+    .from('product_catalog_state')
+    .upsert({
+      product_id: row.id,
+      is_available: availabilityField.checked,
+      stock_quantity: hasVariantStock ? null : stockQuantity,
+      updated_by: currentSession.user.id,
+    }, { onConflict: 'product_id' });
+
+  if (stateError) {
+    console.error('Failed to save product catalog state', stateError);
+    finish(stateError.message || 'Товар збережено, але наявність не оновлено.', 'error');
+    return;
+  }
+
+  // Accessories and merch keep text and prices in product_catalog_items, so old overrides would shadow the edit.
+  const overrideResults = await Promise.all([
+    supabase.from('product_text_overrides').update({ is_active: false }).eq('product_id', row.id).eq('is_active', true),
+    supabase.from('product_price_overrides').update({ is_active: false }).eq('product_id', row.id).eq('is_active', true),
+  ]);
+  const overrideError = overrideResults.find((result) => result.error)?.error;
+  if (overrideError) {
+    console.error('Failed to deactivate legacy product overrides', overrideError);
+    finish('Товар збережено, але старі оверрайди тексту або цін вимкнути не вдалося: зміни можуть не відобразитися.', 'error');
+    return;
+  }
+
+  catalogAdminHasUnsavedChanges = false;
+  await loadCatalogAdmin(currentSession);
+  setCatalogAdminStatus(`Оновлено товар: ${name}.`, 'success');
 };
 
 const saveCatalogRow = async (card) => {
@@ -1438,6 +2065,11 @@ const saveCatalogRow = async (card) => {
   const rowStatus = card.querySelector('[data-catalog-row-status]');
   const saveButton = card.querySelector('[data-catalog-save]');
   const row = catalogAdminRows.find((item) => item.id === productId);
+
+  if (row && card.querySelector('[data-noncoffee-card]')) {
+    await saveNonCoffeeCatalogRow(card, row);
+    return;
+  }
 
   if (!productId || !(availabilityField instanceof HTMLInputElement) || !(stockField instanceof HTMLInputElement) || !row) {
     return;
@@ -2106,6 +2738,19 @@ catalogAdminCreateForm?.addEventListener('submit', async (event) => {
   await createCatalogProduct(catalogAdminCreateForm);
 });
 
+if (catalogAdminCreateForm) {
+  applyCreateFormCategory(catalogAdminCreateForm);
+
+  catalogAdminCreateForm.querySelector('select[name="category"]')?.addEventListener('change', () => {
+    applyCreateFormCategory(catalogAdminCreateForm);
+  });
+
+  catalogAdminCreateForm.addEventListener('click', handleNonCoffeeRowClick);
+  hydrateImagePickers(catalogAdminCreateForm);
+}
+
+catalogAdminList?.addEventListener('click', handleNonCoffeeRowClick);
+
 catalogAdminList?.addEventListener('click', async (event) => {
   const target = event.target;
   if (!(target instanceof HTMLElement)) return;
@@ -2162,14 +2807,15 @@ catalogAdminList?.addEventListener('click', (event) => {
           <span>Опис кольору</span>
           <input type="text" class="catalog-color-description" placeholder="Наприклад: Темна, інтенсивна">
         </label>
-        <label class="catalog-admin-field catalog-admin-field-wide">
-          <span>URL фото</span>
-          <input type="text" class="catalog-color-image" placeholder="images/... або https://...">
-        </label>
+        <div class="catalog-admin-field catalog-admin-field-wide">
+          <span>Фото кольору</span>
+          ${buildImagePickerMarkup({ inputAttrs: 'class="catalog-color-image"' })}
+        </div>
         <button type="button" class="btn ghost remove-color" title="Видалити цей колір">✕ Видалити</button>
       </div>
     `;
     container.appendChild(colorItem);
+    hydrateImagePickers(colorItem);
     catalogAdminHasUnsavedChanges = true;
     return;
   }
@@ -2243,6 +2889,11 @@ catalogAdminList?.addEventListener('input', (event) => {
   const card = target.closest('.catalog-admin-card');
   if (!card) return;
 
+  if (target.closest('[data-noncoffee-card]')) {
+    catalogAdminHasUnsavedChanges = true;
+    return;
+  }
+
   if (target.matches('[data-catalog-field-search]')) {
     filterCatalogCardFields(card, target.value);
     return;
@@ -2271,6 +2922,17 @@ catalogAdminList?.addEventListener('input', (event) => {
 catalogAdminList?.addEventListener('change', (event) => {
   const target = event.target;
   if (!(target instanceof HTMLSelectElement)) return;
+
+  if (target.matches('[data-card-field="category"]')) {
+    const slot = target.closest('[data-noncoffee-card]')?.querySelector('[data-noncoffee-slot]');
+    const currentRoot = slot?.querySelector('[data-noncoffee-fields]');
+    if (slot instanceof HTMLElement && currentRoot instanceof HTMLElement && currentRoot.dataset.noncoffeeGroup !== target.value) {
+      mountNonCoffeeFields(slot, target.value, collectNonCoffeeDraft(currentRoot));
+    }
+    catalogAdminHasUnsavedChanges = true;
+    return;
+  }
+
   if (!target.matches('[data-catalog-text-field]')) return;
 
   const card = target.closest('.catalog-admin-card');
