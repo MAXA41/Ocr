@@ -191,7 +191,7 @@ Deno.serve(async (request) => {
     const { data: catalogRows, error: catalogError } = await admin
       .from("product_catalog_public")
       .select(
-        "product_id,name,category,price,base_price,weight,is_available,availability_status",
+        "product_id,name,category,price,base_price,weight,is_available,availability_status,details",
       )
       .in("product_id", productIds);
 
@@ -255,12 +255,45 @@ Deno.serve(async (request) => {
         ? Math.max(1, Math.trunc(requestedQuantity))
         : 1;
       const volumeOption = String(item.volumeOption || "").trim();
-      const unitPrice = getCatalogUnitPrice(
-        catalogItem,
-        priceOverrideMap.get(productId),
-        volumeOption,
-      );
-      const volumeLabel = getVolumeLabel(volumeOption);
+
+      // Accessories and merch variants: price, stock and name come from the catalog, never from the client.
+      let variant: Record<string, unknown> | null = null;
+      if (volumeOption.startsWith("variant-")) {
+        const variantId = volumeOption.slice("variant-".length);
+        const details =
+          catalogItem.details && typeof catalogItem.details === "object"
+            ? (catalogItem.details as Record<string, unknown>)
+            : {};
+        const variants = Array.isArray(details.variants)
+          ? (details.variants as Record<string, unknown>[])
+          : [];
+        variant = variants.find((entry) => String(entry.id) === variantId) ?? null;
+
+        if (!variant) {
+          throw new Error(`Unknown variant for product: ${productId}`);
+        }
+
+        const available = variant.available;
+        if (typeof available === "number" && available < quantity) {
+          throw new Error(`Variant is unavailable: ${productId}/${variantId}`);
+        }
+      }
+
+      const variantPrice = variant ? Number(variant.price) : Number.NaN;
+      const unitPrice = variant
+        ? variant.price !== null &&
+          variant.price !== undefined &&
+          Number.isFinite(variantPrice)
+          ? variantPrice
+          : Number(catalogItem.base_price ?? catalogItem.price)
+        : getCatalogUnitPrice(
+            catalogItem,
+            priceOverrideMap.get(productId),
+            volumeOption,
+          );
+      const volumeLabel = variant
+        ? String(variant.label || "")
+        : getVolumeLabel(volumeOption);
       const productTitle = String(item.name || catalogItem.name || productId);
 
       if (!Number.isFinite(unitPrice) || unitPrice <= 0) {

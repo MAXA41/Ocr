@@ -2980,9 +2980,21 @@ const syncDeliveryLocationValue = () => {
   deliveryDetails.value = deliveryLocationSelect.value;
 };
 
+const isVariantCartItem = (item) => String(item?.volumeOption || '').startsWith('variant-');
+
+// Accessories and merch have no grind; their chosen variant (color/size) is what the operator needs to see.
+const getOrderLineTitle = (item) => (isVariantCartItem(item) && item.volumeLabel
+  ? `${item.title} (${item.volumeLabel})`
+  : item.title);
+
 const buildCartSummary = (cart) => {
   return cart
-    .map((item) => `${item.title} (${getGrindLabel(item)}, ${getVolumeLabel(item)}) x${item.qty} - ${item.price * item.qty} грн`)
+    .map((item) => {
+      const details = isNonCoffeeProduct(item)
+        ? (isVariantCartItem(item) ? `(${getVolumeLabel(item)}) ` : '')
+        : `(${getGrindLabel(item)}, ${getVolumeLabel(item)}) `;
+      return `${item.title} ${details}x${item.qty} - ${item.price * item.qty} грн`;
+    })
     .join(', ');
 };
 
@@ -3025,7 +3037,8 @@ const buildOrderPayload = ({
     totalLabel: `${total} грн`,
     cart: cart.map((item) => ({
       ...item,
-      grindLabel: getGrindLabel(item),
+      title: getOrderLineTitle(item),
+      grindLabel: isNonCoffeeProduct(item) ? '' : getGrindLabel(item),
       volumeLabel: getVolumeLabel(item),
     })),
     orderItems: buildCartSummary(cart),
