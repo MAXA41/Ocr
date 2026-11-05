@@ -1824,6 +1824,26 @@ body[data-page-category="filter"] .hero .btn.ghost {
   display: none;
 }
 
+.catalog-admin-swatch-control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.catalog-admin-swatch-control input[type="color"] {
+  width: 48px;
+  height: 40px;
+  padding: 2px;
+  border: 1px solid rgba(31, 27, 22, 0.2);
+  border-radius: 10px;
+  background: #fff;
+  cursor: pointer;
+}
+
+.catalog-admin-swatch-control input[type="color"][data-empty="true"] {
+  opacity: 0.4;
+}
+
 .catalog-admin-field-image {
   min-width: min(100%, 320px);
 }
@@ -2174,6 +2194,112 @@ body[data-page-category="filter"] .hero .btn.ghost {
   width: 100%;
   display: grid;
   gap: 6px;
+}
+
+.product-volume-field[hidden] {
+  display: none;
+}
+
+.variant-swatches {
+  display: grid;
+  gap: 10px;
+  justify-items: center;
+  margin-top: 18px;
+  text-align: center;
+}
+
+.variant-swatches-card {
+  width: 100%;
+  justify-items: start;
+  margin-top: 0;
+  gap: 8px;
+  text-align: left;
+}
+
+.variant-swatch-list,
+.variant-chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: inherit;
+}
+
+.variant-swatches:not(.variant-swatches-card) .variant-swatch-list,
+.variant-swatches:not(.variant-swatches-card) .variant-chip-list {
+  justify-content: center;
+}
+
+.variant-swatch {
+  width: 38px;
+  height: 38px;
+  padding: 3px;
+  border: 2px solid transparent;
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+
+.variant-swatches-card .variant-swatch {
+  width: 30px;
+  height: 30px;
+}
+
+.variant-swatch:hover:not(:disabled) {
+  transform: scale(1.08);
+}
+
+.variant-swatch:focus-visible,
+.variant-chip:focus-visible {
+  outline: 2px solid var(--olive);
+  outline-offset: 2px;
+}
+
+.variant-swatch.is-active {
+  border-color: #1f1b16;
+}
+
+.variant-swatch:disabled,
+.variant-chip:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.variant-swatch-dot {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1px rgba(31, 27, 22, 0.25);
+}
+
+.variant-swatch-label {
+  margin: 0;
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--olive);
+}
+
+.variant-chip {
+  min-width: 44px;
+  padding: 8px 14px;
+  border: 1px solid rgba(31, 27, 22, 0.2);
+  border-radius: 999px;
+  background: #fff;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.variant-chip.is-active {
+  border-color: #1f1b16;
+  background: #1f1b16;
+  color: #fff;
+}
+
+.variant-chip:disabled {
+  text-decoration: line-through;
 }
 
 .product-volume-field span,

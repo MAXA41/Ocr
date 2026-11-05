@@ -214,6 +214,9 @@ const getVariantSelectionOptions = (product) => {
       value: getVariantOptionValue(variant),
       label: variant.label,
       weightLabel: variant.label,
+      color: variant.color || '',
+      size: variant.size || '',
+      swatch: variant.swatch || '',
       price: Number.isFinite(variantPrice) && variant.price !== null ? variantPrice : basePrice,
       image: variant.image || '',
       available: getVariantAvailable(variant),
@@ -382,7 +385,184 @@ const getVolumeSelectionConfig = (product) => {
   }];
 };
 
-const getProductVolumeMarkup = (product) => {
+const swatchColorNames = {
+  'чорний': '#1f1b16',
+  'черный': '#1f1b16',
+  'білий': '#ffffff',
+  'белый': '#ffffff',
+  'off-white': '#f1ead9',
+  'кремовий': '#f1ead9',
+  'молочний': '#f6f1e7',
+  'червоний': '#c0392b',
+  'красный': '#c0392b',
+  'синій': '#2f5da8',
+  'синий': '#2f5da8',
+  'блакитний': '#7fb2e5',
+  'голубой': '#7fb2e5',
+  'зелений': '#3f7d4e',
+  'зеленый': '#3f7d4e',
+  'жовтий': '#f0c419',
+  'желтый': '#f0c419',
+  'оранжевий': '#e8832a',
+  'оранжевый': '#e8832a',
+  'сірий': '#8a8a8a',
+  'серый': '#8a8a8a',
+  'сріблястий': '#c0c0c0',
+  'срібний': '#c0c0c0',
+  'золотий': '#d4af37',
+  'коричневий': '#6b4423',
+  'коричневый': '#6b4423',
+  'рожевий': '#e8a0b4',
+  'розовый': '#e8a0b4',
+  'фіолетовий': '#6f4a9c',
+  'фиолетовый': '#6f4a9c',
+  'бежевий': '#d9c7a6',
+  'бежевый': '#d9c7a6',
+};
+
+// Explicit HEX from the admin first, then a known color name; otherwise the color is sampled from the variant photo.
+const getVariantSwatchStyle = (option) => {
+  const explicit = String(option.swatch || '').trim();
+  const name = String(option.color || '').trim().toLowerCase();
+  let color = '';
+
+  if (/^#[0-9a-f]{6}$/i.test(explicit)) {
+    color = explicit;
+  } else if (swatchColorNames[name]) {
+    color = swatchColorNames[name];
+  } else if (name && globalThis.CSS?.supports?.('color', name)) {
+    color = name;
+  }
+
+  if (color) return { style: `background-color:${color}`, sample: '' };
+  if (option.image) {
+    return {
+      style: `background-image:url('${option.image}');background-size:cover;background-position:center`,
+      sample: option.image,
+    };
+  }
+  return { style: 'background-color:#d8d2c6', sample: '' };
+};
+
+const swatchSampleCache = new Map();
+
+// Average of the saturated pixels of the photo, ignoring white/grey/black backgrounds.
+const sampleImageColor = (source) => {
+  if (!swatchSampleCache.has(source)) {
+    swatchSampleCache.set(source, new Promise((resolve) => {
+      const image = new Image();
+      image.crossOrigin = 'anonymous';
+      image.onload = () => {
+        try {
+          const size = 64;
+          const canvas = document.createElement('canvas');
+          canvas.width = size;
+          canvas.height = size;
+          const context = canvas.getContext('2d', { willReadFrequently: true });
+          context.drawImage(image, 0, 0, size, size);
+          const { data } = context.getImageData(0, 0, size, size);
+          let red = 0;
+          let green = 0;
+          let blue = 0;
+          let count = 0;
+          for (let index = 0; index < data.length; index += 4) {
+            const [r, g, b, a] = [data[index], data[index + 1], data[index + 2], data[index + 3]];
+            const max = Math.max(r, g, b);
+            const min = Math.min(r, g, b);
+            const saturation = max === 0 ? 0 : (max - min) / max;
+            if (a > 200 && saturation > 0.4 && max > 70) {
+              red += r;
+              green += g;
+              blue += b;
+              count += 1;
+            }
+          }
+          resolve(count >= 40 ? `rgb(${Math.round(red / count)}, ${Math.round(green / count)}, ${Math.round(blue / count)})` : '');
+        } catch (error) {
+          resolve('');
+        }
+      };
+      image.onerror = () => resolve('');
+      image.src = source;
+    }));
+  }
+  return swatchSampleCache.get(source);
+};
+
+const hydrateVariantSwatchColors = (root = document) => {
+  root.querySelectorAll('[data-swatch-sample]:not([data-swatch-sampled])').forEach((dot) => {
+    dot.dataset.swatchSampled = 'true';
+    sampleImageColor(dot.dataset.swatchSample).then((color) => {
+      if (!color) return;
+      dot.style.backgroundImage = 'none';
+      dot.style.backgroundColor = color;
+    });
+  });
+};
+
+const getVariantSwatchesMarkup = (product, modifier = '') => {
+  const options = getVariantSelectionOptions(product);
+  if (options.length < 2) return '';
+
+  const selected = options[0];
+  const hasColors = options.some((option) => option.color);
+  const hasSizes = options.some((option) => option.size);
+
+  const colors = [];
+  options.forEach((option) => {
+    if (!option.color) return;
+    const existing = colors.find((entry) => entry.color.toLowerCase() === option.color.toLowerCase());
+    if (!existing) {
+      colors.push({ color: option.color, option, available: option.available !== 0 });
+    } else if (option.available !== 0 && !existing.available) {
+      existing.available = true;
+      existing.option = option;
+    }
+  });
+
+  const swatchButtons = colors.map(({ color, option, available }) => {
+    const isActive = selected.color.toLowerCase() === color.toLowerCase();
+    const { style, sample } = getVariantSwatchStyle(option);
+    return `
+      <button type="button" class="variant-swatch${isActive ? ' is-active' : ''}" data-swatch-color="${escapeHtml(color)}" role="radio" aria-checked="${isActive}" aria-label="${escapeHtml(color)}" title="${escapeHtml(color)}${available ? '' : ' — немає в наявності'}"${available ? '' : ' disabled'}>
+        <span class="variant-swatch-dot" style="${escapeHtml(style)}"${sample ? ` data-swatch-sample="${escapeHtml(sample)}"` : ''}></span>
+      </button>`;
+  }).join('');
+
+  // Size (or plain label) chips: one per variant, shown only for the selected color.
+  const chipOptions = hasSizes || !hasColors ? options : [];
+  const chipButtons = chipOptions.map((option) => {
+    const isVisible = !hasColors || option.color.toLowerCase() === selected.color.toLowerCase();
+    return `
+      <button type="button" class="variant-chip${option.value === selected.value ? ' is-active' : ''}" data-swatch-chip="${option.value}"${isVisible ? '' : ' hidden'}${option.available === 0 ? ' disabled' : ''}>${escapeHtml(option.size || option.label)}</button>`;
+  }).join('');
+
+  const optionData = options.map((option) => ({
+    v: option.value,
+    c: option.color,
+    s: option.size,
+    l: option.label,
+    d: option.available === 0,
+  }));
+
+  return `
+    <div class="variant-swatches${modifier ? ` ${modifier}` : ''}" data-swatch-group data-swatch-options="${escapeHtml(JSON.stringify(optionData))}">
+      ${hasColors ? `<div class="variant-swatch-list" role="radiogroup" aria-label="Колір">${swatchButtons}</div>` : ''}
+      <p class="variant-swatch-label" data-swatch-label>${escapeHtml(getVariantSwatchLabel(selected))}</p>
+      ${chipButtons ? `<div class="variant-chip-list" role="group" aria-label="${hasSizes ? 'Розмір' : 'Варіант'}">${chipButtons}</div>` : ''}
+    </div>`;
+};
+
+const getVariantSwatchLabel = (option) => {
+  const color = option.color ?? option.c ?? '';
+  const size = option.size ?? option.s ?? '';
+  const parts = [];
+  if (color) parts.push(`Колір: ${color}`);
+  if (size) parts.push(`Розмір: ${size}`);
+  return parts.length > 0 ? parts.join(' · ') : `Варіант: ${option.l || option.label || ''}`;
+};
+
+const getProductVolumeMarkup = (product, { withSwatches = true } = {}) => {
   const volumeConfig = getVolumeSelectionConfig(product);
   const selectedOption = volumeConfig[0];
   const isVariantProduct = getCatalogVariants(product).length > 0;
@@ -396,15 +576,17 @@ const getProductVolumeMarkup = (product) => {
       </div>`;
   }
 
+  // For variant products the select stays in the DOM (hidden) as the single source of the selection;
+  // the swatches drive it, so price, photo, stock and cart logic are shared with the other volume selects.
   return `
-    <label class="product-volume-field" for="volume-select-${product.id}">
+    <label class="product-volume-field" for="volume-select-${product.id}"${isVariantProduct ? ' hidden' : ''}>
       <span>${fieldLabel}</span>
       <select class="product-volume-select" id="volume-select-${product.id}" data-product-id="${product.id}" aria-label="${fieldLabel} для ${product.name}">
         ${volumeConfig.map((option, index) => option.available === 0
           ? `<option value="${option.value}" disabled>${escapeHtml(option.label)} — немає в наявності</option>`
           : `<option value="${option.value}"${index === 0 ? ' selected' : ''}>${escapeHtml(option.label)} — ${option.price} грн</option>`).join('')}
       </select>
-    </label>`;
+    </label>${isVariantProduct && withSwatches ? getVariantSwatchesMarkup(product, 'variant-swatches-card') : ''}`;
 };
 
 const renderProductCard = (product, showCategory = false) => {
@@ -1042,7 +1224,7 @@ const renderProductDetail = (product, allProducts) => {
       <div class="container">
         <article class="product-showcase-card">
           <div class="product-detail-grid">
-            <div class="product-showcase-media">${productMediaMarkup}${galleryMarkup}</div>
+            <div class="product-showcase-media">${productMediaMarkup}${isNonCoffee ? getVariantSwatchesMarkup(product) : ''}${galleryMarkup}</div>
             <div class="hero-copy product-detail-copy product-showcase-copy">
               <div class="product-showcase-head">
                 <p class="product-code">Код товару: ${productCode}</p>
@@ -1062,7 +1244,7 @@ const renderProductDetail = (product, allProducts) => {
                 </div>
               </div>
               <div class="product-detail-price-row product-showcase-actions">
-                ${getProductVolumeMarkup(product)}
+                ${getProductVolumeMarkup(product, { withSwatches: false })}
                 <span class="product-detail-price" data-product-price>${(getVolumeSelectionConfig(product)[0] || { price: product.price }).price} грн</span>
                 <button class="btn primary product-buy" data-id="${product.id}" data-name="${product.name}" data-category="${product.category}" data-price="${(getVolumeSelectionConfig(product)[0] || { price: product.price }).price}" data-weight="${(getVolumeSelectionConfig(product)[0] || { weightLabel: product.weight || '' }).weightLabel || product.weight || ''}" data-available="${String(canBuy)}" type="button" ${canBuy ? '' : 'disabled'}>${canBuy ? 'Додати до кошика' : availability.buttonLabel}</button>
               </div>
@@ -1233,6 +1415,8 @@ const reconcileCartWithCatalogState = (notify = false) => {
 };
 
 const attachBuyHandlers = () => {
+  hydrateVariantSwatchColors();
+
   const syncProductContextImage = (context, selectedVolume) => {
     const root = context.closest('.product-card, .product-detail-grid');
     const image = root?.querySelector('.product-media img, .product-detail-media img');
@@ -1318,6 +1502,75 @@ const attachBuyHandlers = () => {
     });
   });
 };
+
+const syncVariantSwatches = (group, value) => {
+  let options = [];
+  try {
+    options = JSON.parse(group.dataset.swatchOptions || '[]');
+  } catch (error) {
+    return;
+  }
+
+  const current = options.find((option) => option.v === value) || options[0];
+  if (!current) return;
+
+  group.querySelectorAll('[data-swatch-color]').forEach((button) => {
+    const isActive = button.dataset.swatchColor.toLowerCase() === current.c.toLowerCase();
+    button.classList.toggle('is-active', isActive);
+    button.setAttribute('aria-checked', String(isActive));
+  });
+
+  const hasColors = options.some((option) => option.c);
+  group.querySelectorAll('[data-swatch-chip]').forEach((chip) => {
+    const option = options.find((item) => item.v === chip.dataset.swatchChip);
+    chip.hidden = hasColors && option?.c.toLowerCase() !== current.c.toLowerCase();
+    chip.classList.toggle('is-active', chip.dataset.swatchChip === current.v);
+  });
+
+  const label = group.querySelector('[data-swatch-label]');
+  if (label) label.textContent = getVariantSwatchLabel(current);
+};
+
+const pickVariantOption = (group, value) => {
+  const select = group.closest('.product-card, .product-detail-grid')?.querySelector('.product-volume-select');
+  if (!(select instanceof HTMLSelectElement)) return;
+
+  select.value = value;
+  // Reuses the select's change handler: price, photo and buy button stay in sync.
+  select.dispatchEvent(new Event('change', { bubbles: true }));
+  syncVariantSwatches(group, value);
+};
+
+document.addEventListener('click', (event) => {
+  const target = event.target;
+  if (!(target instanceof HTMLElement)) return;
+
+  const group = target.closest('[data-swatch-group]');
+  if (!(group instanceof HTMLElement)) return;
+
+  const chip = target.closest('[data-swatch-chip]');
+  if (chip instanceof HTMLButtonElement) {
+    pickVariantOption(group, chip.dataset.swatchChip);
+    return;
+  }
+
+  const swatch = target.closest('[data-swatch-color]');
+  if (!(swatch instanceof HTMLButtonElement)) return;
+
+  let options = [];
+  try {
+    options = JSON.parse(group.dataset.swatchOptions || '[]');
+  } catch (error) {
+    return;
+  }
+
+  const select = group.closest('.product-card, .product-detail-grid')?.querySelector('.product-volume-select');
+  const current = options.find((option) => option.v === select?.value) || options[0];
+  const sameColor = options.filter((option) => option.c.toLowerCase() === swatch.dataset.swatchColor.toLowerCase() && !option.d);
+  // Keep the chosen size when switching color, if that color has it.
+  const next = sameColor.find((option) => option.s === current?.s) || sameColor[0];
+  if (next) pickVariantOption(group, next.v);
+});
 
 const renderCatalogProducts = async (products) => {
       const fallbackWeightMap = new Map(

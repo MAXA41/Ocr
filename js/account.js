@@ -436,11 +436,21 @@ const buildNonCoffeeRowMarkup = (kind, group, values = {}) => {
     ? `<small class="catalog-admin-hint">Продано / в обробці: ${Number(values.sold)} шт.${values.available === null || values.available === undefined ? '' : `, доступно: ${Number(values.available)}`}</small>`
     : '';
 
+  const swatchValue = /^#[0-9a-f]{6}$/i.test(String(values.swatch || '')) ? values.swatch : '';
+
   return `
     <label class="catalog-admin-field">
       <span>${group === 'merch' ? 'Колір' : 'Колір / модель'}</span>
       <input type="text" data-row-field="color" value="${toInputValue(values.color)}" placeholder="${group === 'merch' ? 'Чорний' : 'Off-white'}">
     </label>
+    <div class="catalog-admin-field catalog-admin-field-swatch">
+      <span>Кружок на сайті</span>
+      <div class="catalog-admin-swatch-control">
+        <input type="color" data-row-field="swatch" value="${swatchValue || '#cccccc'}"${swatchValue ? '' : ' data-empty="true"'} aria-label="Колір кружка">
+        <button type="button" class="btn ghost" data-swatch-clear title="Визначити колір автоматично">авто</button>
+      </div>
+      <small class="catalog-admin-hint">«Авто» — за назвою кольору, інакше з фото.</small>
+    </div>
     ${sizeField}
     ${imageField('Фото варіанта', values.image)}
     <label class="catalog-admin-field">
@@ -593,6 +603,10 @@ const collectNonCoffeeDraft = (root) => {
       id: row.dataset.variantId || '',
       color: readRowField(row, 'color'),
       size: readRowField(row, 'size'),
+      swatch: (() => {
+        const swatchInput = row.querySelector('[data-row-field="swatch"]');
+        return swatchInput && swatchInput.dataset.empty !== 'true' ? swatchInput.value : '';
+      })(),
       image: readRowField(row, 'image'),
       price: readRowField(row, 'price'),
       stock: readRowField(row, 'stock'),
@@ -620,6 +634,7 @@ const detailsToDraft = (row) => {
       id: variant.id || '',
       color: variant.color || '',
       size: variant.size || '',
+      swatch: variant.swatch || '',
       image: variant.image || '',
       price: variant.price ?? '',
       stock: variant.stock ?? '',
@@ -698,6 +713,7 @@ const buildNonCoffeeDetails = (draft, group) => {
       id: item.id || `v${variantSeq}`,
       ...(item.color ? { color: item.color } : {}),
       ...(item.size ? { size: item.size } : {}),
+      ...(/^#[0-9a-f]{6}$/i.test(item.swatch || '') ? { swatch: item.swatch.toLowerCase() } : {}),
       label,
       ...(image ? { image } : {}),
       price,
@@ -773,8 +789,27 @@ const handleNonCoffeeRowClick = (event) => {
   if (removeButton instanceof HTMLElement) {
     removeButton.closest('.catalog-admin-row')?.remove();
     catalogAdminHasUnsavedChanges = true;
+    return;
+  }
+
+  const clearSwatchButton = target.closest('[data-swatch-clear]');
+  if (clearSwatchButton instanceof HTMLElement) {
+    const swatchInput = clearSwatchButton.closest('.catalog-admin-swatch-control')?.querySelector('input[type="color"]');
+    if (swatchInput instanceof HTMLInputElement) {
+      swatchInput.value = '#cccccc';
+      swatchInput.dataset.empty = 'true';
+      catalogAdminHasUnsavedChanges = true;
+    }
   }
 };
+
+// A color input always holds a value, so "auto" is tracked explicitly and cleared as soon as the user picks a color.
+document.addEventListener('input', (event) => {
+  const target = event.target;
+  if (target instanceof HTMLInputElement && target.matches('input[type="color"][data-row-field="swatch"]')) {
+    delete target.dataset.empty;
+  }
+});
 
 const runtimeEnv = globalThis.__OCR_ENV__ || {};
 const runtimeConfig = globalThis.__OCR_CONFIG__ || {};
