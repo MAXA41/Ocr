@@ -180,6 +180,50 @@ Deno.serve(async (request) => {
 
   try {
     const admin = createSupabaseAdminClient();
+
+    // Guests send no token. A signed-in customer's token links the order to the account and unlocks the loyalty discount.
+    const accessToken = (request.headers.get("authorization") || "")
+      .replace(/^Bearer\s+/i, "")
+      .trim();
+    let customerId: string | null = null;
+    let loyaltyDiscountPercent = 0;
+
+    if (accessToken) {
+      const { data: userData, error: userError } =
+        await admin.auth.getUser(accessToken);
+
+      // Rejecting beats silently charging a price without the discount the cart displayed.
+      if (userError || !userData?.user) {
+        return jsonResponse(
+          {
+            error:
+              "Сесія входу застаріла. Оновіть сторінку та увійдіть у кабінет ще раз.",
+          },
+          { status: 401 },
+        );
+      }
+
+      const userId = userData.user.id;
+      const [profileResult, discountStateResult] = await Promise.all([
+        admin.from("profiles").select("id").eq("id", userId).maybeSingle(),
+        admin
+          .from("customer_discount_state")
+          .select("current_discount_percent")
+          .eq("customer_id", userId)
+          .maybeSingle(),
+      ]);
+
+      // orders.customer_id references profiles, so only link when the profile row exists.
+      if (profileResult.data?.id) {
+        customerId = userId;
+        const percent = Number(
+          discountStateResult.data?.current_discount_percent,
+        );
+        loyaltyDiscountPercent =
+          Number.isFinite(percent) && percent > 0 ? percent : 0;
+      }
+    }
+
     const productIds = [
       ...new Set(
         cart
@@ -321,9 +365,20 @@ Deno.serve(async (request) => {
     const promoEligibleSubtotal = normalizedItems
       .filter((item) => !isPromoExcludedProduct(item.product_title))
       .reduce((sum, item) => sum + item.unit_price * item.quantity, 0);
-    const safeDiscount =
+    // Promo and loyalty discounts never stack: the larger one wins. Keep in sync with calculateCartPricing in js/site.js.
+    const promoDiscount =
       promoDiscountRate > 0
         ? Math.round(promoEligibleSubtotal * promoDiscountRate)
+        : 0;
+    const loyaltyDiscount = Math.round(
+      promoEligibleSubtotal * (loyaltyDiscountPercent / 100),
+    );
+    const isLoyaltyApplied = loyaltyDiscount > promoDiscount;
+    const safeDiscount = isLoyaltyApplied ? loyaltyDiscount : promoDiscount;
+    const appliedDiscountPercent = isLoyaltyApplied
+      ? loyaltyDiscountPercent
+      : promoDiscount > 0
+        ? promoDiscountRate * 100
         : 0;
     const safeTotal = Math.max(0, computedSubtotal - safeDiscount);
     const orderItemsSummary = normalizedItems
@@ -397,6 +452,7 @@ Deno.serve(async (request) => {
       const { data: order, error: orderError } = await admin
         .from("orders")
         .insert({
+          customer_id: customerId,
           source: String(payload.source || "website"),
           status: "new",
           payment_provider: "mono",
@@ -414,7 +470,7 @@ Deno.serve(async (request) => {
           comment,
           currency: "UAH",
           subtotal_amount: computedSubtotal,
-          discount_percent: promoDiscountRate * 100,
+          discount_percent: appliedDiscountPercent,
           discount_amount: safeDiscount,
           total_amount: safeTotal,
           accumulation_amount: 0,

@@ -1710,46 +1710,34 @@ const normalizeCartItem = (item) => ({
 
 const normalizePromoCode = (value = '') => String(value || '').trim().toLowerCase();
 
-const getDiscountTierForAccumulation = (accumulationThreshold) => {
-  const tiers = [
-    { name: 'Black', threshold: 10000, discountPercent: 10 },
-    { name: 'Gold', threshold: 5000, discountPercent: 7 },
-    { name: 'Silver', threshold: 2000, discountPercent: 5 },
-    { name: 'Bronze', threshold: 500, discountPercent: 3 },
-    { name: 'Base', threshold: 0, discountPercent: 0 },
-  ];
+// Loaded from customer_discount_state for the signed-in customer; 0 for guests.
+let currentLoyaltyDiscountPercent = 0;
 
-  for (const tier of tiers) {
-    if (accumulationThreshold >= tier.threshold) {
-      return tier;
-    }
-  }
-  return tiers[tiers.length - 1];
-};
-
-const calculateCartPricing = (items, promoCode = '', accumulationDiscount = 0) => {
+// Promo and loyalty discounts never stack: the larger one wins. Keep in sync with mono-create-invoice.
+const calculateCartPricing = (items, promoCode = '') => {
   const subtotal = items.reduce((sum, item) => sum + item.price * item.qty, 0);
   const promoEligibleSubtotal = items
     .filter((item) => !isPromoExcludedProduct(item))
     .reduce((sum, item) => sum + item.price * item.qty, 0);
   const normalizedPromoCode = normalizePromoCode(promoCode);
   const promoDiscountRate = promoDiscountRates[normalizedPromoCode] || 0;
-  const isPromoApplied = promoEligibleSubtotal > 0 && promoDiscountRate > 0;
-  const promoDiscountAmount = isPromoApplied ? Math.round(promoEligibleSubtotal * promoDiscountRate) : 0;
-  
-  const accumulationDiscountAmount = Math.round(subtotal * (accumulationDiscount / 100));
-  const totalDiscountAmount = Math.max(promoDiscountAmount, accumulationDiscountAmount);
-  
-  const total = Math.max(subtotal - totalDiscountAmount, 0);
+  const isPromoValid = promoEligibleSubtotal > 0 && promoDiscountRate > 0;
+  const promoDiscountAmount = isPromoValid ? Math.round(promoEligibleSubtotal * promoDiscountRate) : 0;
+  const loyaltyDiscountAmount = Math.round(promoEligibleSubtotal * (currentLoyaltyDiscountPercent / 100));
+  const isLoyaltyApplied = loyaltyDiscountAmount > promoDiscountAmount;
+  const isPromoApplied = isPromoValid && !isLoyaltyApplied;
+  const discountAmount = isLoyaltyApplied ? loyaltyDiscountAmount : promoDiscountAmount;
+  const total = Math.max(subtotal - discountAmount, 0);
 
   return {
     subtotal,
-    discountAmount: totalDiscountAmount,
-    discountType: accumulationDiscountAmount > promoDiscountAmount ? 'accumulation' : (isPromoApplied ? 'promo' : 'none'),
-    discountPercent: accumulationDiscountAmount > promoDiscountAmount ? accumulationDiscount : (isPromoApplied ? Math.round(promoDiscountRate * 100) : 0),
+    discountAmount,
+    discountType: isLoyaltyApplied ? 'accumulation' : (isPromoApplied ? 'promo' : 'none'),
+    discountPercent: isLoyaltyApplied ? currentLoyaltyDiscountPercent : (isPromoApplied ? Math.round(promoDiscountRate * 100) : 0),
     total,
     promoCode: isPromoApplied ? String(promoCode).trim() : '',
     enteredPromoCode: String(promoCode || '').trim(),
+    isPromoValid,
     isPromoApplied,
   };
 };
@@ -1797,6 +1785,13 @@ const getVolumeLabel = (item) => {
   return cartVolumeOptions.find((option) => option.value === item.volumeOption)?.label || 'Оберіть об\'єм';
 };
 
+const renderCartTotal = (pricing) => {
+  if (!cartTotal) return;
+  cartTotal.textContent = pricing.discountAmount > 0
+    ? `Разом зі знижкою: ${pricing.total} грн`
+    : `Разом: ${pricing.total} грн`;
+};
+
 const renderCart = () => {
   const items = getCart();
   if (!cartItemsContainer || !cartTotal) return;
@@ -1837,9 +1832,7 @@ const renderCart = () => {
       `;
       cartItemsContainer.append(row);
     });
-    cartTotal.textContent = pricing.discountAmount > 0
-      ? `Разом зі знижкою: ${pricing.total} грн`
-      : `Разом: ${pricing.total} грн`;
+    renderCartTotal(pricing);
   }
 };
 
@@ -2074,17 +2067,30 @@ const applyAuthenticatedProfileToCheckout = () => {
   }
 };
 
+const setLoyaltyDiscountPercent = (value) => {
+  const percent = Number(value);
+  currentLoyaltyDiscountPercent = Number.isFinite(percent) && percent > 0 ? percent : 0;
+  renderCart();
+  renderCheckoutSummary();
+};
+
 const loadAuthenticatedProfile = async () => {
   if (!supabase || !currentSupabaseSession?.user) {
     currentSupabaseProfile = null;
+    setLoyaltyDiscountPercent(0);
     return;
   }
 
-  const { data, error } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('id', currentSupabaseSession.user.id)
-    .maybeSingle();
+  const userId = currentSupabaseSession.user.id;
+  const [{ data, error }, { data: discountState, error: discountError }] = await Promise.all([
+    supabase.from('profiles').select('*').eq('id', userId).maybeSingle(),
+    supabase.from('customer_discount_state').select('current_discount_percent').eq('customer_id', userId).maybeSingle(),
+  ]);
+
+  if (discountError) {
+    console.error('Failed to load loyalty discount', discountError);
+  }
+  setLoyaltyDiscountPercent(discountError ? 0 : discountState?.current_discount_percent);
 
   if (error) {
     console.error('Failed to load Supabase profile', error);
@@ -2864,13 +2870,23 @@ const renderCheckoutSummary = () => {
 
   const promoCode = getCheckoutField('promoCode')?.value || '';
   const pricing = calculateCartPricing(items, promoCode);
+  renderCartTotal(pricing);
   const deliveryMethod = getCheckoutField('deliveryMethod')?.value || '';
   const paymentMethod = getCheckoutField('paymentMethod')?.value || '';
+  const enteredPromoCode = escapeHtml(pricing.enteredPromoCode);
+  const promoStatusText = pricing.isPromoApplied
+    ? `${enteredPromoCode} (-${pricing.discountPercent}%)`
+    : pricing.isPromoValid
+      ? `${enteredPromoCode}: діє більша накопичувальна знижка`
+      : `${enteredPromoCode} не застосовано`;
   const promoStatusMarkup = pricing.enteredPromoCode
-    ? `<div class="checkout-summary-row"><span>Промокод</span><strong>${pricing.isPromoApplied ? `${pricing.promoCode} (-10%)` : `${pricing.enteredPromoCode} не застосовано`}</strong></div>`
+    ? `<div class="checkout-summary-row"><span>Промокод</span><strong>${promoStatusText}</strong></div>`
     : '';
+  const discountLabel = pricing.discountType === 'accumulation'
+    ? `Накопичувальна знижка (-${pricing.discountPercent}%)`
+    : 'Знижка';
   const discountMarkup = pricing.discountAmount > 0
-    ? `<div class="checkout-summary-row"><span>Знижка</span><strong>-${pricing.discountAmount} грн</strong></div>`
+    ? `<div class="checkout-summary-row"><span>${discountLabel}</span><strong>-${pricing.discountAmount} грн</strong></div>`
     : '';
 
   checkoutSummary.innerHTML = `
@@ -3060,11 +3076,16 @@ const submitViaMonoAcquiring = async (payload) => {
     throw new Error('Не налаштовано Mono Edge Function.');
   }
 
+  // The function verifies this token to link the order to the account and apply the loyalty discount.
+  const { data: sessionData } = supabase ? await supabase.auth.getSession() : { data: null };
+  const accessToken = sessionData?.session?.access_token;
+
   const response = await fetch(monoCreateInvoiceUrl, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       Accept: 'application/json',
+      ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
     },
     body: JSON.stringify(payload),
   });
@@ -3526,30 +3547,6 @@ if (checkoutForm) {
   syncDeliveryFields();
   renderCheckoutSummary();
 
-  const getCustomerAccumulationDiscount = async (customerId) => {
-    if (!customerId || !supabase) return 0;
-    
-    try {
-      const { data: orders, error } = await supabase
-        .from('orders')
-        .select('total')
-        .eq('customer_id', customerId)
-        .not('total', 'is', null);
-      
-      if (error) {
-        console.error('Error loading customer orders:', error);
-        return 0;
-      }
-      
-      const totalAccumulation = (orders || []).reduce((sum, order) => sum + (order.total || 0), 0);
-      const tier = getDiscountTierForAccumulation(totalAccumulation);
-      return tier.discountPercent;
-    } catch (e) {
-      console.error('Failed to calculate customer discount:', e);
-      return 0;
-    }
-  };
-
   checkoutForm.addEventListener('submit', async (event) => {
     event.preventDefault();
 
@@ -3589,11 +3586,7 @@ if (checkoutForm) {
       if (submitButton) submitButton.disabled = true;
       setCheckoutStatus('Відправляємо замовлення...', 'neutral');
 
-      const customerAccumulationDiscount = currentSupabaseSession?.user?.id
-        ? await getCustomerAccumulationDiscount(currentSupabaseSession.user.id)
-        : 0;
-
-      const pricing = calculateCartPricing(cart, promoCode, customerAccumulationDiscount);
+      const pricing = calculateCartPricing(cart, promoCode);
 
       const submission = await submitOrder({
         name,
