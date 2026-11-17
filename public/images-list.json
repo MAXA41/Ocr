@@ -1,5 +1,5 @@
 {
-  "generated": "2026-11-17T20:00:18.053Z",
+  "generated": "2026-11-17T20:04:18.683Z",
   "totalCount": 122,
   "images": [
     "images/11-png-2-731x638.webp",
@@ -113,15 +113,15 @@
     "images/venue-holalola-sady.jpg",
     "images/Банка06.jpg",
     "images/Кава25/Brazilia_Capadokia_250г.png",
-    "images/Кава25/Colombia_ Decaf_250.png",
     "images/Кава25/Colombia_Coocentral_250.png",
+    "images/Кава25/Colombia_Decaf_250.png",
     "images/Кава25/Colombia_Ombligon_250.png",
+    "images/Кава25/Costa_Rica_La_Isla_250.png",
     "images/Кава25/Guatemala_DonaLinda_250.png",
     "images/Кава25/Honduras_Montecilio_250.png",
     "images/Кава25/Kenya_Wanrich_250.png",
     "images/Кава25/Rwanda_Kivu_250.png",
     "images/Кава25/Rwanda_Tropic_250.png",
-    "images/Кава25/Сosta_Rica_La Isla_250.png",
     "images/ПОДАРУНОК.png",
     "images/ПОДАРУНОК.webp"
   ],
@@ -182,15 +182,15 @@
     ],
     "Кава25": [
       "images/Кава25/Brazilia_Capadokia_250г.png",
-      "images/Кава25/Colombia_ Decaf_250.png",
       "images/Кава25/Colombia_Coocentral_250.png",
+      "images/Кава25/Colombia_Decaf_250.png",
       "images/Кава25/Colombia_Ombligon_250.png",
+      "images/Кава25/Costa_Rica_La_Isla_250.png",
       "images/Кава25/Guatemala_DonaLinda_250.png",
       "images/Кава25/Honduras_Montecilio_250.png",
       "images/Кава25/Kenya_Wanrich_250.png",
       "images/Кава25/Rwanda_Kivu_250.png",
-      "images/Кава25/Rwanda_Tropic_250.png",
-      "images/Кава25/Сosta_Rica_La Isla_250.png"
+      "images/Кава25/Rwanda_Tropic_250.png"
     ]
   }
 }
