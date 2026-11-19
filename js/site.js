@@ -1643,6 +1643,7 @@ const latestOrderKey = 'latest_order';
 const promoDiscountRates = {
   barista: 0.1,
   'o.10': 0.1,
+  gtavi: 0.06,
 };
 const isPromoExcludedProduct = (item) => /(?:30\s*(drip|дріп)|svarog\s*drip\s*box)/i.test(String(item?.title || item?.name || ''));
 const cartButton = document.querySelector('.cart-button');

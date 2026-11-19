@@ -26,6 +26,7 @@ const monoToken = Deno.env.get("MONO_MERCHANT_TOKEN")?.trim() || "";
 const promoDiscountRates: Record<string, number> = {
   barista: 0.1,
   "o.10": 0.1,
+  gtavi: 0.06,
 };
 const isPromoExcludedProduct = (productTitle: string) =>
   /(?:30\s*(drip|дріп)|svarog\s*drip\s*box)/i.test(productTitle);

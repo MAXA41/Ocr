@@ -61,6 +61,8 @@ npm run supabase:functions:deploy:mono-create
 npm run supabase:functions:deploy:mono-webhook
 ```
 
+Промокоды: `BARISTA` и `O.10` — 10%, `GTAVI` — 6%. Списки на фронтенде и в `mono-create-invoice` должны совпадать; после изменения промокодов обнови сайт и задеплой `mono-create-invoice`.
+
 Файлы функций:
 
 1. [supabase/functions/mono-create-invoice/index.ts](supabase/functions/mono-create-invoice/index.ts)
